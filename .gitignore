@@ -33,6 +33,9 @@ prisma/*.db
 # Test
 coverage/
 
+# Docs (分析文档，不纳入提交)
+source/docs/
+
 # Misc
 *.bak
 *.tmp
