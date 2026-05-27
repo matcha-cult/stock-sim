@@ -13,6 +13,7 @@ import type express from 'express';
 import authRoutes from '../routes/authRoutes.js';
 import characterRoutes from '../routes/characterRoutes.js';
 import stockMarketRoutes from '../routes/stockMarketRoutes.js';
+import rankRoutes from '../routes/rankRoutes.js';
 
 export function registerRoutes(app: express.Application): void {
   // 认证路由
@@ -23,4 +24,7 @@ export function registerRoutes(app: express.Application): void {
 
   // 股市路由
   app.use('/api/stock-market', stockMarketRoutes);
+
+  // 排行路由
+  app.use('/api/rank', rankRoutes);
 }
