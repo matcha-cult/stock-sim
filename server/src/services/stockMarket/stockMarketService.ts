@@ -398,12 +398,12 @@ class StockMarketService {
     await query(
       `
         INSERT INTO stock_market_price_history (
-          stock_id, tick_id, price_spirit_stones, change_bps, direction, reason, created_at
+          stock_id, tick_id, price_spirit_stones, change_bps, direction, reason
         )
         VALUES ${historyPlaceholders.join(', ')}
         ON CONFLICT (stock_id, tick_id) DO NOTHING
       `,
-      [...historyValues, tickHour],
+      [...historyValues],
     );
   }
 
