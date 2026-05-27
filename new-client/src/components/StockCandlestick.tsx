@@ -374,12 +374,9 @@ const StockCandlestick = memo(function StockCandlestick({
         movingAverageDataByKey.get(average.key) ?? [],
       );
     }
-    const containerWidth = containerRef.current?.clientWidth ?? 0;
-    const requestedVisibleBars = resolveVisibleBarCount(containerWidth);
-    const effectiveBarCount = Math.min(candlestickData.length, requestedVisibleBars);
-    const fromIndex = Math.max(0, candlestickData.length - effectiveBarCount - CHART_RIGHT_OFFSET);
+    const visibleBarCount = resolveVisibleBarCount(containerRef.current?.clientWidth ?? 0);
     refs.chart.timeScale().setVisibleLogicalRange({
-      from: fromIndex,
+      from: candlestickData.length - visibleBarCount - CHART_RIGHT_OFFSET,
       to: candlestickData.length - 1 + CHART_RIGHT_OFFSET,
     });
   }, [candlestickData, model.movingAverages, movingAverageDataByKey, shouldRenderChart]);

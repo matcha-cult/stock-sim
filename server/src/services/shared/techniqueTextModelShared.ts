@@ -325,22 +325,12 @@ export const buildTechniqueTextModelJsonSchemaResponseFormat = (_params: {
 
 /**
  * OpenAI 兼容响应格式处理（精简版）。
- * DeepSeek 不支持 json_schema，自动降级为 json_object；其余 provider 直接透传。
+ * 精简版不支持 Gemini/DeepSeek 特殊处理，直接返回原始 responseFormat。
  */
 export const resolveOpenAICompatibleResponseFormat = (
   _config: OpenAICompatibleTextModelProtocolConfig,
   responseFormat?: TechniqueTextModelResponseFormat,
 ): TechniqueTextModelResponseFormat | undefined => {
-  if (!responseFormat) return undefined;
-
-  // DeepSeek 兼容层不支持 json_schema，降级为 json_object
-  if (
-    responseFormat.type === 'json_schema' &&
-    /deepseek/i.test(_config.baseURL)
-  ) {
-    return { type: 'json_object' };
-  }
-
   return responseFormat;
 };
 

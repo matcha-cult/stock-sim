@@ -54,7 +54,7 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'profit' | 'records' | 'ranking';
+type ActiveTab = 'market' | 'profit' | 'records';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
@@ -265,7 +265,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'profit' || key === 'records' || key === 'ranking') {
+    if (key === 'market' || key === 'profit' || key === 'records') {
       setActiveTab(key);
     }
   }, []);
@@ -413,13 +413,6 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   profitLoading={stockStore.profitLoading}
                   onRefresh={() => void stockStore.refreshProfitDetail()}
                 />
-              ),
-            },
-            {
-              key: 'ranking',
-              label: '排行',
-              children: (
-                <RankingTab />
               ),
             },
             {
@@ -1192,16 +1185,6 @@ function ProfitTab({ profitModel, profitLoading, onRefresh }: ProfitTabProps): R
           ))}
         </Flex>
       )}
-    </Flex>
-  );
-}
-
-// ---- 排行 tab（内容待实现） ----
-
-function RankingTab(): React.ReactNode {
-  return (
-    <Flex data-section="ranking-tab" justify="center" style={{ padding: 24 }}>
-      <Empty description="排行功能开发中" />
     </Flex>
   );
 }

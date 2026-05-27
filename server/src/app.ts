@@ -2,8 +2,8 @@
  * Express 应用主入口（精简版）。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：整合所有路由、中间件，启动 HTTP 服务和股市行情调度器。
- * 2. 不做什么：不直接处理业务请求、不定义路由。
+ * 1. 做什么：整合所有路由、中间件，启动 HTTP 服务。
+ * 2. 不做什么：简化版不启动股市调度器和 WebSocket。
  *
  * 输入 / 输出：
  * - 输入：环境变量配置。
@@ -28,7 +28,6 @@ import { redis } from './config/redis.js';
 import { logger } from './utils/logger.js';
 import { registerRoutes } from './bootstrap/registerRoutes.js';
 import { initStockDefinitions } from './services/staticConfigLoader.js';
-import { initializeStockMarketScheduler, stopStockMarketScheduler } from './services/stockMarket/stockMarketScheduler.js';
 import './types/express.d.ts';
 
 dotenv.config();
@@ -49,10 +48,6 @@ async function startServer() {
   // 加载静态配置（股票定义等）
   await initStockDefinitions();
   logger.info('静态配置已加载');
-
-  // 启动股市行情调度器（每 N 分钟生成 AI 新闻与行情 tick）
-  await initializeStockMarketScheduler();
-  logger.info('股市行情调度器已启动');
 
   // 测试 Redis 连接
   try {
@@ -94,7 +89,6 @@ async function startServer() {
   // 注册关闭钩子
   const gracefulShutdown = async () => {
     logger.info('开始优雅关闭...');
-    stopStockMarketScheduler();
     await pool.end();
     await redis.quit();
     logger.info('服务已关闭');
