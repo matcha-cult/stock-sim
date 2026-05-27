@@ -352,6 +352,59 @@ class StockMarketService {
       `,
       values,
     );
+
+    await this.ensureInitialTick(definitions);
+  }
+
+  /**
+   * 确保存在一个初始 tick（status='generated'）和对应的价格历史记录，
+   * 使前端 K 线图在服务启动后不显示为空。
+   */
+  private async ensureInitialTick(definitions: readonly StockMarketDefinition[]): Promise<void> {
+    const hasGeneratedResult = await query<{ cnt: string }>(
+      `SELECT COUNT(*) AS cnt FROM stock_market_tick WHERE status = 'generated'`,
+    );
+    if (Number(hasGeneratedResult.rows[0]?.cnt) > 0) return;
+
+    const tickHour = floorStockMarketTickTime(new Date());
+
+    const tickResult = await query<{ id: string | number | bigint }>(
+      `
+        INSERT INTO stock_market_tick (tick_hour, status, created_at, finished_at)
+        VALUES ($1, 'generated', NOW(), NOW())
+        ON CONFLICT (tick_hour) DO NOTHING
+        RETURNING id
+      `,
+      [tickHour],
+    );
+    const tick = tickResult.rows[0];
+    if (!tick) return;
+
+    const historyValues: Array<string | number> = [];
+    const historyPlaceholders = definitions.map((definition, index) => {
+      const baseIndex = index * 6;
+      const priceUnits = stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones);
+      historyValues.push(
+        definition.id,
+        tick.id.toString(),
+        priceUnits.toString(),
+        0,
+        'flat',
+        '初始报价',
+      );
+      return `($${baseIndex + 1}, $${baseIndex + 2}, $${baseIndex + 3}, $${baseIndex + 4}, $${baseIndex + 5}, $${baseIndex + 6})`;
+    });
+
+    await query(
+      `
+        INSERT INTO stock_market_price_history (
+          stock_id, tick_id, price_spirit_stones, change_bps, direction, reason, created_at
+        )
+        VALUES ${historyPlaceholders.join(', ')}
+        ON CONFLICT (stock_id, tick_id) DO NOTHING
+      `,
+      [...historyValues, tickHour],
+    );
   }
 
   private async loadQuoteRowsForUpdate(stockIds: readonly string[]): Promise<Map<string, StockMarketQuoteRow>> {
