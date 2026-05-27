@@ -1,0 +1,35 @@
+{
+  "name": "stock-sim-new-client",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "rsbuild dev",
+    "build": "rsbuild build",
+    "preview": "rsbuild preview"
+  },
+  "dependencies": {
+    "@ant-design/icons": "^6.2.2",
+    "@ant-design/pro-components": "3.1.11-0",
+    "antd": "6.3.1",
+    "axios": "1.14.0",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.20",
+    "lightweight-charts": "^4.1.0",
+    "mobx": "^6.15.3",
+    "mobx-react-lite": "^4.1.1",
+    "mobx-state-tree": "^7.2.0",
+    "react": "^19.2.5",
+    "react-dom": "^19.2.5",
+    "react-router-dom": "^7.15.0"
+  },
+  "devDependencies": {
+    "@rsbuild/core": "^2.0.3",
+    "@rsbuild/plugin-less": "^1.6.3",
+    "@rsbuild/plugin-react": "^2.0.0",
+    "@types/node": "^24.12.3",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "less": "^4.6.4",
+    "typescript": "~5.9.3"
+  }
+}

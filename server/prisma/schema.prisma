@@ -1,0 +1,131 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 用户表
+model users {
+  id            Int       @id @default(autoincrement())
+  username      String    @unique @db.VarChar(255)
+  password      String?   @db.VarChar(255)
+  phone_number  String?   @unique @db.VarChar(20)
+  email         String?   @unique @db.VarChar(255)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @updatedAt @db.Timestamp(6)
+  last_login    DateTime? @db.Timestamp(6)
+  status        Int       @default(1) @db.SmallInt
+  session_token String?   @db.VarChar(64)
+
+  characters    characters?
+}
+
+// 角色表（精简版，默认灵石 10000）
+model characters {
+  id               Int      @id @default(autoincrement())
+  user_id          Int      @unique
+  nickname         String   @db.VarChar(50)
+  gender           String   @db.VarChar(10)
+  title            String?  @default("散修") @db.VarChar(50)
+  spirit_stones    BigInt   @default(10000)
+  silver           BigInt   @default(0)
+  created_at       DateTime @default(now()) @db.Timestamp(6)
+  updated_at       DateTime @updatedAt @db.Timestamp(6)
+
+  users                        users  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  stock_holdings               character_stock_holding[]
+  stock_trade_records          stock_market_trade_record[]
+}
+
+// 股票报价表
+model stock_market_quote {
+  stock_id                     String   @id @db.VarChar(96)
+  current_price_spirit_stones  BigInt
+  last_change_bps              Int      @default(0)
+  last_tick_id                 BigInt?
+  updated_at                   DateTime @default(now()) @db.Timestamp(6)
+}
+
+// 股市Tick表
+model stock_market_tick {
+  id              BigInt   @id @default(autoincrement())
+  tick_hour       DateTime @unique @db.Timestamp(6)
+  status          String   @db.VarChar(20)
+  headline        String?
+  summary         String?
+  model_name      String?  @db.VarChar(100)
+  prompt_snapshot String?
+  event_id        BigInt?
+  error_message   String?
+  finished_at     DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  price_histories stock_market_price_history[]
+}
+
+// 股票价格历史表
+model stock_market_price_history {
+  id                       BigInt    @id @default(autoincrement())
+  stock_id                 String    @db.VarChar(96)
+  tick_id                  BigInt
+  price_spirit_stones      BigInt
+  change_bps               Int
+  direction                String    @db.VarChar(10)
+  reason                   String?
+  created_at               DateTime  @default(now()) @db.Timestamp(6)
+
+  tick                     stock_market_tick @relation(fields: [tick_id], references: [id])
+
+  @@index([stock_id, tick_id])
+}
+
+// 股市新闻事件表
+model stock_market_news_event {
+  id                 BigInt    @id @default(autoincrement())
+  status             String    @db.VarChar(20)
+  theme              String?
+  headline           String?
+  summary            String?
+  stage              String?   @db.VarChar(50)
+  affected_stock_ids String[]
+  started_tick_id    BigInt?
+  last_tick_id       BigInt?
+  updated_at         DateTime  @default(now()) @db.Timestamp(6)
+  created_at         DateTime  @default(now()) @db.Timestamp(6)
+}
+
+// 角色股票持仓表
+model character_stock_holding {
+  character_id                Int
+  stock_id                    String   @db.VarChar(96)
+  quantity                    Int
+  total_cost_spirit_stones    BigInt
+  created_at                  DateTime @default(now()) @db.Timestamp(6)
+  updated_at                  DateTime @updatedAt @db.Timestamp(6)
+
+  character                   characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@id([character_id, stock_id])
+}
+
+// 股票交易记录表
+model stock_market_trade_record {
+  id                           BigInt    @id @default(autoincrement())
+  character_id                 Int
+  stock_id                     String    @db.VarChar(96)
+  side                         String    @db.VarChar(8)
+  quantity                     Int
+  unit_price_spirit_stones     BigInt
+  gross_amount_spirit_stones   BigInt
+  fee_spirit_stones            BigInt
+  net_amount_spirit_stones     BigInt
+  realized_pnl_spirit_stones   BigInt?
+  created_at                   DateTime  @default(now()) @db.Timestamp(6)
+
+  character                    characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@index([character_id, created_at])
+}

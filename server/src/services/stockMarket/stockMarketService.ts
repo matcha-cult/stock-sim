@@ -1,0 +1,1541 @@
+/**
+ * 股市交易与行情服务。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：初始化静态股票报价、生成周期行情、查询概览/历史/交易记录/收益详情，并处理系统即时买卖。
+ * 2. 不做什么：不实现玩家挂单撮合、不把股票伪装成坊市物品、不在路由层重复业务规则。
+ *
+ * 输入 / 输出：
+ * - 输入：角色 ID、股票 ID、交易数量、调度 tick 时间。
+ * - 输出：股市概览 DTO、历史价格、交易记录、收益详情和买卖结果。
+ *
+ * 数据流 / 状态流：
+ * 静态股票 -> 初始 quote 分单位价格 -> AI 新闻具体涨跌 -> quote/history；
+ * 角色请求 -> 交易校验 -> 货币 Delta -> holding/trade record -> route 推送角色刷新。
+ *
+ * 复用设计说明：
+ * - 报价、持仓、交易记录都在本服务单点聚合，前端只消费 DTO，避免列表页、持仓页和交易页各自拼 SQL。
+ * - 买卖都复用 `stockMarketRules` 与现有精确货币入口，手续费和灵石扣增不会散落。
+ *
+ * 关键边界条件与坑点：
+ * 1. 买入只校验数量合法性和灵石是否足够，持仓上限不在股市服务层限制。
+ * 2. AI 失败只更新 tick 状态，不触碰 quote/history，保证价格只由有效新闻驱动。
+ */
+import { withTransaction, query } from '../../config/database.js';
+import { Transactional } from '../../decorators/transactional.js';
+import {
+  consumeSpiritStones,
+  addSpiritStones,
+} from '../inventory/shared/consume.js';
+import {
+  getEnabledStockDefinitionById,
+  getEnabledStockDefinitions,
+  getEnabledStockIdSet,
+  type StockMarketDefinition,
+} from './stockMarketDefinitions.js';
+import {
+  generateStockMarketAiNewsDraft,
+  type StockMarketValidatedEvent,
+  type StockMarketValidatedImpact,
+} from './stockMarketAi.js';
+import {
+  STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT,
+  type StockMarketNewsEventPromptContext,
+  type StockMarketNewsEventStatus,
+} from './stockMarketNewsEventContext.js';
+import {
+  STOCK_MARKET_HISTORY_LIMIT,
+  STOCK_MARKET_PRICE_SCALE,
+  STOCK_MARKET_TRADE_RECORD_PAGE_SIZE,
+  applyStockMarketPriceChange,
+  buildStockMarketHistoryOhlc,
+  buildStockMarketTradeRulesDto,
+  calculateStockMarketMarketValue,
+  calculateStockMarketMaxSellQuantity,
+  calculateReleasedStockHoldingCost,
+  calculateStockMarketGrossAmount,
+  calculateStockMarketTradeFee,
+  stockMarketPriceToStorageUnits,
+  stockMarketPriceUnitsToSpiritStones,
+} from './stockMarketRules.js';
+import {
+  floorStockMarketTickTime,
+  getNextStockMarketRefreshAt,
+} from './stockMarketTime.js';
+import { STOCK_MARKET_SCENARIO_RECENT_TICK_LIMIT } from './stockMarketScenarioSelector.js';
+
+type StockMarketQuoteRow = {
+  stock_id: string;
+  current_price_spirit_stones: string | number | bigint;
+  last_change_bps: string | number;
+  updated_at: Date | string;
+};
+
+type StockMarketHoldingRow = {
+  stock_id: string;
+  quantity: string | number;
+  total_cost_spirit_stones: string | number | bigint;
+};
+
+type StockMarketNewsRow = {
+  id: string | number | bigint;
+  tick_hour: Date | string;
+  headline: string | null;
+  summary: string | null;
+  created_at: Date | string;
+  stock_id: string | null;
+  change_bps: string | number | null;
+  direction: string | null;
+  reason: string | null;
+};
+
+type StockMarketHistoryRow = {
+  tick_hour: Date | string;
+  price_spirit_stones: string | number | bigint | null;
+  change_bps: string | number | null;
+  direction: string | null;
+  reason: string | null;
+  baseline_price_spirit_stones: string | number | bigint;
+};
+
+type StockMarketTradeRow = {
+  id: string | number | bigint;
+  stock_id: string;
+  side: string;
+  quantity: string | number;
+  unit_price_spirit_stones: string | number | bigint;
+  gross_amount_spirit_stones: string | number | bigint;
+  fee_spirit_stones: string | number | bigint;
+  net_amount_spirit_stones: string | number | bigint;
+  realized_pnl_spirit_stones: string | number | bigint | null;
+  created_at: Date | string;
+};
+
+type StockMarketProfitDetailRow = {
+  day_key: string;
+  total_holding_qty: string | number | bigint;
+  total_market_value_spirit_stones: string | number | bigint;
+  total_cost_spirit_stones: string | number | bigint;
+  realized_pnl_spirit_stones: string | number | bigint;
+  cumulative_realized_pnl_spirit_stones: string | number | bigint;
+  unrealized_pnl_spirit_stones: string | number | bigint;
+  total_pnl_spirit_stones: string | number | bigint;
+  daily_pnl_spirit_stones: string | number | bigint;
+};
+
+type StockMarketTickInsertRow = {
+  id: string | number | bigint;
+};
+
+type StockMarketTickRow = {
+  id: string | number | bigint;
+  status: string;
+};
+
+type StockMarketRecentImpactRow = {
+  stock_id: string;
+};
+
+type StockMarketNewsEventRow = {
+  id: string | number | bigint;
+  status: string;
+  theme: string;
+  headline: string;
+  summary: string;
+  stage: string;
+  affected_stock_ids: string[] | string;
+};
+
+type StockMarketNewsEventInsertRow = {
+  id: string | number | bigint;
+};
+
+type StockMarketSellExecutionPlan = {
+  stockId: string;
+  quantity: number;
+  holdingQuantity: number;
+  price: bigint;
+  grossAmount: bigint;
+  fee: bigint;
+  netAmount: bigint;
+  realizedPnl: bigint;
+  releasedCost: bigint;
+};
+
+export type StockMarketStockDto = {
+  stockId: string;
+  code: string;
+  name: string;
+  shortName: string;
+  sector: string;
+  description: string;
+  priceSpiritStones: number;
+  lastChangeBps: number;
+  updatedAt: number;
+  holdingQty: number;
+  holdingCostSpiritStones: number;
+  holdingMarketValueSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  maxSellQty: number;
+};
+
+export type StockMarketNewsDto = {
+  tickId: number;
+  tickHour: number;
+  headline: string;
+  summary: string;
+  impacts: Array<{
+    stockId: string;
+    stockName: string;
+    direction: string;
+    changeBps: number;
+    reason: string | null;
+  }>;
+  createdAt: number;
+};
+
+export type StockMarketPortfolioDto = {
+  totalHoldingQty: number;
+  totalCostSpiritStones: number;
+  totalMarketValueSpiritStones: number;
+  totalUnrealizedPnlSpiritStones: number;
+};
+
+export type StockMarketOverviewDto = {
+  stocks: StockMarketStockDto[];
+  latestNews: StockMarketNewsDto | null;
+  newsRecords: StockMarketNewsDto[];
+  portfolio: StockMarketPortfolioDto;
+  tradeRules: ReturnType<typeof buildStockMarketTradeRulesDto>;
+  nextRefreshAt: number;
+};
+
+export type StockMarketHistoryPointDto = {
+  stockId: string;
+  priceSpiritStones: number;
+  openPriceSpiritStones: number;
+  highPriceSpiritStones: number;
+  lowPriceSpiritStones: number;
+  closePriceSpiritStones: number;
+  changeBps: number;
+  direction: string;
+  reason: string | null;
+  createdAt: number;
+};
+
+export type StockMarketTradeRecordDto = {
+  id: number;
+  stockId: string;
+  stockName: string;
+  stockCode: string;
+  side: 'buy' | 'sell';
+  quantity: number;
+  unitPriceSpiritStones: number;
+  grossAmountSpiritStones: number;
+  feeSpiritStones: number;
+  netAmountSpiritStones: number;
+  realizedPnlSpiritStones: number | null;
+  createdAt: number;
+};
+
+export type StockMarketProfitSummaryDto = {
+  totalHoldingQty: number;
+  totalMarketValueSpiritStones: number;
+  totalCostSpiritStones: number;
+  realizedPnlSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  totalPnlSpiritStones: number;
+};
+
+export type StockMarketProfitDailyDto = {
+  dayKey: string;
+  dailyPnlSpiritStones: number;
+  totalPnlSpiritStones: number;
+  realizedPnlSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  totalMarketValueSpiritStones: number;
+  totalCostSpiritStones: number;
+};
+
+export type StockMarketProfitDetailDto = {
+  summary: StockMarketProfitSummaryDto;
+  daily: StockMarketProfitDailyDto[];
+};
+
+type StockMarketStockBuildInput = {
+  definition: StockMarketDefinition;
+  price: bigint;
+  lastChangeBps: number;
+  updatedAt: Date | string;
+  quantity: number;
+  holdingCost: bigint;
+  marketValue: bigint;
+};
+
+const toBigIntValue = (value: string | number | bigint | null | undefined): bigint => {
+  if (typeof value === 'bigint') return value;
+  if (typeof value === 'number') return BigInt(Math.trunc(value));
+  if (typeof value === 'string' && value.trim()) return BigInt(value);
+  return 0n;
+};
+
+const toIntValue = (value: string | number | null | undefined): number => {
+  const parsed = Number(value ?? 0);
+  return Number.isFinite(parsed) ? Math.trunc(parsed) : 0;
+};
+
+const toTimestamp = (value: Date | string): number => {
+  return value instanceof Date ? value.getTime() : new Date(value).getTime();
+};
+
+const toDtoNumber = (value: bigint): number => {
+  const normalized = Number(value);
+  if (!Number.isSafeInteger(normalized)) {
+    throw new Error('股市数值超过前端安全整数范围');
+  }
+  return normalized;
+};
+
+const toDtoStockMarketPrice = (priceUnits: bigint): number => {
+  return stockMarketPriceUnitsToSpiritStones(priceUnits);
+};
+
+const STOCK_MARKET_PROFIT_DETAIL_DAY_LIMIT = 30;
+const STOCK_MARKET_PRICE_SCALE_SQL = STOCK_MARKET_PRICE_SCALE.toString();
+const STOCK_MARKET_PRICE_SCALE_OFFSET_SQL = (STOCK_MARKET_PRICE_SCALE - 1n).toString();
+
+const normalizeTradeQuantity = (quantity: number): number | null => {
+  if (!Number.isInteger(quantity) || quantity <= 0) return null;
+  if (!Number.isSafeInteger(quantity)) return null;
+  return quantity;
+};
+
+const buildStockMarketDirection = (changeBps: number): string => {
+  if (changeBps > 0) return 'up';
+  if (changeBps < 0) return 'down';
+  return 'flat';
+};
+
+const normalizeStockMarketNewsEventStatus = (status: string): StockMarketNewsEventStatus | null => {
+  if (status === 'active' || status === 'cooling' || status === 'resolved') return status;
+  return null;
+};
+
+const parseStockMarketEventStockIds = (value: string[] | string): string[] => {
+  if (Array.isArray(value)) return value;
+  const trimmed = value.trim();
+  if (!trimmed) return [];
+  return trimmed
+    .replace(/^\{|\}$/gu, '')
+    .split(',')
+    .map((stockId) => stockId.trim())
+    .filter((stockId) => stockId.length > 0);
+};
+
+class StockMarketService {
+  async ensureInitialQuotes(): Promise<void> {
+    const definitions = getEnabledStockDefinitions();
+    if (definitions.length <= 0) return;
+
+    const values: Array<string | number> = [];
+    const placeholders = definitions.map((definition, index) => {
+      const baseIndex = index * 2;
+      values.push(definition.id, stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones).toString());
+      return `($${baseIndex + 1}, $${baseIndex + 2})`;
+    });
+
+    await query(
+      `
+        INSERT INTO stock_market_quote (stock_id, current_price_spirit_stones)
+        VALUES ${placeholders.join(', ')}
+        ON CONFLICT (stock_id) DO NOTHING
+      `,
+      values,
+    );
+  }
+
+  private async loadQuoteRowsForUpdate(stockIds: readonly string[]): Promise<Map<string, StockMarketQuoteRow>> {
+    if (stockIds.length <= 0) return new Map<string, StockMarketQuoteRow>();
+    const result = await query<StockMarketQuoteRow>(
+      `
+        SELECT stock_id, current_price_spirit_stones, last_change_bps, updated_at
+        FROM stock_market_quote
+        WHERE stock_id = ANY($1::text[])
+        FOR UPDATE
+      `,
+      [stockIds],
+    );
+    return new Map(result.rows.map((row) => [row.stock_id, row] as const));
+  }
+
+  async getOverview(characterId: number): Promise<StockMarketOverviewDto> {
+    await this.ensureInitialQuotes();
+
+    const definitions = getEnabledStockDefinitions();
+    const [quoteResult, holdingResult, newsResult] = await Promise.all([
+      query<StockMarketQuoteRow>(
+        `
+          SELECT stock_id, current_price_spirit_stones, last_change_bps, updated_at
+          FROM stock_market_quote
+          WHERE stock_id = ANY($1::text[])
+        `,
+        [definitions.map((definition) => definition.id)],
+      ),
+      query<StockMarketHoldingRow>(
+        `
+          SELECT stock_id, quantity, total_cost_spirit_stones
+          FROM character_stock_holding
+          WHERE character_id = $1
+        `,
+        [characterId],
+      ),
+      query<StockMarketNewsRow>(
+        `
+          WITH recent_ticks AS (
+            SELECT id, tick_hour, headline, summary, created_at
+            FROM stock_market_tick
+            WHERE status = 'generated'
+            ORDER BY tick_hour DESC
+            LIMIT 10
+          )
+          SELECT
+            rt.id,
+            rt.tick_hour,
+            rt.headline,
+            rt.summary,
+            rt.created_at,
+            h.stock_id,
+            h.change_bps,
+            h.direction,
+            h.reason
+          FROM recent_ticks rt
+          LEFT JOIN stock_market_price_history h ON h.tick_id = rt.id
+          ORDER BY rt.tick_hour DESC, h.id ASC
+        `,
+      ),
+    ]);
+
+    const quoteByStockId = new Map(quoteResult.rows.map((row) => [row.stock_id, row] as const));
+    const holdingByStockId = new Map(holdingResult.rows.map((row) => [row.stock_id, row] as const));
+    const definitionMap = new Map(definitions.map((definition) => [definition.id, definition] as const));
+    const stockBuildInputs: StockMarketStockBuildInput[] = [];
+    let totalHoldingQty = 0;
+    let totalCost = 0n;
+    let totalMarketValue = 0n;
+
+    for (const definition of definitions) {
+      const quote = quoteByStockId.get(definition.id);
+      const holding = holdingByStockId.get(definition.id);
+      const price = toBigIntValue(
+        quote?.current_price_spirit_stones ?? stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones),
+      );
+      const quantity = toIntValue(holding?.quantity ?? 0);
+      const holdingCost = toBigIntValue(holding?.total_cost_spirit_stones ?? 0);
+      const marketValue = calculateStockMarketMarketValue(price, quantity);
+      totalHoldingQty += quantity;
+      totalCost += holdingCost;
+      totalMarketValue += marketValue;
+      stockBuildInputs.push({
+        definition,
+        price,
+        lastChangeBps: toIntValue(quote?.last_change_bps ?? 0),
+        updatedAt: quote?.updated_at ?? new Date(),
+        quantity,
+        holdingCost,
+        marketValue,
+      });
+    }
+
+    const newsRecords = this.buildNewsDtos(newsResult.rows, definitionMap);
+
+    return {
+      stocks: stockBuildInputs.map((input) => this.buildStockDto(input)),
+      latestNews: newsRecords[0] ?? null,
+      newsRecords,
+      portfolio: {
+        totalHoldingQty,
+        totalCostSpiritStones: toDtoNumber(totalCost),
+        totalMarketValueSpiritStones: toDtoNumber(totalMarketValue),
+        totalUnrealizedPnlSpiritStones: toDtoNumber(totalMarketValue - totalCost),
+      },
+      tradeRules: buildStockMarketTradeRulesDto(),
+      nextRefreshAt: getNextStockMarketRefreshAt().getTime(),
+    };
+  }
+
+  async getHistory(stockId: string): Promise<{
+    success: boolean;
+    message: string;
+    data?: { points: StockMarketHistoryPointDto[] };
+  }> {
+    const definition = getEnabledStockDefinitionById(stockId);
+    if (!definition) return { success: false, message: '股票不存在' };
+
+    await this.ensureInitialQuotes();
+    const result = await query<StockMarketHistoryRow>(
+      `
+        WITH recent_ticks AS (
+          SELECT id, tick_hour
+          FROM stock_market_tick
+          WHERE status = 'generated'
+          ORDER BY tick_hour DESC
+          LIMIT $2
+        ),
+        ordered_ticks AS (
+          SELECT id, tick_hour
+          FROM recent_ticks
+          ORDER BY tick_hour ASC
+        ),
+        first_tick AS (
+          SELECT tick_hour
+          FROM ordered_ticks
+          ORDER BY tick_hour ASC
+          LIMIT 1
+        ),
+        baseline AS (
+          SELECT h.price_spirit_stones
+          FROM stock_market_price_history h
+          CROSS JOIN first_tick ft
+          WHERE h.stock_id = $1
+            AND h.created_at < ft.tick_hour
+          ORDER BY h.created_at DESC, h.id DESC
+          LIMIT 1
+        )
+        SELECT
+          ot.tick_hour,
+          h.price_spirit_stones,
+          h.change_bps,
+          h.direction,
+          h.reason,
+          COALESCE((SELECT price_spirit_stones FROM baseline), $3::bigint) AS baseline_price_spirit_stones
+        FROM ordered_ticks ot
+        LEFT JOIN stock_market_price_history h ON h.tick_id = ot.id AND h.stock_id = $1
+        ORDER BY ot.tick_hour ASC
+      `,
+      [
+        definition.id,
+        STOCK_MARKET_HISTORY_LIMIT,
+        stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones).toString(),
+      ],
+    );
+
+    return {
+      success: true,
+      message: 'ok',
+      data: {
+        points: this.buildHistoryPointDtos(definition.id, result.rows),
+      },
+    };
+  }
+
+  async getTradeRecords(characterId: number, page: number): Promise<{
+    records: StockMarketTradeRecordDto[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    const safePage = Number.isInteger(page) && page > 0 ? page : 1;
+    const offset = (safePage - 1) * STOCK_MARKET_TRADE_RECORD_PAGE_SIZE;
+    const [recordsResult, totalResult] = await Promise.all([
+      query<StockMarketTradeRow>(
+        `
+          SELECT
+            id, stock_id, side, quantity, unit_price_spirit_stones,
+            gross_amount_spirit_stones, fee_spirit_stones, net_amount_spirit_stones,
+            realized_pnl_spirit_stones, created_at
+          FROM stock_market_trade_record
+          WHERE character_id = $1
+          ORDER BY created_at DESC, id DESC
+          LIMIT $2 OFFSET $3
+        `,
+        [characterId, STOCK_MARKET_TRADE_RECORD_PAGE_SIZE, offset],
+      ),
+      query<{ total: string | number }>(
+        `
+          SELECT COUNT(*)::int AS total
+          FROM stock_market_trade_record
+          WHERE character_id = $1
+        `,
+        [characterId],
+      ),
+    ]);
+
+    const definitionMap = new Map(getEnabledStockDefinitions().map((definition) => [definition.id, definition] as const));
+    return {
+      records: recordsResult.rows.map((row) => this.buildTradeRecordDto(row, definitionMap)),
+      total: toIntValue(totalResult.rows[0]?.total ?? 0),
+      page: safePage,
+      pageSize: STOCK_MARKET_TRADE_RECORD_PAGE_SIZE,
+    };
+  }
+
+  async getProfitDetail(characterId: number): Promise<StockMarketProfitDetailDto> {
+    await this.ensureInitialQuotes();
+
+    const definitions = getEnabledStockDefinitions();
+    const stockIds = definitions.map((definition) => definition.id);
+    const initialPriceUnits = definitions.map((definition) => (
+      stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones).toString()
+    ));
+    if (stockIds.length <= 0) {
+      return this.buildEmptyProfitDetailDto();
+    }
+
+    const result = await query<StockMarketProfitDetailRow>(
+      `
+        WITH runtime_params AS (
+          SELECT timezone('Asia/Shanghai', NOW())::date AS today_key
+        ),
+        calc_days AS (
+          SELECT generated_day::date AS day_key
+          FROM runtime_params
+          CROSS JOIN generate_series(
+            runtime_params.today_key - ($2::int * INTERVAL '1 day'),
+            runtime_params.today_key,
+            INTERVAL '1 day'
+          ) AS generated_day
+        ),
+        output_days AS (
+          SELECT generated_day::date AS day_key
+          FROM runtime_params
+          CROSS JOIN generate_series(
+            runtime_params.today_key - (($2::int - 1) * INTERVAL '1 day'),
+            runtime_params.today_key,
+            INTERVAL '1 day'
+          ) AS generated_day
+        ),
+        stock_defs AS (
+          SELECT stock_id, initial_price_units
+          FROM unnest($3::text[], $4::bigint[]) AS stock_def(stock_id, initial_price_units)
+        ),
+        trade_deltas AS (
+          SELECT
+            stock_id,
+            created_at,
+            CASE
+              WHEN side = 'buy' THEN quantity::bigint
+              ELSE -quantity::bigint
+            END AS quantity_delta,
+            CASE
+              WHEN side = 'buy' THEN gross_amount_spirit_stones
+              ELSE -(net_amount_spirit_stones - COALESCE(realized_pnl_spirit_stones, 0))
+            END AS cost_delta
+          FROM stock_market_trade_record
+          CROSS JOIN runtime_params
+          WHERE character_id = $1
+            AND stock_id = ANY($3::text[])
+            AND created_at < ((runtime_params.today_key + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+        ),
+        position_by_day AS (
+          SELECT
+            d.day_key,
+            s.stock_id,
+            COALESCE(SUM(td.quantity_delta) FILTER (
+              WHERE td.created_at < ((d.day_key + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+            ), 0)::bigint AS quantity,
+            COALESCE(SUM(td.cost_delta) FILTER (
+              WHERE td.created_at < ((d.day_key + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+            ), 0)::bigint AS total_cost_spirit_stones
+          FROM calc_days d
+          CROSS JOIN stock_defs s
+          LEFT JOIN trade_deltas td ON td.stock_id = s.stock_id
+          GROUP BY d.day_key, s.stock_id
+        ),
+        price_by_day AS (
+          SELECT
+            p.day_key,
+            p.stock_id,
+            p.quantity,
+            p.total_cost_spirit_stones,
+            CASE
+              WHEN p.day_key = runtime_params.today_key THEN COALESCE(q.current_price_spirit_stones, s.initial_price_units)
+              ELSE COALESCE(history_price.price_spirit_stones, s.initial_price_units)
+            END AS price_spirit_stones
+          FROM position_by_day p
+          JOIN stock_defs s ON s.stock_id = p.stock_id
+          CROSS JOIN runtime_params
+          LEFT JOIN stock_market_quote q ON q.stock_id = p.stock_id
+          LEFT JOIN LATERAL (
+            SELECT h.price_spirit_stones
+            FROM stock_market_price_history h
+            WHERE h.stock_id = p.stock_id
+              AND h.created_at < ((p.day_key + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+            ORDER BY h.created_at DESC, h.id DESC
+            LIMIT 1
+          ) history_price ON p.day_key <> runtime_params.today_key
+        ),
+        daily_portfolio AS (
+          SELECT
+            day_key,
+            SUM(quantity)::bigint AS total_holding_qty,
+            SUM(
+              (quantity * price_spirit_stones + ${STOCK_MARKET_PRICE_SCALE_OFFSET_SQL})
+              / ${STOCK_MARKET_PRICE_SCALE_SQL}
+            )::bigint AS total_market_value_spirit_stones,
+            SUM(total_cost_spirit_stones)::bigint AS total_cost_spirit_stones
+          FROM price_by_day
+          GROUP BY day_key
+        ),
+        realized_by_day AS (
+          SELECT
+            d.day_key,
+            COALESCE(SUM(COALESCE(r.realized_pnl_spirit_stones, 0)) FILTER (
+              WHERE r.side = 'sell'
+                AND r.created_at >= (d.day_key::timestamp AT TIME ZONE 'Asia/Shanghai')
+                AND r.created_at < ((d.day_key + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+            ), 0)::bigint AS realized_pnl_spirit_stones,
+            COALESCE(SUM(COALESCE(r.realized_pnl_spirit_stones, 0)) FILTER (
+              WHERE r.side = 'sell'
+                AND r.created_at < ((d.day_key + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+            ), 0)::bigint AS cumulative_realized_pnl_spirit_stones
+          FROM calc_days d
+          LEFT JOIN stock_market_trade_record r ON r.character_id = $1
+            AND r.stock_id = ANY($3::text[])
+            AND r.created_at < ((d.day_key + 1)::timestamp AT TIME ZONE 'Asia/Shanghai')
+          GROUP BY d.day_key
+        ),
+        daily_totals AS (
+          SELECT
+            p.day_key,
+            p.total_holding_qty,
+            p.total_market_value_spirit_stones,
+            p.total_cost_spirit_stones,
+            r.realized_pnl_spirit_stones,
+            r.cumulative_realized_pnl_spirit_stones,
+            (p.total_market_value_spirit_stones - p.total_cost_spirit_stones)::bigint AS unrealized_pnl_spirit_stones,
+            (
+              r.cumulative_realized_pnl_spirit_stones
+              + p.total_market_value_spirit_stones
+              - p.total_cost_spirit_stones
+            )::bigint AS total_pnl_spirit_stones
+          FROM daily_portfolio p
+          JOIN realized_by_day r ON r.day_key = p.day_key
+        ),
+        ordered_totals AS (
+          SELECT
+            *,
+            (
+              total_pnl_spirit_stones
+              - COALESCE(
+                LAG(total_pnl_spirit_stones) OVER (ORDER BY day_key ASC),
+                total_pnl_spirit_stones
+              )
+            )::bigint AS daily_pnl_spirit_stones
+          FROM daily_totals
+        )
+        SELECT
+          to_char(ordered_totals.day_key, 'YYYY-MM-DD') AS day_key,
+          ordered_totals.total_holding_qty,
+          ordered_totals.total_market_value_spirit_stones,
+          ordered_totals.total_cost_spirit_stones,
+          ordered_totals.realized_pnl_spirit_stones,
+          ordered_totals.cumulative_realized_pnl_spirit_stones,
+          ordered_totals.unrealized_pnl_spirit_stones,
+          ordered_totals.total_pnl_spirit_stones,
+          ordered_totals.daily_pnl_spirit_stones
+        FROM ordered_totals
+        JOIN output_days ON output_days.day_key = ordered_totals.day_key
+        ORDER BY ordered_totals.day_key DESC
+      `,
+      [characterId, STOCK_MARKET_PROFIT_DETAIL_DAY_LIMIT, stockIds, initialPriceUnits],
+    );
+
+    return this.buildProfitDetailDto(result.rows);
+  }
+
+  @Transactional
+  async buyStock(params: {
+    characterId: number;
+    stockId: string;
+    quantity: number;
+  }): Promise<{ success: boolean; message: string }> {
+    const definition = getEnabledStockDefinitionById(params.stockId);
+    if (!definition) return { success: false, message: '股票不存在' };
+    const quantity = normalizeTradeQuantity(params.quantity);
+    if (quantity === null) return { success: false, message: '购买数量不合法' };
+
+    await this.ensureInitialQuotes();
+    const quoteByStockId = await this.loadQuoteRowsForUpdate([definition.id]);
+    const quote = quoteByStockId.get(definition.id);
+    if (!quote) return { success: false, message: '股票报价不存在' };
+
+    const price = toBigIntValue(quote.current_price_spirit_stones);
+
+    const grossAmount = calculateStockMarketGrossAmount(price, quantity, 'buy');
+    const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
+    const consumeResult = await consumeSpiritStones(params.characterId, grossAmount + fee);
+    if (!consumeResult.success) return { success: false, message: consumeResult.message };
+
+    await query(
+      `
+        INSERT INTO character_stock_holding (
+          character_id, stock_id, quantity, total_cost_spirit_stones, updated_at
+        )
+        VALUES ($1, $2, $3, $4, NOW())
+        ON CONFLICT (character_id, stock_id)
+        DO UPDATE SET
+          quantity = character_stock_holding.quantity + EXCLUDED.quantity,
+          total_cost_spirit_stones = character_stock_holding.total_cost_spirit_stones + EXCLUDED.total_cost_spirit_stones,
+          updated_at = NOW()
+      `,
+      [params.characterId, definition.id, quantity, grossAmount.toString()],
+    );
+    await this.insertTradeRecord({
+      characterId: params.characterId,
+      stockId: definition.id,
+      side: 'buy',
+      quantity,
+      price,
+      grossAmount,
+      fee,
+      netAmount: grossAmount + fee,
+      realizedPnl: null,
+    });
+
+    return { success: true, message: '买入成功' };
+  }
+
+  @Transactional
+  async sellStock(params: {
+    characterId: number;
+    stockId: string;
+    quantity: number;
+  }): Promise<{ success: boolean; message: string }> {
+    const definition = getEnabledStockDefinitionById(params.stockId);
+    if (!definition) return { success: false, message: '股票不存在' };
+    const quantity = normalizeTradeQuantity(params.quantity);
+    if (quantity === null) return { success: false, message: '卖出数量不合法' };
+
+    await this.ensureInitialQuotes();
+    const quoteByStockId = await this.loadQuoteRowsForUpdate([definition.id]);
+    const quote = quoteByStockId.get(definition.id);
+    if (!quote) return { success: false, message: '股票报价不存在' };
+
+    const holding = await this.loadHoldingForUpdate(params.characterId, definition.id);
+    if (!holding) return { success: false, message: '未持有该股票' };
+    const holdingQuantity = toIntValue(holding.quantity);
+    const maxSellQuantity = calculateStockMarketMaxSellQuantity(holdingQuantity);
+    if (quantity > maxSellQuantity) return { success: false, message: '持仓数量不足' };
+
+    const price = toBigIntValue(quote.current_price_spirit_stones);
+    const executionResult = await this.executeSellPlans(params.characterId, [
+      this.buildSellExecutionPlan({
+        stockId: definition.id,
+        holding,
+        price,
+        quantity,
+      }),
+    ]);
+    if (!executionResult.success) return executionResult;
+
+    return { success: true, message: '卖出成功' };
+  }
+
+  @Transactional
+  async clearPosition(params: {
+    characterId: number;
+    stockId: string | null;
+  }): Promise<{ success: boolean; message: string }> {
+    await this.ensureInitialQuotes();
+
+    let definitions: readonly StockMarketDefinition[];
+    if (params.stockId === null) {
+      definitions = getEnabledStockDefinitions();
+    } else {
+      const definition = getEnabledStockDefinitionById(params.stockId);
+      definitions = definition ? [definition] : [];
+    }
+    if (params.stockId !== null && definitions.length <= 0) {
+      return { success: false, message: '股票不存在' };
+    }
+    if (definitions.length <= 0) {
+      return { success: false, message: '当前没有可清仓股票' };
+    }
+
+    const stockIds = definitions.map((definition) => definition.id);
+    const definitionByStockId = new Map(definitions.map((definition) => [definition.id, definition] as const));
+    const quoteByStockId = await this.loadQuoteRowsForUpdate(stockIds);
+    const holdings = await this.loadHoldingsForUpdate(params.characterId, stockIds);
+    const plans: StockMarketSellExecutionPlan[] = [];
+
+    for (const holding of holdings) {
+      const definition = definitionByStockId.get(holding.stock_id);
+      if (!definition) continue;
+      const quote = quoteByStockId.get(definition.id);
+      if (!quote) return { success: false, message: '股票报价不存在' };
+
+      const holdingQuantity = toIntValue(holding.quantity);
+      const quantity = calculateStockMarketMaxSellQuantity(holdingQuantity);
+      if (quantity <= 0) continue;
+      plans.push(this.buildSellExecutionPlan({
+        stockId: definition.id,
+        holding,
+        price: toBigIntValue(quote.current_price_spirit_stones),
+        quantity,
+      }));
+    }
+
+    if (plans.length <= 0) {
+      return {
+        success: false,
+        message: params.stockId === null ? '当前没有可清仓股票' : '未持有该股票',
+      };
+    }
+
+    const executionResult = await this.executeSellPlans(params.characterId, plans);
+    if (!executionResult.success) return executionResult;
+
+    return {
+      success: true,
+      message: params.stockId === null
+        ? `清仓完成，卖出 ${executionResult.soldStockCount} 支股票 ${executionResult.soldQuantity} 股，到账 ${executionResult.netAmount.toString()} 灵石`
+        : `清仓完成，卖出 ${executionResult.soldQuantity} 股，到账 ${executionResult.netAmount.toString()} 灵石`,
+    };
+  }
+
+  private buildSellExecutionPlan(params: {
+    stockId: string;
+    holding: StockMarketHoldingRow;
+    price: bigint;
+    quantity: number;
+  }): StockMarketSellExecutionPlan {
+    const holdingQuantity = toIntValue(params.holding.quantity);
+    const grossAmount = calculateStockMarketGrossAmount(params.price, params.quantity, 'sell');
+    const fee = calculateStockMarketTradeFee(grossAmount, 'sell');
+    const netAmount = grossAmount > fee ? grossAmount - fee : 0n;
+    const holdingCost = toBigIntValue(params.holding.total_cost_spirit_stones);
+    const releasedCost = calculateReleasedStockHoldingCost(holdingCost, holdingQuantity, params.quantity);
+    return {
+      stockId: params.stockId,
+      quantity: params.quantity,
+      holdingQuantity,
+      price: params.price,
+      grossAmount,
+      fee,
+      netAmount,
+      realizedPnl: netAmount - releasedCost,
+      releasedCost,
+    };
+  }
+
+  private async executeSellPlans(
+    characterId: number,
+    plans: readonly StockMarketSellExecutionPlan[],
+  ): Promise<{
+    success: boolean;
+    message: string;
+    soldStockCount: number;
+    soldQuantity: number;
+    netAmount: bigint;
+  }> {
+    let soldQuantity = 0;
+    let netAmount = 0n;
+    for (const plan of plans) {
+      soldQuantity += plan.quantity;
+      netAmount += plan.netAmount;
+    }
+
+    if (netAmount > 0n) {
+      const addResult = await addSpiritStones(characterId, netAmount);
+      if (!addResult.success) {
+        return {
+          success: false,
+          message: addResult.message,
+          soldStockCount: 0,
+          soldQuantity: 0,
+          netAmount: 0n,
+        };
+      }
+    }
+
+    for (const plan of plans) {
+      if (plan.quantity >= plan.holdingQuantity) {
+        await query(
+          `
+            DELETE FROM character_stock_holding
+            WHERE character_id = $1 AND stock_id = $2
+          `,
+          [characterId, plan.stockId],
+        );
+      } else {
+        await query(
+          `
+            UPDATE character_stock_holding
+            SET
+              quantity = quantity - $3,
+              total_cost_spirit_stones = total_cost_spirit_stones - $4,
+              updated_at = NOW()
+            WHERE character_id = $1 AND stock_id = $2
+          `,
+          [characterId, plan.stockId, plan.quantity, plan.releasedCost.toString()],
+        );
+      }
+
+      await this.insertTradeRecord({
+        characterId,
+        stockId: plan.stockId,
+        side: 'sell',
+        quantity: plan.quantity,
+        price: plan.price,
+        grossAmount: plan.grossAmount,
+        fee: plan.fee,
+        netAmount: plan.netAmount,
+        realizedPnl: plan.realizedPnl,
+      });
+    }
+
+    return {
+      success: true,
+      message: '卖出成功',
+      soldStockCount: plans.length,
+      soldQuantity,
+      netAmount,
+    };
+  }
+
+  async runScheduledTick(now: Date = new Date()): Promise<{
+    status: 'generated' | 'failed' | 'skipped';
+    message: string;
+  }> {
+    await this.ensureInitialQuotes();
+    const tickHour = floorStockMarketTickTime(now);
+    const insertResult = await query<StockMarketTickInsertRow>(
+      `
+        INSERT INTO stock_market_tick (tick_hour, status, created_at)
+        VALUES ($1, 'running', NOW())
+        ON CONFLICT (tick_hour) DO NOTHING
+        RETURNING id
+      `,
+      [tickHour],
+    );
+    const insertedTick = insertResult.rows[0];
+    if (!insertedTick) {
+      return { status: 'skipped', message: '当前周期股市 tick 已存在' };
+    }
+
+    const tickId = toBigIntValue(insertedTick.id);
+    const definitions = getEnabledStockDefinitions();
+    const quoteResult = await query<StockMarketQuoteRow>(
+      `
+        SELECT stock_id, current_price_spirit_stones, last_change_bps, updated_at
+        FROM stock_market_quote
+        WHERE stock_id = ANY($1::text[])
+      `,
+      [definitions.map((definition) => definition.id)],
+    );
+    const recentImpactStockIds = await this.loadRecentImpactStockIds();
+    const activeEvents = await this.loadActiveNewsEvents();
+    const newsResult = await generateStockMarketAiNewsDraft({
+      definitions,
+      quotes: quoteResult.rows.map((row) => ({
+        stockId: row.stock_id,
+        currentPriceUnits: toBigIntValue(row.current_price_spirit_stones),
+      })),
+      recentImpactStockIds,
+      activeEvents,
+      tickHour,
+    });
+
+    if (!newsResult.success) {
+      await this.recordTickFailure(tickId, newsResult.reason);
+      return { status: 'failed', message: newsResult.reason };
+    }
+
+    await this.applyGeneratedTick({
+      tickId,
+      tickHour,
+      headline: newsResult.draft.headline,
+      summary: newsResult.draft.summary,
+      modelName: newsResult.draft.modelName,
+      promptSnapshot: newsResult.draft.promptSnapshot,
+      event: newsResult.draft.event,
+      impacts: newsResult.draft.impacts,
+    });
+    return { status: 'generated', message: '股市新闻与行情已生成' };
+  }
+
+  private buildStockDto(params: {
+    definition: StockMarketDefinition;
+    price: bigint;
+    lastChangeBps: number;
+    updatedAt: Date | string;
+    quantity: number;
+    holdingCost: bigint;
+    marketValue: bigint;
+  }): StockMarketStockDto {
+    return {
+      stockId: params.definition.id,
+      code: params.definition.code,
+      name: params.definition.name,
+      shortName: params.definition.short_name ?? params.definition.name,
+      sector: params.definition.sector,
+      description: params.definition.description ?? '',
+      priceSpiritStones: toDtoStockMarketPrice(params.price),
+      lastChangeBps: params.lastChangeBps,
+      updatedAt: toTimestamp(params.updatedAt),
+      holdingQty: params.quantity,
+      holdingCostSpiritStones: toDtoNumber(params.holdingCost),
+      holdingMarketValueSpiritStones: toDtoNumber(params.marketValue),
+      unrealizedPnlSpiritStones: toDtoNumber(params.marketValue - params.holdingCost),
+      maxSellQty: calculateStockMarketMaxSellQuantity(params.quantity),
+    };
+  }
+
+  private buildNewsDto(
+    rows: readonly StockMarketNewsRow[],
+    definitionMap: ReadonlyMap<string, StockMarketDefinition>,
+  ): StockMarketNewsDto | null {
+    const row = rows[0] ?? null;
+    if (!row?.headline || !row.summary) return null;
+    const impacts: StockMarketNewsDto['impacts'] = [];
+    for (const entry of rows) {
+      if (!entry.stock_id) continue;
+      impacts.push({
+        stockId: entry.stock_id,
+        stockName: definitionMap.get(entry.stock_id)?.name ?? entry.stock_id,
+        direction: entry.direction ?? 'flat',
+        changeBps: toIntValue(entry.change_bps ?? 0),
+        reason: entry.reason,
+      });
+    }
+    return {
+      tickId: toDtoNumber(toBigIntValue(row.id)),
+      tickHour: toTimestamp(row.tick_hour),
+      headline: row.headline,
+      summary: row.summary,
+      impacts,
+      createdAt: toTimestamp(row.created_at),
+    };
+  }
+
+  private buildNewsDtos(
+    rows: readonly StockMarketNewsRow[],
+    definitionMap: ReadonlyMap<string, StockMarketDefinition>,
+  ): StockMarketNewsDto[] {
+    const rowsByTickId = new Map<string, StockMarketNewsRow[]>();
+    for (const row of rows) {
+      const tickId = String(row.id);
+      const group = rowsByTickId.get(tickId);
+      if (group) {
+        group.push(row);
+      } else {
+        rowsByTickId.set(tickId, [row]);
+      }
+    }
+
+    const records: StockMarketNewsDto[] = [];
+    for (const group of rowsByTickId.values()) {
+      const record = this.buildNewsDto(group, definitionMap);
+      if (record) {
+        records.push(record);
+      }
+    }
+    return records;
+  }
+
+  private buildHistoryPointDtos(
+    stockId: string,
+    rows: readonly StockMarketHistoryRow[],
+  ): StockMarketHistoryPointDto[] {
+    const points: StockMarketHistoryPointDto[] = [];
+    let lastPrice = toBigIntValue(rows[0]?.baseline_price_spirit_stones);
+
+    for (const row of rows) {
+      const changed = row.price_spirit_stones !== null;
+      const openPrice = lastPrice;
+      const price = changed ? toBigIntValue(row.price_spirit_stones) : lastPrice;
+      const changeBps = changed ? toIntValue(row.change_bps) : 0;
+      const ohlc = buildStockMarketHistoryOhlc(openPrice, price);
+
+      points.push({
+        stockId,
+        priceSpiritStones: toDtoStockMarketPrice(price),
+        openPriceSpiritStones: toDtoStockMarketPrice(ohlc.openPriceUnits),
+        highPriceSpiritStones: toDtoStockMarketPrice(ohlc.highPriceUnits),
+        lowPriceSpiritStones: toDtoStockMarketPrice(ohlc.lowPriceUnits),
+        closePriceSpiritStones: toDtoStockMarketPrice(ohlc.closePriceUnits),
+        changeBps,
+        direction: changed ? row.direction ?? buildStockMarketDirection(changeBps) : 'flat',
+        reason: changed ? row.reason : null,
+        createdAt: toTimestamp(row.tick_hour),
+      });
+
+      lastPrice = price;
+    }
+
+    return points;
+  }
+
+  private buildTradeRecordDto(
+    row: StockMarketTradeRow,
+    definitionMap: ReadonlyMap<string, StockMarketDefinition>,
+  ): StockMarketTradeRecordDto {
+    return {
+      id: toDtoNumber(toBigIntValue(row.id)),
+      stockId: row.stock_id,
+      stockName: definitionMap.get(row.stock_id)?.name ?? row.stock_id,
+      stockCode: definitionMap.get(row.stock_id)?.code ?? row.stock_id,
+      side: row.side === 'sell' ? 'sell' : 'buy',
+      quantity: toIntValue(row.quantity),
+      unitPriceSpiritStones: toDtoStockMarketPrice(toBigIntValue(row.unit_price_spirit_stones)),
+      grossAmountSpiritStones: toDtoNumber(toBigIntValue(row.gross_amount_spirit_stones)),
+      feeSpiritStones: toDtoNumber(toBigIntValue(row.fee_spirit_stones)),
+      netAmountSpiritStones: toDtoNumber(toBigIntValue(row.net_amount_spirit_stones)),
+      realizedPnlSpiritStones: row.realized_pnl_spirit_stones === null
+        ? null
+        : toDtoNumber(toBigIntValue(row.realized_pnl_spirit_stones)),
+      createdAt: toTimestamp(row.created_at),
+    };
+  }
+
+  private buildEmptyProfitDetailDto(): StockMarketProfitDetailDto {
+    return {
+      summary: {
+        totalHoldingQty: 0,
+        totalMarketValueSpiritStones: 0,
+        totalCostSpiritStones: 0,
+        realizedPnlSpiritStones: 0,
+        unrealizedPnlSpiritStones: 0,
+        totalPnlSpiritStones: 0,
+      },
+      daily: [],
+    };
+  }
+
+  private buildProfitDailyDto(row: StockMarketProfitDetailRow): StockMarketProfitDailyDto {
+    return {
+      dayKey: row.day_key,
+      dailyPnlSpiritStones: toDtoNumber(toBigIntValue(row.daily_pnl_spirit_stones)),
+      totalPnlSpiritStones: toDtoNumber(toBigIntValue(row.total_pnl_spirit_stones)),
+      realizedPnlSpiritStones: toDtoNumber(toBigIntValue(row.realized_pnl_spirit_stones)),
+      unrealizedPnlSpiritStones: toDtoNumber(toBigIntValue(row.unrealized_pnl_spirit_stones)),
+      totalMarketValueSpiritStones: toDtoNumber(toBigIntValue(row.total_market_value_spirit_stones)),
+      totalCostSpiritStones: toDtoNumber(toBigIntValue(row.total_cost_spirit_stones)),
+    };
+  }
+
+  private buildProfitDetailDto(rows: readonly StockMarketProfitDetailRow[]): StockMarketProfitDetailDto {
+    const todayRow = rows[0] ?? null;
+    if (!todayRow) return this.buildEmptyProfitDetailDto();
+
+    return {
+      summary: {
+        totalHoldingQty: toDtoNumber(toBigIntValue(todayRow.total_holding_qty)),
+        totalMarketValueSpiritStones: toDtoNumber(toBigIntValue(todayRow.total_market_value_spirit_stones)),
+        totalCostSpiritStones: toDtoNumber(toBigIntValue(todayRow.total_cost_spirit_stones)),
+        realizedPnlSpiritStones: toDtoNumber(toBigIntValue(todayRow.cumulative_realized_pnl_spirit_stones)),
+        unrealizedPnlSpiritStones: toDtoNumber(toBigIntValue(todayRow.unrealized_pnl_spirit_stones)),
+        totalPnlSpiritStones: toDtoNumber(toBigIntValue(todayRow.total_pnl_spirit_stones)),
+      },
+      daily: rows.map((row) => this.buildProfitDailyDto(row)),
+    };
+  }
+
+  private async loadHoldingForUpdate(
+    characterId: number,
+    stockId: string,
+  ): Promise<StockMarketHoldingRow | null> {
+    const result = await query<StockMarketHoldingRow>(
+      `
+        SELECT stock_id, quantity, total_cost_spirit_stones
+        FROM character_stock_holding
+        WHERE character_id = $1 AND stock_id = $2
+        FOR UPDATE
+      `,
+      [characterId, stockId],
+    );
+    return result.rows[0] ?? null;
+  }
+
+  private async loadHoldingsForUpdate(
+    characterId: number,
+    stockIds: readonly string[],
+  ): Promise<StockMarketHoldingRow[]> {
+    if (stockIds.length <= 0) return [];
+    const result = await query<StockMarketHoldingRow>(
+      `
+        SELECT stock_id, quantity, total_cost_spirit_stones
+        FROM character_stock_holding
+        WHERE character_id = $1
+          AND stock_id = ANY($2::text[])
+          AND quantity > 0
+        ORDER BY stock_id ASC
+        FOR UPDATE
+      `,
+      [characterId, stockIds],
+    );
+    return result.rows;
+  }
+
+  private async loadRecentImpactStockIds(): Promise<string[]> {
+    const result = await query<StockMarketRecentImpactRow>(
+      `
+        WITH recent_ticks AS (
+          SELECT id, tick_hour
+          FROM stock_market_tick
+          WHERE status = 'generated'
+          ORDER BY tick_hour DESC
+          LIMIT $1
+        )
+        SELECT h.stock_id
+        FROM recent_ticks rt
+        JOIN stock_market_price_history h ON h.tick_id = rt.id
+        ORDER BY rt.tick_hour DESC, h.id ASC
+      `,
+      [STOCK_MARKET_SCENARIO_RECENT_TICK_LIMIT],
+    );
+    return result.rows.map((row) => row.stock_id);
+  }
+
+  private async loadActiveNewsEvents(): Promise<StockMarketNewsEventPromptContext[]> {
+    const result = await query<StockMarketNewsEventRow>(
+      `
+        SELECT id, status, theme, headline, summary, stage, affected_stock_ids
+        FROM stock_market_news_event
+        WHERE status IN ('active', 'cooling')
+        ORDER BY updated_at DESC, id DESC
+        LIMIT $1
+      `,
+      [STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT],
+    );
+    const enabledStockIdSet = getEnabledStockIdSet();
+    const events: StockMarketNewsEventPromptContext[] = [];
+
+    for (const row of result.rows) {
+      const status = normalizeStockMarketNewsEventStatus(row.status);
+      if (!status || status === 'resolved') continue;
+      const affectedStockIds = parseStockMarketEventStockIds(row.affected_stock_ids)
+        .filter((stockId) => enabledStockIdSet.has(stockId));
+      if (affectedStockIds.length <= 0) continue;
+      events.push({
+        eventId: toBigIntValue(row.id).toString(),
+        status,
+        theme: row.theme,
+        headline: row.headline,
+        summary: row.summary,
+        stage: row.stage,
+        affectedStockIds,
+      });
+    }
+
+    return events;
+  }
+
+  private async insertTradeRecord(params: {
+    characterId: number;
+    stockId: string;
+    side: 'buy' | 'sell';
+    quantity: number;
+    price: bigint;
+    grossAmount: bigint;
+    fee: bigint;
+    netAmount: bigint;
+    realizedPnl: bigint | null;
+  }): Promise<void> {
+    await query(
+      `
+        INSERT INTO stock_market_trade_record (
+          character_id, stock_id, side, quantity, unit_price_spirit_stones,
+          gross_amount_spirit_stones, fee_spirit_stones, net_amount_spirit_stones,
+          realized_pnl_spirit_stones
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+      `,
+      [
+        params.characterId,
+        params.stockId,
+        params.side,
+        params.quantity,
+        params.price.toString(),
+        params.grossAmount.toString(),
+        params.fee.toString(),
+        params.netAmount.toString(),
+        params.realizedPnl === null ? null : params.realizedPnl.toString(),
+      ],
+    );
+  }
+
+  private async recordTickFailure(tickId: bigint, errorMessage: string): Promise<void> {
+    await query(
+      `
+        UPDATE stock_market_tick
+        SET status = 'failed',
+            error_message = $2,
+            finished_at = NOW()
+        WHERE id = $1
+      `,
+      [tickId.toString(), errorMessage],
+    );
+  }
+
+  private async persistNewsEventForTick(params: {
+    tickId: bigint;
+    event: StockMarketValidatedEvent;
+  }): Promise<bigint> {
+    if (params.event.action === 'new') {
+      const insertResult = await query<StockMarketNewsEventInsertRow>(
+        `
+          INSERT INTO stock_market_news_event (
+            status, theme, headline, summary, stage, affected_stock_ids,
+            started_tick_id, last_tick_id, updated_at
+          )
+          VALUES ('active', $1, $2, $3, $4, $5::text[], $6, $6, NOW())
+          RETURNING id
+        `,
+        [
+          params.event.theme,
+          params.event.headline,
+          params.event.summary,
+          params.event.stage,
+          params.event.affectedStockIds,
+          params.tickId.toString(),
+        ],
+      );
+      const insertedEventId = insertResult.rows[0]?.id;
+      if (insertedEventId === undefined) {
+        throw new Error('股市事件创建失败');
+      }
+      return toBigIntValue(insertedEventId);
+    }
+
+    if (!params.event.selectedEventId) {
+      throw new Error('股市事件缺少选中事件 ID');
+    }
+
+    const nextStatus = params.event.action === 'resolve' ? 'resolved' : 'active';
+    const updateResult = await query<StockMarketNewsEventInsertRow>(
+      `
+        UPDATE stock_market_news_event
+        SET status = $2,
+            theme = $3,
+            headline = $4,
+            summary = $5,
+            stage = $6,
+            affected_stock_ids = $7::text[],
+            last_tick_id = $8,
+            updated_at = NOW()
+        WHERE id = $1
+          AND status IN ('active', 'cooling')
+        RETURNING id
+      `,
+      [
+        params.event.selectedEventId,
+        nextStatus,
+        params.event.theme,
+        params.event.headline,
+        params.event.summary,
+        params.event.stage,
+        params.event.affectedStockIds,
+        params.tickId.toString(),
+      ],
+    );
+    const updatedEventId = updateResult.rows[0]?.id;
+    if (updatedEventId === undefined) {
+      throw new Error('股市事件上下文已失效');
+    }
+    return toBigIntValue(updatedEventId);
+  }
+
+  private async applyGeneratedTick(params: {
+    tickId: bigint;
+    tickHour: Date;
+    headline: string;
+    summary: string;
+    modelName: string;
+    promptSnapshot: string;
+    event: StockMarketValidatedEvent;
+    impacts: readonly StockMarketValidatedImpact[];
+  }): Promise<void> {
+    await withTransaction(async () => {
+      const tickResult = await query<StockMarketTickRow>(
+        `
+          SELECT id, status
+          FROM stock_market_tick
+          WHERE id = $1
+          FOR UPDATE
+        `,
+        [params.tickId.toString()],
+      );
+      if (tickResult.rows[0]?.status !== 'running') return;
+
+      const impactedStockIds = params.impacts.map((impact) => impact.stockId);
+      const quoteByStockId = await this.loadQuoteRowsForUpdate(impactedStockIds);
+      if (quoteByStockId.size !== impactedStockIds.length) {
+        await this.recordTickFailure(params.tickId, 'AI 新闻包含缺失报价的股票');
+        return;
+      }
+
+      await query(
+        `
+          UPDATE stock_market_tick
+          SET status = 'generated',
+              headline = $2,
+              summary = $3,
+              model_name = $4,
+              prompt_snapshot = $5,
+              finished_at = NOW()
+          WHERE id = $1
+        `,
+        [
+          params.tickId.toString(),
+          params.headline,
+          params.summary,
+          params.modelName,
+          params.promptSnapshot,
+        ],
+      );
+
+      const eventId = await this.persistNewsEventForTick({
+        tickId: params.tickId,
+        event: params.event,
+      });
+      await query(
+        `
+          UPDATE stock_market_tick
+          SET event_id = $2
+          WHERE id = $1
+        `,
+        [params.tickId.toString(), eventId.toString()],
+      );
+
+      for (const impact of params.impacts) {
+        const quote = quoteByStockId.get(impact.stockId);
+        if (!quote) continue;
+        const currentPrice = toBigIntValue(quote.current_price_spirit_stones);
+        const changeBps = impact.changeBps;
+        const nextPrice = applyStockMarketPriceChange(currentPrice, changeBps);
+        const direction = buildStockMarketDirection(changeBps);
+        await query(
+          `
+            UPDATE stock_market_quote
+            SET current_price_spirit_stones = $2,
+                last_change_bps = $3,
+                last_tick_id = $4,
+                updated_at = NOW()
+            WHERE stock_id = $1
+          `,
+          [impact.stockId, nextPrice.toString(), changeBps, params.tickId.toString()],
+        );
+        await query(
+          `
+            INSERT INTO stock_market_price_history (
+              stock_id, tick_id, price_spirit_stones, change_bps, direction, reason, created_at
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+          `,
+          [
+            impact.stockId,
+            params.tickId.toString(),
+            nextPrice.toString(),
+            changeBps,
+            direction,
+            impact.reason,
+            params.tickHour,
+          ],
+        );
+      }
+    });
+  }
+}
+
+export const stockMarketService = new StockMarketService();

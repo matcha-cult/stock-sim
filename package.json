@@ -1,0 +1,29 @@
+{
+  "name": "stock-sim",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --parallel -r dev",
+    "dev:client": "pnpm --filter ./client dev",
+    "dev:server": "pnpm --filter ./server dev",
+    "build": "pnpm --parallel -r build",
+    "build:client": "pnpm --filter ./client build",
+    "dev:new-client": "pnpm --filter ./new-client dev",
+    "build:new-client": "pnpm --filter ./new-client build",
+    "build:server": "pnpm --filter ./server build",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "prisma",
+      "esbuild",
+      "@prisma/engines",
+      "sharp"
+    ]
+  },
+  "devDependencies": {
+    "typescript": "^5.3.2"
+  }
+}
