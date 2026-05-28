@@ -71,6 +71,14 @@ interface AuthPayload {
     username: string;
   };
   token: string;
+  character: {
+    id: number;
+    nickname: string;
+    gender: string;
+    title: string | null;
+    spiritStones: number;
+    silver: number;
+  } | null;
 }
 
 // bootstrap 返回的 data 结构
@@ -153,9 +161,12 @@ export class AuthStore {
         if (typeof window !== 'undefined') {
           localStorage.setItem('token', response.data.token);
         }
+        const raw = response.data.character;
         runInAction(() => {
           this.user = { id: response.data.user.id, username: response.data.user.username };
-          this.character = null; // login 不返回 character
+          this.character = raw
+            ? { id: raw.id, nickname: raw.nickname, gender: raw.gender, title: raw.title, spiritStones: raw.spiritStones, silver: raw.silver }
+            : null;
         });
         return { success: true, message: '登录成功' };
       }
@@ -175,7 +186,7 @@ export class AuthStore {
         }
         runInAction(() => {
           this.user = { id: response.data.user.id, username: response.data.user.username };
-          this.character = null;
+          this.character = null; // register 不返回 character
         });
         return { success: true, message: '注册成功' };
       }

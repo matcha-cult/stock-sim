@@ -4,7 +4,7 @@ import { pluginLess } from '@rsbuild/plugin-less';
 
 export default defineConfig(({ mode }) => {
   const { parsed } = loadEnv({ cwd: process.cwd(), mode });
-
+  console.log(`Loaded environment variables for mode "${mode}":`, parsed);
   return {
     plugins: [pluginReact(), pluginLess()],
     server: {

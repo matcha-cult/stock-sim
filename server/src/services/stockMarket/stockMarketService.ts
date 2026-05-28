@@ -40,6 +40,8 @@ import {
 } from './stockMarketAi.js';
 import {
   STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT,
+  STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS,
+  STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS,
   type StockMarketNewsEventPromptContext,
   type StockMarketNewsEventStatus,
 } from './stockMarketNewsEventContext.js';
@@ -55,6 +57,7 @@ import {
   calculateReleasedStockHoldingCost,
   calculateStockMarketGrossAmount,
   calculateStockMarketTradeFee,
+  generateStockMarketNoiseChangeBps,
   stockMarketPriceToStorageUnits,
   stockMarketPriceUnitsToSpiritStones,
 } from './stockMarketRules.js';
@@ -303,6 +306,7 @@ const toDtoStockMarketPrice = (priceUnits: bigint): number => {
 const STOCK_MARKET_PROFIT_DETAIL_DAY_LIMIT = 30;
 const STOCK_MARKET_PRICE_SCALE_SQL = STOCK_MARKET_PRICE_SCALE.toString();
 const STOCK_MARKET_PRICE_SCALE_OFFSET_SQL = (STOCK_MARKET_PRICE_SCALE - 1n).toString();
+const STOCK_MARKET_NOISE_REASON = '市场正常起伏';
 
 const normalizeTradeQuantity = (quantity: number): number | null => {
   if (!Number.isInteger(quantity) || quantity <= 0) return null;
@@ -464,8 +468,10 @@ class StockMarketService {
             h.reason
           FROM recent_ticks rt
           LEFT JOIN stock_market_price_history h ON h.tick_id = rt.id
+            AND h.reason != $1
           ORDER BY rt.tick_hour DESC, h.id ASC
         `,
+        [STOCK_MARKET_NOISE_REASON],
       ),
     ]);
 
@@ -1078,6 +1084,7 @@ class StockMarketService {
       [definitions.map((definition) => definition.id)],
     );
     const recentImpactStockIds = await this.loadRecentImpactStockIds();
+    await this.coolInactiveNewsEvents(tickId);
     const activeEvents = await this.loadActiveNewsEvents();
     const newsResult = await generateStockMarketAiNewsDraft({
       definitions,
@@ -1104,6 +1111,7 @@ class StockMarketService {
       promptSnapshot: newsResult.draft.promptSnapshot,
       event: newsResult.draft.event,
       impacts: newsResult.draft.impacts,
+      allStockIds: definitions.map((definition) => definition.id),
     });
     return { status: 'generated', message: '股市新闻与行情已生成' };
   }
@@ -1341,6 +1349,31 @@ class StockMarketService {
     return result.rows.map((row) => row.stock_id);
   }
 
+  private async coolInactiveNewsEvents(currentTickId: bigint): Promise<void> {
+    await query(
+      `
+        UPDATE stock_market_news_event
+        SET status = 'cooling',
+            updated_at = NOW()
+        WHERE status = 'active'
+          AND last_tick_id IS NOT NULL
+          AND ($1 - last_tick_id) >= $2
+      `,
+      [currentTickId.toString(), STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS],
+    );
+    await query(
+      `
+        UPDATE stock_market_news_event
+        SET status = 'resolved',
+            updated_at = NOW()
+        WHERE status = 'cooling'
+          AND last_tick_id IS NOT NULL
+          AND ($1 - last_tick_id) >= $2
+      `,
+      [currentTickId.toString(), STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS],
+    );
+  }
+
   private async loadActiveNewsEvents(): Promise<StockMarketNewsEventPromptContext[]> {
     const result = await query<StockMarketNewsEventRow>(
       `
@@ -1499,6 +1532,7 @@ class StockMarketService {
     promptSnapshot: string;
     event: StockMarketValidatedEvent;
     impacts: readonly StockMarketValidatedImpact[];
+    allStockIds: readonly string[];
   }): Promise<void> {
     await withTransaction(async () => {
       const tickResult = await query<StockMarketTickRow>(
@@ -1587,6 +1621,54 @@ class StockMarketService {
             params.tickHour,
           ],
         );
+      }
+
+      // 未受 AI 影响的股票追加随机噪音波动
+      // 写入 history 以在 K 线中展示，但新闻查询会按 reason 过滤掉
+      const impactedStockIdSet = new Set(impactedStockIds);
+      const unimpactedStockIds = params.allStockIds.filter((id) => !impactedStockIdSet.has(id));
+      if (unimpactedStockIds.length > 0) {
+        const unimpactedQuotes = await this.loadQuoteRowsForUpdate(unimpactedStockIds);
+        for (const stockId of unimpactedStockIds) {
+          const quote = unimpactedQuotes.get(stockId);
+          if (!quote) continue;
+          const currentPrice = toBigIntValue(quote.current_price_spirit_stones);
+          const changeBps = generateStockMarketNoiseChangeBps(
+            Number(params.tickId),
+            stockId,
+            params.tickHour,
+          );
+          const nextPrice = applyStockMarketPriceChange(currentPrice, changeBps);
+          const direction = buildStockMarketDirection(changeBps);
+          await query(
+            `
+              UPDATE stock_market_quote
+              SET current_price_spirit_stones = $2,
+                  last_change_bps = $3,
+                  last_tick_id = $4,
+                  updated_at = NOW()
+              WHERE stock_id = $1
+            `,
+            [stockId, nextPrice.toString(), changeBps, params.tickId.toString()],
+          );
+          await query(
+            `
+              INSERT INTO stock_market_price_history (
+                stock_id, tick_id, price_spirit_stones, change_bps, direction, reason, created_at
+              )
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `,
+            [
+              stockId,
+              params.tickId.toString(),
+              nextPrice.toString(),
+              changeBps,
+              direction,
+              STOCK_MARKET_NOISE_REASON,
+              params.tickHour,
+            ],
+          );
+        }
       }
     });
   }

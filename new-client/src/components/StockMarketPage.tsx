@@ -604,6 +604,8 @@ function MarketTabContent(props: MarketTabContentProps): React.ReactNode {
           <StockListSection
             stocks={overviewModel.stocks}
             onSelectStock={onSelectStock}
+            onRefresh={onRefresh}
+            refreshLoading={refreshLoading}
           />
         </Col>
         <Col xs={24} xl={16}>
@@ -692,7 +694,7 @@ function NewsCard({ news, newsRecords, newsIndex, nextRefreshText, onShowNewerNe
           <div>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{news.headline}</div>
             <div style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 2 }}>
-              {formatStockMarketTime(news.createdAt)}
+              {formatStockMarketTime(news.tickHour)}
             </div>
             <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>{news.summary}</div>
           </div>
@@ -788,16 +790,31 @@ function PortfolioSummaryCard({ portfolio, canClearAll, localActionKey, onClearA
 interface StockListSectionProps {
   stocks: import('../domain/stock-market/types').StockMarketStockView[];
   onSelectStock: (stockId: string) => void;
+  onRefresh: () => void;
+  refreshLoading: boolean;
 }
 
-function StockListSection({ stocks, onSelectStock }: StockListSectionProps): React.ReactNode {
+function StockListSection({ stocks, onSelectStock, onRefresh, refreshLoading }: StockListSectionProps): React.ReactNode {
   return (
     <Card
       id="stock-list-card"
       data-section="stock-market-list"
       size="small"
       title="股票列表"
-      extra={<Tag>共 {stocks.length} 支</Tag>}
+      extra={
+        <Flex gap={8} align="center">
+          <Tag>共 {stocks.length} 支</Tag>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={onRefresh}
+            loading={refreshLoading}
+            data-action="refresh-market"
+          >
+            刷新
+          </Button>
+        </Flex>
+      }
       bodyStyle={{ padding: '8px' }}
     >
       <Flex vertical gap={4} data-element="stock-list">

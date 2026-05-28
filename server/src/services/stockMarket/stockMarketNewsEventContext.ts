@@ -49,6 +49,12 @@ export type StockMarketNewsEventSelectionResult = {
 
 export const STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT = 6;
 
+/** active 事件超过 N 个 tick 未续写，自动转为 cooling。 */
+export const STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS = 12;
+
+/** cooling 事件超过 N 个 tick 未续写，自动转为 resolved。 */
+export const STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS = 24;
+
 const STOCK_MARKET_NEWS_EVENT_BASE_WEIGHT = 72;
 const STOCK_MARKET_NEWS_EVENT_ACTIVE_BONUS = 28;
 const STOCK_MARKET_NEWS_EVENT_COOLING_PENALTY = 18;
