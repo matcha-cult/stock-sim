@@ -41,6 +41,7 @@ export interface CharacterDto {
   gender: string;
   title: string | null;
   spiritStones: number;
+  silver: number;
 }
 
 // 服务端 /api/character/info 返回的实际结构
@@ -51,6 +52,7 @@ interface CharacterInfoResponse {
     gender: string;
     title: string | null;
     spirit_stones: string;
+    silver: string;
     created_at: string;
     updated_at: string;
   };
@@ -83,6 +85,7 @@ interface BootstrapPayload {
     gender: string;
     title: string | null;
     spiritStones: number;
+    silver: number;
   } | null;
 }
 
@@ -195,6 +198,7 @@ export class AuthStore {
             gender: c.gender,
             title: c.title,
             spiritStones: Number(c.spirit_stones),
+            silver: Number(c.silver ?? 0),
           };
         });
         return { success: true, message: '角色创建成功' };
@@ -226,6 +230,7 @@ export class AuthStore {
             gender: c.gender,
             title: c.title,
             spiritStones: Number(c.spirit_stones),
+            silver: Number(c.silver ?? 0),
           };
         });
       }

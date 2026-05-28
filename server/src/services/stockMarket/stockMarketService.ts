@@ -366,16 +366,17 @@ class StockMarketService {
     );
     if (Number(hasGeneratedResult.rows[0]?.cnt) > 0) return;
 
-    const tickHour = floorStockMarketTickTime(new Date());
+    const now = new Date();
+    const tickHour = floorStockMarketTickTime(now);
 
     const tickResult = await query<{ id: string | number | bigint }>(
       `
         INSERT INTO stock_market_tick (tick_hour, status, created_at, finished_at)
-        VALUES ($1, 'generated', NOW(), NOW())
+        VALUES ($1, 'generated', $2, $2)
         ON CONFLICT (tick_hour) DO NOTHING
         RETURNING id
       `,
-      [tickHour],
+      [tickHour, now],
     );
     const tick = tickResult.rows[0];
     if (!tick) return;
@@ -1055,11 +1056,11 @@ class StockMarketService {
     const insertResult = await query<StockMarketTickInsertRow>(
       `
         INSERT INTO stock_market_tick (tick_hour, status, created_at)
-        VALUES ($1, 'running', NOW())
+        VALUES ($1, 'running', $2)
         ON CONFLICT (tick_hour) DO NOTHING
         RETURNING id
       `,
-      [tickHour],
+      [tickHour, now],
     );
     const insertedTick = insertResult.rows[0];
     if (!insertedTick) {

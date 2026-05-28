@@ -23,13 +23,42 @@
 
 import { useContext } from 'react';
 import { Observer } from 'mobx-react-lite';
-import { Button, Space, Typography, Layout } from 'antd';
-import { LogoutOutlined, UserOutlined, BulbOutlined } from '@ant-design/icons';
+import { Button, Popover, Space, Typography, Layout, Tooltip } from 'antd';
+import { LogoutOutlined, UserOutlined, BulbOutlined, DollarOutlined, GoldOutlined } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 
 const { Header } = Layout;
 
 const { Text } = Typography;
+
+/**
+ * 格式化数值：超过 4 位则缩为 K/M 单位，不超过 4 位直接显示。
+ */
+const formatCompact = (value: number): string => {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+  if (value >= 10_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return value.toLocaleString();
+};
+
+interface CurrencyDisplayProps {
+  value: number;
+  icon: JSX.Element;
+}
+
+function CurrencyDisplay({ value, icon }: CurrencyDisplayProps): JSX.Element {
+  const compact = formatCompact(value);
+  const fullText = value.toLocaleString();
+
+  const element = (
+    <span style={{ cursor: 'pointer', color: value >= 10_000 ? 'var(--color-success)' : 'inherit' }}>
+      <Tooltip title={fullText}>
+        {icon} {compact}
+      </Tooltip>
+    </span>
+  );
+
+  return element;
+}
 
 export default function AppHeader(): React.ReactNode {
   const rootStore = useContext(RootStoreContext);
@@ -46,7 +75,7 @@ export default function AppHeader(): React.ReactNode {
             <div id="header-inner" data-element="header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
               <div id="header-brand" data-element="brand">
                 <Typography.Title level={4} style={{ margin: 0, color: 'var(--text-primary)' }}>
-                  股市模拟系统
+                  模拟修仙股市
                 </Typography.Title>
               </div>
               {user && (
@@ -55,9 +84,16 @@ export default function AppHeader(): React.ReactNode {
                     <UserOutlined /> {character?.nickname ?? user.username}
                   </Text>
                   {character && (
-                    <Text type="success" data-element="spirit-stones">
-                      灵石: {(character.spiritStones ?? 0).toLocaleString()}
-                    </Text>
+                    <Space size="small">
+                      <CurrencyDisplay
+                        value={character.spiritStones ?? 0}
+                        icon={<DollarOutlined />}
+                      />
+                      <CurrencyDisplay
+                        value={character.silver ?? 0}
+                        icon={<GoldOutlined />}
+                      />
+                    </Space>
                   )}
                   <Button
                     type="text"
