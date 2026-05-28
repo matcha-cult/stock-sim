@@ -23,8 +23,9 @@
 
 import { useContext } from 'react';
 import { Observer } from 'mobx-react-lite';
-import { Button, Popover, Space, Typography, Layout, Tooltip } from 'antd';
+import { Button, Dropdown, Popover, Space, Typography, Layout, Tooltip } from 'antd';
 import { LogoutOutlined, UserOutlined, BulbOutlined, DollarOutlined, GoldOutlined } from '@ant-design/icons';
+import type { MenuProps } from 'antd';
 import { RootStoreContext } from '../stores/RootStore';
 
 const { Header } = Layout;
@@ -75,14 +76,11 @@ export default function AppHeader(): React.ReactNode {
             <div id="header-inner" data-element="header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
               <div id="header-brand" data-element="brand">
                 <Typography.Title level={4} style={{ margin: 0, color: 'var(--text-primary)' }}>
-                  模拟修仙股市
+                  修仙股市
                 </Typography.Title>
               </div>
               {user && (
                 <Space size="middle" id="header-user" data-element="user-info">
-                  <Text style={{ color: 'var(--text-primary)' }}>
-                    <UserOutlined /> {character?.nickname ?? user.username}
-                  </Text>
                   {character && (
                     <Space size="small">
                       <CurrencyDisplay
@@ -95,23 +93,27 @@ export default function AppHeader(): React.ReactNode {
                       />
                     </Space>
                   )}
-                  <Button
-                    type="text"
-                    icon={<BulbOutlined />}
-                    onClick={() => themeStore.toggle()}
-                    data-action="toggle-theme"
-                  >
-                    {themeStore.isDark ? '亮色' : '暗色'}
-                  </Button>
-                  <Button
-                    type="text"
-                    danger
-                    icon={<LogoutOutlined />}
-                    onClick={logout}
-                    data-action="logout"
-                  >
-                    登出
-                  </Button>
+                  <Dropdown menu={{
+                    items: [
+                      {
+                        key: 'theme',
+                        icon: <BulbOutlined />,
+                        label: themeStore.isDark ? '切换亮色' : '切换暗色',
+                        onClick: () => themeStore.toggle(),
+                      },
+                      {
+                        key: 'logout',
+                        icon: <LogoutOutlined />,
+                        label: '登出',
+                        danger: true,
+                        onClick: logout,
+                      },
+                    ] satisfies MenuProps['items'],
+                  }} trigger={['click']} placement="bottomRight">
+                    <Text style={{ color: 'var(--text-primary)', cursor: 'pointer' }}>
+                      <UserOutlined /> {character?.nickname ?? user.username}
+                    </Text>
+                  </Dropdown>
                 </Space>
               )}
             </div>

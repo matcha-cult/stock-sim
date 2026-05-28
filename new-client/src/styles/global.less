@@ -49,6 +49,28 @@ body {
   --border-color-soft: rgba(255, 255, 255, 0.1);
 }
 
+/* 股市涨跌色调：A 股惯例，涨红跌绿 */
+.is-up {
+  color: #f05b4f;
+}
+
+.is-down {
+  color: #58a678;
+}
+
+.is-flat {
+  color: var(--text-tertiary);
+}
+
+/* 股票列表选中态：中性色背景，不覆盖涨跌红绿色 */
+[data-element='stock-item'][data-selected='true'] {
+  background-color: rgba(0, 0, 0, 0.06) !important;
+}
+
+[data-theme='dark'] [data-element='stock-item'][data-selected='true'] {
+  background-color: rgba(255, 255, 255, 0.12) !important;
+}
+
 /* K 线图 tooltip */
 .stock-market-kline-tooltip {
   position: absolute;

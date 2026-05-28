@@ -834,7 +834,7 @@ interface StockListItemProps {
 function StockListItem({ stockView, onClick }: StockListItemProps): React.ReactNode {
   return (
     <Button
-      type={stockView.selected ? 'primary' : 'text'}
+      type="text"
       block
       data-element="stock-item"
       data-selected={stockView.selected}
