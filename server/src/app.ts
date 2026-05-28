@@ -51,8 +51,8 @@ async function startServer() {
   logger.info('静态配置已加载');
 
   // 启动股市行情调度器（每 N 分钟生成 AI 新闻与行情 tick）
-  await initializeStockMarketScheduler();
-  logger.info('股市行情调度器已启动');
+  const schedulerActive = await initializeStockMarketScheduler();
+  logger.info(schedulerActive ? '股市行情调度器已启动' : '股市行情调度器已加载（tick 未启用）');
 
   // 测试 Redis 连接
   try {

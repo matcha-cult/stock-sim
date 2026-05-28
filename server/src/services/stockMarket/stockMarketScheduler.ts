@@ -27,6 +27,12 @@ let timer: NodeJS.Timeout | null = null;
 let initialized = false;
 let inFlight = false;
 
+// 环境变量控制开关，默认开启。设为 'false' 或 '0' 则暂停 tick。
+const isSchedulerEnabled = (): boolean => {
+  const env = process.env.STOCK_MARKET_SCHEDULER_ENABLED;
+  return env !== 'false' && env !== '0';
+};
+
 const clearScheduledTimer = (): void => {
   if (!timer) return;
   clearTimeout(timer);
@@ -34,6 +40,7 @@ const clearScheduledTimer = (): void => {
 };
 
 const scheduleNextRun = (now: Date = new Date()): void => {
+  if (!isSchedulerEnabled()) return;
   clearScheduledTimer();
   timer = setTimeout(() => {
     void runScheduledStockMarketTick();
@@ -58,11 +65,13 @@ const runScheduledStockMarketTick = async (): Promise<void> => {
   }
 };
 
-export const initializeStockMarketScheduler = async (): Promise<void> => {
-  if (initialized) return;
+export const initializeStockMarketScheduler = async (): Promise<boolean> => {
+  if (initialized) return !isSchedulerEnabled();
   initialized = true;
   await stockMarketService.ensureInitialQuotes();
+  if (!isSchedulerEnabled()) return false;
   scheduleNextRun(new Date());
+  return true;
 };
 
 export const stopStockMarketScheduler = (): void => {
