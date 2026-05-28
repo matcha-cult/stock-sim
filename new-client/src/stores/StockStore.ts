@@ -43,7 +43,6 @@ import {
   getStockMarketRanks,
   type WealthRankDto,
   type StockMarketRankDto,
-  type StockMarketRankMetric,
 } from '../services/api/rank';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
 
@@ -68,7 +67,6 @@ export class StockStore {
   // 排行相关
   wealthRanks: WealthRankDto[] = [];
   stockMarketRanks: StockMarketRankDto[] = [];
-  stockMarketRankMetric: StockMarketRankMetric = 'value';
   rankLoading: boolean = false;
 
   constructor() {
@@ -175,10 +173,9 @@ export class StockStore {
 
   async refreshStockMarketRanks(background = false): Promise<void> {
     if (!background) this.rankLoading = true;
-    const metric = this.stockMarketRankMetric;
     try {
       const response = await getStockMarketRanks(
-        metric,
+        'value',
         50,
         background ? SILENT_API_REQUEST_CONFIG : undefined,
       );
@@ -190,10 +187,6 @@ export class StockStore {
     } finally {
       if (!background) this.rankLoading = false;
     }
-  }
-
-  setStockMarketRankMetric(metric: StockMarketRankMetric): void {
-    this.stockMarketRankMetric = metric;
   }
 
   async executeTrade(
@@ -251,7 +244,6 @@ export class StockStore {
     this.newsIndex = 0;
     this.wealthRanks = [];
     this.stockMarketRanks = [];
-    this.stockMarketRankMetric = 'value';
     this.rankLoading = false;
   }
 }

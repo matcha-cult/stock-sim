@@ -34,11 +34,11 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   ClearOutlined, FallOutlined, LeftOutlined, ReloadOutlined,
-  RightOutlined, ShoppingCartOutlined, LineChartOutlined, CrownOutlined, RiseOutlined,
+  RightOutlined, ShoppingCartOutlined, LineChartOutlined, CrownOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import { useIsMobile } from '../shared/responsive';
-import type { StockMarketRankDto, StockMarketRankMetric, WealthRankDto } from '../services/api/rank';
+import type { StockMarketRankDto, WealthRankDto } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import {
   buildStockMarketOverviewViewModel,
@@ -73,7 +73,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const [activeTab, setActiveTab] = useState<ActiveTab>('market');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<ActionKey>('');
-  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'value' | 'profit'>('wealth');
+  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket'>('wealth');
 
   // 从 stockStore 读取数据并派生 ViewModel
   const overview = stockStore.overview;
@@ -168,7 +168,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   useEffect(() => {
     if (activeTab !== 'ranking') return;
     void stockStore.refreshStockMarketRanks();
-  }, [stockStore.stockMarketRankMetric, activeTab, stockStore]);
+  }, [activeTab, stockStore]);
 
   // 移动端关闭详情
   useEffect(() => {
@@ -445,9 +445,6 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   onRefreshStockMarket={() => void stockStore.refreshStockMarketRanks()}
                   onTabChange={(tab) => {
                     setActiveRankTab(tab);
-                    if (tab !== 'wealth') {
-                      stockStore.setStockMarketRankMetric(tab);
-                    }
                   }}
                   activeRankTab={activeRankTab}
                 />
@@ -1255,8 +1252,8 @@ interface RankingTabProps {
   rankLoading: boolean;
   onRefreshWealth: () => void;
   onRefreshStockMarket: () => void;
-  onTabChange: (tab: 'wealth' | 'value' | 'profit') => void;
-  activeRankTab: 'wealth' | 'value' | 'profit';
+  onTabChange: (tab: 'wealth' | 'stockMarket') => void;
+  activeRankTab: 'wealth' | 'stockMarket';
 }
 
 const formatSpiritStones = (value: number): string => {
@@ -1299,6 +1296,7 @@ const wealthRankColumns: ColumnsType<WealthRankDto> = [
     dataIndex: 'name',
     key: 'name',
     width: 120,
+    fixed: 'left',
     render: (_: unknown, record: WealthRankDto) => (
       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.name}</span>
     ),
@@ -1348,6 +1346,7 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     dataIndex: 'name',
     key: 'name',
     width: 120,
+    fixed: 'left',
     render: (_: unknown, record: StockMarketRankDto) => (
       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.name}</span>
     ),
@@ -1358,6 +1357,7 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'totalHoldingQty',
     width: 90,
     align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalHoldingQty - b.totalHoldingQty,
     render: (value: number) => value.toLocaleString(),
   },
   {
@@ -1367,6 +1367,7 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     width: 110,
     align: 'right',
     sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalMarketValueSpiritStones - b.totalMarketValueSpiritStones,
+    defaultSortOrder: 'descend',
     render: (value: number) => (
       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
         {formatSpiritStones(value)}
@@ -1379,6 +1380,7 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'totalCostSpiritStones',
     width: 110,
     align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalCostSpiritStones - b.totalCostSpiritStones,
     render: (value: number) => formatSpiritStones(value),
   },
   {
@@ -1387,6 +1389,7 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'unrealizedPnlSpiritStones',
     width: 110,
     align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.unrealizedPnlSpiritStones - b.unrealizedPnlSpiritStones,
     render: (value: number) => {
       const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
       const sign = value > 0 ? '+' : '';
@@ -1399,6 +1402,7 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'realizedPnlSpiritStones',
     width: 110,
     align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.realizedPnlSpiritStones - b.realizedPnlSpiritStones,
     render: (value: number) => {
       const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
       const sign = value > 0 ? '+' : '';
@@ -1432,8 +1436,6 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
   } = props;
 
   const isWealthTab = activeRankTab === 'wealth';
-  const isValueTab = activeRankTab === 'value';
-  const isProfitTab = activeRankTab === 'profit';
   const currentData = isWealthTab ? wealthRanks : stockMarketRanks;
   const onRefresh = isWealthTab ? onRefreshWealth : onRefreshStockMarket;
 
@@ -1457,13 +1459,12 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
     <Flex vertical gap={12} data-section="ranking-tab">
       {/* 排行类型切换 */}
       <Flex justify="space-between" align="center" gap={12} wrap="wrap">
-        <Segmented<'wealth' | 'value' | 'profit'>
+        <Segmented<'wealth' | 'stockMarket'>
           value={activeRankTab}
           onChange={onTabChange}
           options={[
             { label: '财富排行', value: 'wealth', icon: <CrownOutlined /> },
-            { label: '股市市值', value: 'value', icon: <LineChartOutlined /> },
-            { label: '股市收益', value: 'profit', icon: <RiseOutlined /> },
+            { label: '股市排行', value: 'stockMarket', icon: <LineChartOutlined /> },
           ]}
         />
         <Button
@@ -1486,6 +1487,7 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
             size="small"
             loading={rankLoading}
             pagination={false}
+            scroll={{ x: 500 }}
             style={{ fontSize: 13 }}
           />
         ) : (
