@@ -40,6 +40,7 @@ import { RootStoreContext } from '../stores/RootStore';
 import { useIsMobile } from '../shared/responsive';
 import type { StockMarketRankDto, WealthRankDto } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
+import ShopPanel from './ShopPanel';
 import {
   buildStockMarketOverviewViewModel,
   buildStockMarketTradePreview,
@@ -57,7 +58,7 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'profit' | 'records' | 'ranking';
+type ActiveTab = 'market' | 'profit' | 'records' | 'ranking' | 'shop';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
@@ -283,7 +284,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'profit' || key === 'records' || key === 'ranking') {
+    if (key === 'market' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop') {
       setActiveTab(key);
     }
   }, []);
@@ -449,6 +450,11 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   activeRankTab={activeRankTab}
                 />
               ),
+            },
+            {
+              key: 'shop',
+              label: '店铺',
+              children: <ShopPanel />,
             },
             {
               key: 'records',

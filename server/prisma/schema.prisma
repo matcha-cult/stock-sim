@@ -38,6 +38,7 @@ model characters {
   users                        users  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   stock_holdings               character_stock_holding[]
   stock_trade_records          stock_market_trade_record[]
+  shop_details                 shop_detail[]
 }
 
 // 股票报价表
@@ -128,4 +129,37 @@ model stock_market_trade_record {
   character                    characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
 
   @@index([character_id, created_at])
+}
+
+// 店铺Tick表（收租系统独立tick）
+model shop_tick {
+  id              BigInt   @id @default(autoincrement())
+  tick_hour       DateTime @unique @db.Timestamp(6)
+  status          String   @db.VarChar(20)         // running/generated/failed
+  error_message   String?
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  finished_at     DateTime? @db.Timestamp(6)
+}
+
+// 店铺详情表（收租系统）
+model shop_detail {
+  id                    Int      @id @default(autoincrement())
+  character_id          Int
+  shop_type             String   @db.VarChar(10)         // DAN/MIN/BOO/PLT/ART/FBD
+  area                  Int                               // 当前面积（㎡）= 初始面积 + 扩展次数 × 10
+  decoration_tier       String   @db.VarChar(20)         // YELLOW/MYSTIC/EARTH/HEAVEN
+  upgrade_level         Int      @default(0)             // 升级等级
+  space_expansion       Int      @default(0)             // 空间阵法扩展次数
+  pending_rent          BigInt   @default(0)             // 待收租金（单位：分）
+  total_rent_collected  BigInt   @default(0)             // 累计已收租金（统计用）
+  rent_tick_count       BigInt   @default(0)             // 累计收租次数（升级判断）
+  last_rent_tick_id     BigInt?                           // 上一次结算的 tick ID（关联 shop_tick）
+  last_decorate_tick_id BigInt?                           // 最近一次装修的 tick ID（用于跳过该 tick 租金）
+  created_at            DateTime @default(now()) @db.Timestamp(6)
+  updated_at            DateTime @updatedAt @db.Timestamp(6)
+
+  character             characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, shop_type])
+  @@index([character_id])
 }

@@ -14,6 +14,7 @@ import authRoutes from '../routes/authRoutes.js';
 import characterRoutes from '../routes/characterRoutes.js';
 import stockMarketRoutes from '../routes/stockMarketRoutes.js';
 import rankRoutes from '../routes/rankRoutes.js';
+import shopRoutes from '../routes/shopRoutes.js';
 
 export function registerRoutes(app: express.Application): void {
   // 认证路由
@@ -27,4 +28,7 @@ export function registerRoutes(app: express.Application): void {
 
   // 排行路由
   app.use('/api/rank', rankRoutes);
+
+  // 店铺路由
+  app.use('/api/shop', shopRoutes);
 }
