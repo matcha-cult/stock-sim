@@ -54,6 +54,7 @@ function Root() {
                 algorithm: rootStore.themeStore.isDark
                   ? [theme.compactAlgorithm, theme.darkAlgorithm]
                   : [theme.compactAlgorithm],
+                token: { colorPrimary: '#13c2c2' },
               }}
             >
               <ThemeSync rootStore={rootStore} />

@@ -28,15 +28,17 @@ import { useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   App, Button, Card, Col, Drawer, Dropdown, Empty, Flex, InputNumber,
-  Layout, Pagination, Row, Spin, Tabs, Tag, Tooltip, type MenuProps,
+  Layout, Pagination, Row, Segmented, Spin, Table, Tabs, Tag, Tooltip, type MenuProps,
   Descriptions,
 } from 'antd';
+import type { ColumnsType } from 'antd/es/table';
 import {
   ClearOutlined, FallOutlined, LeftOutlined, ReloadOutlined,
-  RightOutlined, ShoppingCartOutlined, LineChartOutlined,
+  RightOutlined, ShoppingCartOutlined, LineChartOutlined, CrownOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import { useIsMobile } from '../shared/responsive';
+import type { StockMarketRankDto, WealthRankDto } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import {
   buildStockMarketOverviewViewModel,
@@ -47,6 +49,7 @@ import {
   formatStockMarketBps,
   getStockMarketToneClassName,
   resolveStockMarketTone,
+  formatStockMarketTime,
 } from '../domain/stock-market/viewTransform';
 import StockCandlestick from './StockCandlestick';
 
@@ -70,6 +73,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const [activeTab, setActiveTab] = useState<ActiveTab>('market');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<ActionKey>('');
+  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket'>('wealth');
 
   // 从 stockStore 读取数据并派生 ViewModel
   const overview = stockStore.overview;
@@ -151,6 +155,20 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
     if (activeTab !== 'profit' || stockStore.profitDetail) return;
     void stockStore.refreshProfitDetail();
   }, [activeTab, stockStore.profitDetail, stockStore]);
+
+  // 切换到排行 tab 时拉取
+  useEffect(() => {
+    if (activeTab !== 'ranking') return;
+    if (stockStore.wealthRanks.length > 0 && stockStore.stockMarketRanks.length > 0) return;
+    void stockStore.refreshWealthRanks();
+    void stockStore.refreshStockMarketRanks();
+  }, [activeTab, stockStore]);
+
+  // 排行维度切换时重新拉取
+  useEffect(() => {
+    if (activeTab !== 'ranking') return;
+    void stockStore.refreshStockMarketRanks();
+  }, [activeTab, stockStore]);
 
   // 移动端关闭详情
   useEffect(() => {
@@ -419,7 +437,17 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
               key: 'ranking',
               label: '排行',
               children: (
-                <RankingTab />
+                <RankingTab
+                  wealthRanks={stockStore.wealthRanks}
+                  stockMarketRanks={stockStore.stockMarketRanks}
+                  rankLoading={stockStore.rankLoading}
+                  onRefreshWealth={() => void stockStore.refreshWealthRanks()}
+                  onRefreshStockMarket={() => void stockStore.refreshStockMarketRanks()}
+                  onTabChange={(tab) => {
+                    setActiveRankTab(tab);
+                  }}
+                  activeRankTab={activeRankTab}
+                />
               ),
             },
             {
@@ -573,6 +601,8 @@ function MarketTabContent(props: MarketTabContentProps): React.ReactNode {
           <StockListSection
             stocks={overviewModel.stocks}
             onSelectStock={onSelectStock}
+            onRefresh={onRefresh}
+            refreshLoading={refreshLoading}
           />
         </Col>
         <Col xs={24} xl={16}>
@@ -660,6 +690,9 @@ function NewsCard({ news, newsRecords, newsIndex, nextRefreshText, onShowNewerNe
         <Flex vertical gap={12} data-element="news-content">
           <div>
             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{news.headline}</div>
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 2 }}>
+              {formatStockMarketTime(news.tickHour)}
+            </div>
             <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>{news.summary}</div>
           </div>
           {news.impacts.length > 0 && (
@@ -754,16 +787,31 @@ function PortfolioSummaryCard({ portfolio, canClearAll, localActionKey, onClearA
 interface StockListSectionProps {
   stocks: import('../domain/stock-market/types').StockMarketStockView[];
   onSelectStock: (stockId: string) => void;
+  onRefresh: () => void;
+  refreshLoading: boolean;
 }
 
-function StockListSection({ stocks, onSelectStock }: StockListSectionProps): React.ReactNode {
+function StockListSection({ stocks, onSelectStock, onRefresh, refreshLoading }: StockListSectionProps): React.ReactNode {
   return (
     <Card
       id="stock-list-card"
       data-section="stock-market-list"
       size="small"
       title="股票列表"
-      extra={<Tag>共 {stocks.length} 支</Tag>}
+      extra={
+        <Flex gap={8} align="center">
+          <Tag>共 {stocks.length} 支</Tag>
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={onRefresh}
+            loading={refreshLoading}
+            data-action="refresh-market"
+          >
+            刷新
+          </Button>
+        </Flex>
+      }
       bodyStyle={{ padding: '8px' }}
     >
       <Flex vertical gap={4} data-element="stock-list">
@@ -783,7 +831,7 @@ interface StockListItemProps {
 function StockListItem({ stockView, onClick }: StockListItemProps): React.ReactNode {
   return (
     <Button
-      type={stockView.selected ? 'primary' : 'text'}
+      type="text"
       block
       data-element="stock-item"
       data-selected={stockView.selected}
@@ -1196,12 +1244,265 @@ function ProfitTab({ profitModel, profitLoading, onRefresh }: ProfitTabProps): R
   );
 }
 
-// ---- 排行 tab（内容待实现） ----
+// ---- 排行 tab ----
 
-function RankingTab(): React.ReactNode {
+interface RankingTabProps {
+  wealthRanks: WealthRankDto[];
+  stockMarketRanks: StockMarketRankDto[];
+  rankLoading: boolean;
+  onRefreshWealth: () => void;
+  onRefreshStockMarket: () => void;
+  onTabChange: (tab: 'wealth' | 'stockMarket') => void;
+  activeRankTab: 'wealth' | 'stockMarket';
+}
+
+const formatSpiritStones = (value: number): string => {
+  if (Math.abs(value) >= 1_0000_0000) {
+    return `${(value / 1_0000_0000).toFixed(2)}亿`;
+  }
+  if (Math.abs(value) >= 1_0000) {
+    return `${(value / 1_0000).toFixed(2)}万`;
+  }
+  return value.toLocaleString();
+};
+
+const getRankBadgeColor = (rank: number): string => {
+  if (rank === 1) return 'gold';
+  if (rank === 2) return 'volcano';
+  if (rank === 3) return 'orange';
+  return 'default';
+};
+
+const wealthRankColumns: ColumnsType<WealthRankDto> = [
+  {
+    title: '排名',
+    dataIndex: 'rank',
+    key: 'rank',
+    width: 70,
+    fixed: 'left',
+    render: (rank: number) => {
+      const color = getRankBadgeColor(rank);
+      const icon = rank <= 3 ? <CrownOutlined /> : null;
+      return (
+        <Flex gap={4} align="center">
+          {icon && <span style={{ color: color === 'gold' ? '#faad14' : color === 'volcano' ? '#fa541c' : '#fa8c16' }}>{icon}</span>}
+          <Tag color={color} style={{ margin: 0, minWidth: 28, textAlign: 'center' }}>{rank}</Tag>
+        </Flex>
+      );
+    },
+  },
+  {
+    title: '角色',
+    dataIndex: 'name',
+    key: 'name',
+    width: 120,
+    fixed: 'left',
+    render: (_: unknown, record: WealthRankDto) => (
+      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.name}</span>
+    ),
+  },
+  {
+    title: '灵石',
+    dataIndex: 'spiritStones',
+    key: 'spiritStones',
+    width: 120,
+    sorter: (a: WealthRankDto, b: WealthRankDto) => a.spiritStones - b.spiritStones,
+    defaultSortOrder: 'descend',
+    render: (value: number) => (
+      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+        {formatSpiritStones(value)}
+      </span>
+    ),
+  },
+  {
+    title: '银两',
+    dataIndex: 'silver',
+    key: 'silver',
+    width: 120,
+    render: (value: number) => formatSpiritStones(value),
+  },
+];
+
+const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
+  {
+    title: '排名',
+    dataIndex: 'rank',
+    key: 'rank',
+    width: 70,
+    fixed: 'left',
+    render: (rank: number) => {
+      const color = getRankBadgeColor(rank);
+      const icon = rank <= 3 ? <CrownOutlined /> : null;
+      return (
+        <Flex gap={4} align="center">
+          {icon && <span style={{ color: color === 'gold' ? '#faad14' : color === 'volcano' ? '#fa541c' : '#fa8c16' }}>{icon}</span>}
+          <Tag color={color} style={{ margin: 0, minWidth: 28, textAlign: 'center' }}>{rank}</Tag>
+        </Flex>
+      );
+    },
+  },
+  {
+    title: '角色',
+    dataIndex: 'name',
+    key: 'name',
+    width: 120,
+    fixed: 'left',
+    render: (_: unknown, record: StockMarketRankDto) => (
+      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.name}</span>
+    ),
+  },
+  {
+    title: '持仓股数',
+    dataIndex: 'totalHoldingQty',
+    key: 'totalHoldingQty',
+    width: 90,
+    align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalHoldingQty - b.totalHoldingQty,
+    render: (value: number) => value.toLocaleString(),
+  },
+  {
+    title: '市值',
+    dataIndex: 'totalMarketValueSpiritStones',
+    key: 'totalMarketValueSpiritStones',
+    width: 110,
+    align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalMarketValueSpiritStones - b.totalMarketValueSpiritStones,
+    defaultSortOrder: 'descend',
+    render: (value: number) => (
+      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+        {formatSpiritStones(value)}
+      </span>
+    ),
+  },
+  {
+    title: '成本',
+    dataIndex: 'totalCostSpiritStones',
+    key: 'totalCostSpiritStones',
+    width: 110,
+    align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalCostSpiritStones - b.totalCostSpiritStones,
+    render: (value: number) => formatSpiritStones(value),
+  },
+  {
+    title: '浮盈亏',
+    dataIndex: 'unrealizedPnlSpiritStones',
+    key: 'unrealizedPnlSpiritStones',
+    width: 110,
+    align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.unrealizedPnlSpiritStones - b.unrealizedPnlSpiritStones,
+    render: (value: number) => {
+      const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
+      const sign = value > 0 ? '+' : '';
+      return <Tag color={tone}>{sign}{formatSpiritStones(value)}</Tag>;
+    },
+  },
+  {
+    title: '已实现',
+    dataIndex: 'realizedPnlSpiritStones',
+    key: 'realizedPnlSpiritStones',
+    width: 110,
+    align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.realizedPnlSpiritStones - b.realizedPnlSpiritStones,
+    render: (value: number) => {
+      const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
+      const sign = value > 0 ? '+' : '';
+      return <Tag color={tone}>{sign}{formatSpiritStones(value)}</Tag>;
+    },
+  },
+  {
+    title: '总盈亏',
+    dataIndex: 'totalPnlSpiritStones',
+    key: 'totalPnlSpiritStones',
+    width: 110,
+    align: 'right',
+    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalPnlSpiritStones - b.totalPnlSpiritStones,
+    render: (value: number) => {
+      const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
+      const sign = value > 0 ? '+' : '';
+      return (
+        <Tag color={tone} style={{ fontWeight: 600 }}>
+          {sign}{formatSpiritStones(value)}
+        </Tag>
+      );
+    },
+  },
+];
+
+function RankingTab(props: RankingTabProps): React.ReactNode {
+  const {
+    wealthRanks, stockMarketRanks,
+    rankLoading, onRefreshWealth, onRefreshStockMarket,
+    onTabChange, activeRankTab,
+  } = props;
+
+  const isWealthTab = activeRankTab === 'wealth';
+  const currentData = isWealthTab ? wealthRanks : stockMarketRanks;
+  const onRefresh = isWealthTab ? onRefreshWealth : onRefreshStockMarket;
+
+  if (rankLoading && currentData.length === 0) {
+    return (
+      <Flex data-section="ranking-loading" justify="center" style={{ padding: 24 }}>
+        <Spin size="small" />
+      </Flex>
+    );
+  }
+
+  if (currentData.length === 0) {
+    return (
+      <Flex data-section="ranking-empty" justify="center" style={{ padding: 24 }}>
+        <Empty description="暂无排行数据" />
+      </Flex>
+    );
+  }
+
   return (
-    <Flex data-section="ranking-tab" justify="center" style={{ padding: 24 }}>
-      <Empty description="排行功能开发中" />
+    <Flex vertical gap={12} data-section="ranking-tab">
+      {/* 排行类型切换 */}
+      <Flex justify="space-between" align="center" gap={12} wrap="wrap">
+        <Segmented<'wealth' | 'stockMarket'>
+          value={activeRankTab}
+          onChange={onTabChange}
+          options={[
+            { label: '财富排行', value: 'wealth', icon: <CrownOutlined /> },
+            { label: '股市排行', value: 'stockMarket', icon: <LineChartOutlined /> },
+          ]}
+        />
+        <Button
+          size="small"
+          icon={<ReloadOutlined />}
+          onClick={onRefresh}
+          loading={rankLoading}
+        >
+          刷新
+        </Button>
+      </Flex>
+
+      {/* 排行表格 */}
+      <Card size="small" style={{ overflow: 'hidden' }}>
+        {isWealthTab ? (
+          <Table<WealthRankDto>
+            columns={wealthRankColumns}
+            dataSource={wealthRanks}
+            rowKey="characterId"
+            size="small"
+            loading={rankLoading}
+            pagination={false}
+            scroll={{ x: 500 }}
+            style={{ fontSize: 13 }}
+          />
+        ) : (
+          <Table<StockMarketRankDto>
+            columns={stockMarketRankColumns}
+            dataSource={stockMarketRanks}
+            rowKey="characterId"
+            size="small"
+            loading={rankLoading}
+            pagination={false}
+            scroll={{ x: 800 }}
+            style={{ fontSize: 13 }}
+          />
+        )}
+      </Card>
     </Flex>
   );
 }

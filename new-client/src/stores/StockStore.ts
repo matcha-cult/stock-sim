@@ -38,6 +38,12 @@ import {
   type StockMarketTradeRecordDto,
   type StockMarketTradeSide,
 } from '../services/api/stockMarket';
+import {
+  getWealthRanks,
+  getStockMarketRanks,
+  type WealthRankDto,
+  type StockMarketRankDto,
+} from '../services/api/rank';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
@@ -57,6 +63,11 @@ export class StockStore {
   loading: boolean = false;
   actionKey: string = '';
   newsIndex: number = 0;
+
+  // 排行相关
+  wealthRanks: WealthRankDto[] = [];
+  stockMarketRanks: StockMarketRankDto[] = [];
+  rankLoading: boolean = false;
 
   constructor() {
     makeAutoObservable(this);
@@ -146,6 +157,38 @@ export class StockStore {
     }
   }
 
+  async refreshWealthRanks(background = false): Promise<void> {
+    if (!background) this.rankLoading = true;
+    try {
+      const response = await getWealthRanks(50, background ? SILENT_API_REQUEST_CONFIG : undefined);
+      this.wealthRanks = response.data ?? [];
+    } catch {
+      if (!background) {
+        this.wealthRanks = [];
+      }
+    } finally {
+      if (!background) this.rankLoading = false;
+    }
+  }
+
+  async refreshStockMarketRanks(background = false): Promise<void> {
+    if (!background) this.rankLoading = true;
+    try {
+      const response = await getStockMarketRanks(
+        'value',
+        50,
+        background ? SILENT_API_REQUEST_CONFIG : undefined,
+      );
+      this.stockMarketRanks = response.data ?? [];
+    } catch {
+      if (!background) {
+        this.stockMarketRanks = [];
+      }
+    } finally {
+      if (!background) this.rankLoading = false;
+    }
+  }
+
   async executeTrade(
     side: StockMarketTradeSide,
     stockId: string,
@@ -199,5 +242,8 @@ export class StockStore {
     this.loading = false;
     this.actionKey = '';
     this.newsIndex = 0;
+    this.wealthRanks = [];
+    this.stockMarketRanks = [];
+    this.rankLoading = false;
   }
 }

@@ -1,16 +1,19 @@
+import { createHash } from 'crypto';
+
 /**
  * 股市数值与交易规则。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：集中维护 AI 涨跌数值边界、两位小数股价、A 股交易费用和交易数量基础规则。
+ * 1. 做什么：集中维护 AI 涨跌数值边界、两位小数股价、A 股交易费用和交易数量基础规则、非 AI 影响股票的随机噪音波动。
  * 2. 不做什么：不访问数据库、不读取 AI 返回、不决定玩家是否已持仓。
  *
  * 输入 / 输出：
  * - 输入：AI 输出涨跌百分比、当前价格分单位、历史开收价分单位、交易金额、买卖方向、当前持仓成本。
- * - 输出：涨跌基点、新价格分单位、历史 OHLC 分单位、整数灵石交易金额、交易费用拆分、释放成本和规则 DTO。
+ * - 输出：涨跌基点、新价格分单位、历史 OHLC 分单位、整数灵石交易金额、交易费用拆分、释放成本和规则 DTO、随机噪音涨跌基点。
  *
  * 数据流 / 状态流：
  * AI 影响 -> `normalizeStockMarketAiChangeBps` -> `applyStockMarketPriceChange` -> `buildStockMarketHistoryOhlc` -> quote/history；
+ * 噪音参数 (seed+stockId+tick) -> `generateStockMarketNoiseChangeBps` -> `applyStockMarketPriceChange` -> quote/history；
  * 交易金额 + 买卖方向 -> `calculateStockMarketTradeFeeBreakdown` -> 买卖服务。
  *
  * 复用设计说明：
@@ -41,6 +44,21 @@ export const STOCK_MARKET_HISTORY_LIMIT = 48;
 export const STOCK_MARKET_TRADE_RECORD_PAGE_SIZE = 20;
 
 export const STOCK_MARKET_MAX_ABS_CHANGE_BPS = 800;
+
+/** 随机噪音波动下限（百分比），默认 0.1%，可通过 STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT 覆盖。 */
+const STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT_ENV = parseFloat(process.env.STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT ?? '0.1');
+export const STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT = Number.isFinite(STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT_ENV)
+  && STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT_ENV > 0
+  ? STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT_ENV
+  : 0.1;
+
+/** 随机噪音波动上限（百分比），默认 0.5%，可通过 STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT 覆盖。 */
+const STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT_ENV = parseFloat(process.env.STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT ?? '0.5');
+export const STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT = Number.isFinite(STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT_ENV)
+  && STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT_ENV >= STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT
+  ? STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT_ENV
+  : 0.5;
+
 const BPS_DENOMINATOR = 10_000n;
 const FEE_RATE_DENOMINATOR = BigInt(STOCK_MARKET_FEE_RATE_DENOMINATOR);
 const STOCK_MARKET_PERCENT_TO_BPS = 100;
@@ -73,6 +91,33 @@ export const normalizeStockMarketAiChangeBps = (changePercent: number): number |
   if (roundedBps === 0) return null;
   if (Math.abs(roundedBps) > STOCK_MARKET_MAX_ABS_CHANGE_BPS) return null;
   return roundedBps;
+};
+
+/**
+ * 为非 AI 影响的股票生成随机噪音涨跌基点。
+ *
+ * 纯函数：同一 seed + stockId + tickHour 调用结果一致。
+ * 返回范围：[-max, -min] 或 [min, max] 内的整数基点，正负方向随机。
+ */
+export const generateStockMarketNoiseChangeBps = (
+  seed: number,
+  stockId: string,
+  tickHour: Date,
+): number => {
+  const hashHex = createHash('md5')
+    .update(`${seed}:${stockId}:${tickHour.toISOString()}`)
+    .digest('hex');
+  const hashInt = parseInt(hashHex.slice(0, 8), 16) >>> 0;
+
+  // 正负方向
+  const isPositive = (hashInt & 1) === 1;
+  const fractional = ((hashInt >> 1) & 0x7FFFFFFF) / 0x7FFFFFFF;
+
+  const minBps = Math.round(STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT * STOCK_MARKET_PERCENT_TO_BPS);
+  const maxBps = Math.round(STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT * STOCK_MARKET_PERCENT_TO_BPS);
+  const noiseBps = Math.round(minBps + fractional * (maxBps - minBps));
+
+  return isPositive ? noiseBps : -noiseBps;
 };
 
 export const applyStockMarketPriceChange = (

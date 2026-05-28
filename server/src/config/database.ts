@@ -583,7 +583,7 @@ const executeQueryWithLogging = (
   }
 
   return (rawResult as Promise<QueryResult<QueryResultRow>>).then((result) => {
-    console.log('执行查询:', { text: sql.substring(0, 50), rows: result.rowCount });
+    //console.log('执行查询:', { text: sql.substring(0, 50), rows: result.rowCount });
     return result;
   });
 };

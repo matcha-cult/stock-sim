@@ -82,12 +82,23 @@ export const callConfiguredTextModel = async (params: {
     seed: params.seed,
     temperature: params.temperature,
   });
+
+  // 调试：打印完整提示词
+  //console.log('[AI Prompt] === System Message ===');
+  //console.log(params.systemMessage);
+  //console.log('[AI Prompt] === User Message ===');
+  //console.log(params.userMessage);
+  //console.log('[AI Prompt] === End ===');
+
   const client = new OpenAI({
     apiKey: config.apiKey,
     baseURL: config.baseURL,
     timeout: params.timeoutMs,
   });
   const completion = await client.chat.completions.create(payload);
+
+  // 调试：打印模型响应
+  console.log('[AI Response] Model:', config.modelName, '| Content length:', completion.choices[0]?.message?.content?.length ?? 0);
 
   return {
     modelName: config.modelName,

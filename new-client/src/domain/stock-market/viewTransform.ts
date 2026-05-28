@@ -75,6 +75,7 @@ const dateTimeFormatter = new Intl.DateTimeFormat('zh-CN', {
   hour: '2-digit',
   minute: '2-digit',
   hour12: false,
+  timeZone: 'Asia/Shanghai',
 });
 
 const toFiniteInteger = (value: number): number => {
@@ -124,7 +125,7 @@ export const formatStockMarketSignedCurrency = (value: number): string => {
   return `${normalized > 0 ? '+' : '-'}${formatStockMarketCurrency(Math.abs(normalized))}`;
 };
 
-const formatStockMarketTime = (timestamp: number): string => {
+export const formatStockMarketTime = (timestamp: number): string => {
   return dateTimeFormatter.format(new Date(timestamp));
 };
 

@@ -134,7 +134,7 @@ export const login = async (
 
   // 查询角色
   const characterResult = await query(
-    'SELECT id, nickname, spirit_stones FROM characters WHERE user_id = $1',
+    'SELECT id, nickname, spirit_stones, silver FROM characters WHERE user_id = $1',
     [user.id],
   );
 
@@ -143,6 +143,7 @@ export const login = async (
       id: Number(characterResult.rows[0].id),
       nickname: String(characterResult.rows[0].nickname),
       spiritStones: Number(characterResult.rows[0].spirit_stones),
+      silver: Number(characterResult.rows[0].silver ?? 0),
     }
     : null;
 
@@ -176,7 +177,7 @@ export const bootstrap = async (
 
   // 查询角色
   const characterResult = await query(
-    'SELECT id, nickname, gender, title, spirit_stones FROM characters WHERE user_id = $1',
+    'SELECT id, nickname, gender, title, spirit_stones, silver FROM characters WHERE user_id = $1',
     [userId],
   );
 
@@ -187,6 +188,7 @@ export const bootstrap = async (
       gender: String(characterResult.rows[0].gender),
       title: characterResult.rows[0].title ? String(characterResult.rows[0].title) : null,
       spiritStones: Number(characterResult.rows[0].spirit_stones),
+      silver: Number(characterResult.rows[0].silver ?? 0),
     }
     : null;
 
