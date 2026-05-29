@@ -54,6 +54,20 @@ import {
 } from './types.js';
 import { getNextShopRentTickAt } from './shopRentTime.js';
 
+// ==================== 功能开关 ====================
+
+/** 收租系统总开关：SHOP_FEATURE_ENABLED=false|0 时关闭所有接口与调度。 */
+const isShopFeatureEnabled = (): boolean => {
+  const env = process.env.SHOP_FEATURE_ENABLED;
+  return env !== 'false' && env !== '0';
+};
+
+const ensureShopFeatureEnabled = (): void => {
+  if (!isShopFeatureEnabled()) {
+    throw new Error('功能未开放');
+  }
+};
+
 // ==================== 类型定义 ====================
 
 type ShopRow = {
@@ -172,6 +186,7 @@ class ShopService {
    * 获取角色所有店铺概览。
    */
   async getOverview(characterId: number): Promise<ShopOverviewDto> {
+    ensureShopFeatureEnabled();
     const rows = await query<ShopRow>(
       `SELECT * FROM shop_detail WHERE character_id = $1 ORDER BY id ASC`,
       [characterId],
@@ -289,6 +304,7 @@ class ShopService {
    */
   @Transactional
   async collectRent(characterId: number, shopId: number): Promise<CollectRentResult> {
+    ensureShopFeatureEnabled();
     // 加锁读取店铺
     const shopResult = await query<ShopRow>(
       `
@@ -363,6 +379,7 @@ class ShopService {
     totalCollected: number;
     upgradedShops: number[];
   }> {
+    ensureShopFeatureEnabled();
     // 加锁读取所有店铺
     const shopResult = await query<ShopRow>(
       `
@@ -451,6 +468,7 @@ class ShopService {
    */
   @Transactional
   async adjustDecoration(characterId: number, shopId: number, targetTier: DecorationTier): Promise<DecorationResult> {
+    ensureShopFeatureEnabled();
     // 加锁读取店铺
     const shopResult = await query<ShopRow>(
       `
@@ -531,6 +549,7 @@ class ShopService {
    */
   @Transactional
   async expandSpace(characterId: number, shopId: number): Promise<SpaceExpansionResult> {
+    ensureShopFeatureEnabled();
     // 加锁读取店铺
     const shopResult = await query<ShopRow>(
       `
@@ -580,6 +599,7 @@ class ShopService {
    */
   @Transactional
   async claimInitialShop(characterId: number): Promise<ClaimInitialShopResult> {
+    ensureShopFeatureEnabled();
     // 检查是否已有该类型店铺
     const existCheck = await query(
       `SELECT id FROM shop_detail WHERE character_id = $1 AND shop_type = $2`,
@@ -631,6 +651,7 @@ class ShopService {
    */
   @Transactional
   async purchaseShop(characterId: number, shopType: ShopType): Promise<PurchaseShopResult> {
+    ensureShopFeatureEnabled();
     // 检查是否已有该类型店铺
     const existCheck = await query(
       `SELECT id FROM shop_detail WHERE character_id = $1 AND shop_type = $2`,
@@ -679,6 +700,7 @@ class ShopService {
    * 为角色创建初始店铺（角色创建时调用）。
    */
   async createInitialShopForCharacter(characterId: number): Promise<void> {
+    ensureShopFeatureEnabled();
     const config = SHOP_TYPE_CONFIG[INITIAL_SHOP_TYPE];
     await query(
       `
@@ -698,6 +720,7 @@ class ShopService {
    * 创建独立的 shop_tick 记录，不依赖 stock_market_tick。
    */
   async processRentTick(tickHour: Date): Promise<{ processed: number; tickId: bigint }> {
+    ensureShopFeatureEnabled();
     // 创建 shop_tick 记录
     const tickInsertResult = await query<{ id: string | number | bigint }>(
       `

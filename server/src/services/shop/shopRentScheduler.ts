@@ -28,6 +28,8 @@ let initialized = false;
 let inFlight = false;
 
 const isSchedulerEnabled = (): boolean => {
+  const featureEnv = process.env.SHOP_FEATURE_ENABLED;
+  if (featureEnv === 'false' || featureEnv === '0') return false;
   const env = process.env.SHOP_RENT_SCHEDULER_ENABLED;
   return env !== 'false' && env !== '0';
 };
