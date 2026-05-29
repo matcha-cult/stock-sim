@@ -320,8 +320,9 @@ class ShopService {
     const pendingRent = toBigIntValue(shop.pending_rent);
     if (pendingRent <= 0n) return { success: false, message: '没有可收取的租金' };
 
-    // 转账到角色
-    const addResult = await addSpiritStones(characterId, pendingRent);
+    // 转账到角色（pending_rent 以分为单位，characters.spirit_stones 以整灵石为单位）
+    const stonesToAdd = pendingRent / 100n;
+    const addResult = await addSpiritStones(characterId, stonesToAdd);
     if (!addResult.success) return { success: false, message: addResult.message };
 
     // 更新店铺状态
@@ -420,8 +421,9 @@ class ShopService {
       return { success: false, message: '没有可收取的租金', totalCollected: 0, upgradedShops: [] };
     }
 
-    // 转账
-    const addResult = await addSpiritStones(characterId, totalRent);
+    // 转账（pending_rent 以分为单位，characters.spirit_stones 以整灵石为单位）
+    const stonesToAdd = totalRent / 100n;
+    const addResult = await addSpiritStones(characterId, stonesToAdd);
     if (!addResult.success) return { success: false, message: addResult.message, totalCollected: 0, upgradedShops: [] };
 
     // 批量更新
@@ -518,7 +520,7 @@ class ShopService {
         cost: Number(cost),
       };
     } else {
-      // 降级装修
+      // 降级装修（refund 以整数灵石为单位）
       const refund = calculateDecorationRefund({ currentTier, targetTier, area });
       const addResult = await addSpiritStones(characterId, refund);
       if (!addResult.success) return { success: false, message: addResult.message };
