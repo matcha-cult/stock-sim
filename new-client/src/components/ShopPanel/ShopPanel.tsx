@@ -36,6 +36,7 @@ import {
   ExperimentOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../../stores/RootStore';
+import ShopProfitCurveChart, { type CalcRow } from './ShopProfitCurveChart';
 
 const { Text, Title } = Typography;
 
@@ -668,21 +669,6 @@ type ShopProfitCalculatorProps = {
   }>;
 };
 
-type CalcRow = {
-  shopName: string;
-  currentRent: number;
-  targetTierLabel: string;
-  targetExpansion: number;
-  targetUpgradeLevel: number;
-  rentPerTick: number;
-  rentIncrease: number;
-  decorationCost: number;
-  expansionCost: number;
-  totalCost: number;
-  ticksToRecover: number;
-  ticksToUpgrade: number;
-};
-
 const calcRentPerTick = (
   initialRent: number,
   tierMultiplier: number,
@@ -796,6 +782,9 @@ const ShopProfitCalculator = observer(({ config, shops }: ShopProfitCalculatorPr
   // 按 totalCost 排序
   rows.sort((a, b) => a.totalCost - b.totalCost);
 
+  const [selectedRowIdx, setSelectedRowIdx] = useState<number | null>(null);
+  const selectedRow = selectedRowIdx !== null ? rows[selectedRowIdx] ?? null : null;
+
   const columns = [
     { title: '店铺', dataIndex: 'shopName', key: 'shopName', width: 80 },
     { title: '当前产出', dataIndex: 'currentRent', key: 'currentRent', width: 80, render: (v: number) => `${v.toFixed(1)}` },
@@ -814,16 +803,24 @@ const ShopProfitCalculator = observer(({ config, shops }: ShopProfitCalculatorPr
   return (
     <Flex vertical gap={12}>
       <Text type="secondary" style={{ fontSize: 12 }}>
-        基于当前状态，枚举各店铺升级装修、扩展空间、提升等级后的成本与收益。回本 tick 数 = 总成本 / 产出提升。
+        基于当前状态，枚举各店铺升级装修、扩展空间、提升等级后的成本与收益。点击表格行查看收益曲线。
       </Text>
       <Table<CalcRow>
         size="small"
         columns={columns}
         dataSource={rows}
         rowKey={(_, idx) => `${idx}`}
-        scroll={{ y: 500 }}
+        scroll={{ y: 400 }}
         pagination={false}
+        onRow={(_, idx) => ({
+          style: { cursor: 'pointer' },
+          onClick: () => setSelectedRowIdx(idx ?? null),
+        })}
+        rowClassName={(_, idx) => idx === selectedRowIdx ? 'ant-table-row-selected' : ''}
       />
+      {selectedRow && (
+        <ShopProfitCurveChart row={selectedRow} ticksPerDay={TICKS_PER_DAY} />
+      )}
     </Flex>
   );
 });
