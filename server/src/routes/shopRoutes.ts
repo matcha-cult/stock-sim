@@ -133,16 +133,34 @@ router.post('/:id/expand', requireCharacter, shopExpandQpsLimit, asyncHandler(as
   sendSuccess(res, result);
 }));
 
-// 临时屏蔽：免费领取初始店铺
 router.post('/claim-initial', requireCharacter, shopClaimQpsLimit, asyncHandler(async (req, res) => {
-  sendSuccess(res, { success: false, message: '功能未开放' });
+  const characterId = req.characterId!;
+  const result = await shopService.claimInitialShop(characterId);
+  if (result.success) {
+    await safePushCharacterUpdate(req.userId!);
+  }
+  sendSuccess(res, result);
 }));
 
-// 临时屏蔽：购买店铺
 const shopPurchaseQpsLimit = createShopQpsLimit('purchase', SHOP_MUTATION_QPS_LIMIT);
 
 router.post('/purchase', requireCharacter, shopPurchaseQpsLimit, asyncHandler(async (req, res) => {
-  sendSuccess(res, { success: false, message: '功能未开放' });
+  const characterId = req.characterId!;
+  const body = req.body as { shopType?: string };
+  const rawType = body.shopType;
+  const shopType = (rawType && (Object.values(SHOP_TYPES) as string[]).includes(rawType))
+    ? rawType as ShopType
+    : null;
+  if (!shopType) {
+    sendSuccess(res, { success: false, message: '店铺类型无效' });
+    return;
+  }
+
+  const result = await shopService.purchaseShop(characterId, shopType);
+  if (result.success) {
+    await safePushCharacterUpdate(req.userId!);
+  }
+  sendSuccess(res, result);
 }));
 
 export default router;
