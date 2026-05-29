@@ -10,7 +10,7 @@
  * - 前端类型可直接复用本文件的定义（通过 API DTO 转换）。
  *
  * 关键边界条件与坑点：
- * 1. 初始租金含 0.5 的类型（如丹药 22.5）在存储时需 ×100 转为整数分（2250）。
+ * 1. 初始租金含小数的类型在存储时需 ×100 转为整数分（如 22.5 → 2250）。
  * 2. 装修等级系数线性递增（黄 1x→玄 1.5x→地 3x→天 5x），扩展费用指数增长，两者不可混淆。
  */
 
@@ -36,7 +36,7 @@ export const SHOP_TYPE_CONFIG: Record<ShopType, {
   [SHOP_TYPES.PLANT]: { name: '灵植', initialArea: 50, initialRent: 25, purchaseCost: 200000 },
   [SHOP_TYPES.MINERAL]: { name: '矿材', initialArea: 40, initialRent: 20, purchaseCost: 120000 },
   [SHOP_TYPES.ARTIFACT]: { name: '法器', initialArea: 35, initialRent: 18, purchaseCost: 80000 },
-  [SHOP_TYPES.PILL]: { name: '丹药', initialArea: 30, initialRent: 22.5, purchaseCost: 150000 },
+  [SHOP_TYPES.PILL]: { name: '丹药', initialArea: 30, initialRent: 25, purchaseCost: 150000 },
   [SHOP_TYPES.FOOD]: { name: '餐饮', initialArea: 25, initialRent: 15, purchaseCost: 50000 },
   [SHOP_TYPES.BOOK]: { name: '书籍', initialArea: 20, initialRent: 10, purchaseCost: 0 },
 };
