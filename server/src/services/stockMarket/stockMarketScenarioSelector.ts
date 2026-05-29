@@ -54,7 +54,7 @@ export const STOCK_MARKET_SCENARIO_GUIDES: readonly StockMarketScenarioGuide[] =
     id: 'alchemy-supply',
     title: '丹药与灵植供需轮动',
     focusStockIds: ['stock-qingyun-danfang', 'stock-yunmeng-herb', 'stock-xinghe-auction'],
-    guide: '围绕丹药需求、药材收成、拍卖流转写作，至少一只受益、一只承压，不要重复写丹方突破大涨。',
+    guide: '围绕丹药需求、药材收成、拍卖流转写作，至少一只受益、一只承压。受益方和承压方应当轮换，不要重复写丹方突破大涨，也不要让云梦药圃总是承压方。',
   },
   {
     id: 'mining-armory',
@@ -90,7 +90,7 @@ export const STOCK_MARKET_SCENARIO_GUIDES: readonly StockMarketScenarioGuide[] =
     id: 'weather-harvest',
     title: '节气收成与材料价格',
     focusStockIds: ['stock-yunmeng-herb', 'stock-qingyun-danfang', 'stock-xuantie-mining', 'stock-tiangong-armory'],
-    guide: '围绕节气、虫害、灵草收成和材料价格写作，供应端与加工端涨跌互相抵消。',
+    guide: '围绕节气、虫害、灵草收成和材料价格写作，供应端与加工端涨跌互相抵消。灵草需求旺盛或丰收时云梦药圃可领涨，虫害或歉收时则承压，题材不要固定为利空。',
   },
   {
     id: 'market-rotation',

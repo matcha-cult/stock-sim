@@ -349,6 +349,8 @@ const buildStockMarketSystemMessage = (): string => {
     '必须只输出合法 JSON 对象，JSON 字段必须严格符合 response_format schema。',
     'impacts 可包含所有受新闻明确影响的股票，stockId 必须来自用户提供的股票列表，禁止虚构股票，changePercent 必须在 -8 到 8 之间且最多两位小数。',
     '同一条 impacts 内每个 stockId 只能出现一次，stockId 必须逐字复制用户 stocks 列表中的 stockId。',
+    '避免让同一只股票在连续多个周期中反复作为受损方或承压方；新闻中的受损方应当轮换，不要总是同一只股票。',
+    '如果某只股票近期已连续下跌，后续新闻应适当给予其修复或利好题材，避免单边持续走低的观感。',
   ].join('\n');
 };
 
