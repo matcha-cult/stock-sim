@@ -532,7 +532,7 @@ const ShopPanel = observer(() => {
                   <Flex vertical>
                     <Text strong>{cfg.name}</Text>
                     <Text type="secondary" style={{ fontSize: 12 }}>
-                      初始面积 {cfg.initialArea} ㎡，每次租金 {cfg.initialRent} 灵石
+                      初始面积 {cfg.initialArea} ㎡，每次收取租金 {cfg.initialRent} 灵石
                     </Text>
                   </Flex>
                   <Text style={{ color: 'var(--colorError)', fontWeight: 600 }}>

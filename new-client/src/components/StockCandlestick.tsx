@@ -24,7 +24,7 @@
  */
 
 import { LineChartOutlined } from '@ant-design/icons';
-import { Spin, Flex, Card, Tag } from 'antd';
+import { Spin, Flex, Card } from 'antd';
 import {
   ColorType,
   CrosshairMode,
@@ -412,9 +412,9 @@ const StockCandlestick = memo(function StockCandlestick({
         <div className="stock-market-kline-chart" aria-label="股票近期K线" data-element="kline-container">
           <Flex gap={12} style={{ marginBottom: 8 }} data-element="ma-list">
             {model.movingAverages.map((average) => (
-              <Tag key={average.key} style={{ color: MA_COLOR_BY_KEY[average.key] }}>
+              <span key={average.key} style={{ color: MA_COLOR_BY_KEY[average.key], fontSize: 12, lineHeight: 1 }}>
                 {average.labelText}: {average.valueText}
-              </Tag>
+              </span>
             ))}
           </Flex>
           <div ref={containerRef} className="stock-market-kline-canvas" data-element="kline-canvas" />

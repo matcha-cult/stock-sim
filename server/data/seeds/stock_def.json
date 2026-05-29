@@ -3,10 +3,10 @@
     {
       "id": "stock-qingyun-danfang",
       "code": "QYDF",
-      "name": "青云丹坊",
-      "short_name": "青云丹",
+      "name": "琼玉丹坊",
+      "short_name": "琼玉丹",
       "sector": "丹药",
-      "description": "专营筑基丹、回气散与高阶药引，行情受丹方突破和药材收成影响。",
+      "description": "大陆第一丹坊，从低阶丹药到高阶药引应有尽有，行情受丹方突破和药材收成影响。",
       "initial_price_spirit_stones": 128,
       "sort_weight": 10,
       "enabled": true
@@ -14,8 +14,8 @@
     {
       "id": "stock-xuantie-mining",
       "code": "XTKY",
-      "name": "玄铁矿业",
-      "short_name": "玄铁矿",
+      "name": "星钛矿业",
+      "short_name": "星钛矿",
       "sector": "矿材",
       "description": "掌控北岭玄铁矿脉，价格随矿脉产量、宗门炼器需求和运输风险波动。",
       "initial_price_spirit_stones": 96,
@@ -25,8 +25,8 @@
     {
       "id": "stock-lingzhou-shipyard",
       "code": "LZCW",
-      "name": "灵舟船坞",
-      "short_name": "灵舟坞",
+      "name": "龙洲船坞",
+      "short_name": "龙洲坞",
       "sector": "交通",
       "description": "制造跨州灵舟与护航阵盘，受商路开放、妖潮和宗门订单影响。",
       "initial_price_spirit_stones": 186,
@@ -36,8 +36,8 @@
     {
       "id": "stock-tiangong-armory",
       "code": "TGQG",
-      "name": "天工器阁",
-      "short_name": "天工阁",
+      "name": "天罡器阁",
+      "short_name": "天罡阁",
       "sector": "炼器",
       "description": "炼制法器、护甲与机关傀儡，行情与炼器大会、稀有矿材价格高度相关。",
       "initial_price_spirit_stones": 212,
@@ -47,8 +47,8 @@
     {
       "id": "stock-wanjuan-academy",
       "code": "WJSY",
-      "name": "万卷书院",
-      "short_name": "万卷院",
+      "name": "无极书院",
+      "short_name": "无极院",
       "sector": "功法",
       "description": "经营功法拓印、古籍修复与讲经会，受秘卷出土和门派交流影响。",
       "initial_price_spirit_stones": 158,
@@ -58,8 +58,8 @@
     {
       "id": "stock-yunmeng-herb",
       "code": "YMYQ",
-      "name": "云梦药圃",
-      "short_name": "云梦圃",
+      "name": "云梦药畦",
+      "short_name": "云梦畦",
       "sector": "灵植",
       "description": "培育灵草、灵果和药田阵法，行情随节气、虫害与炼丹需求变化。",
       "initial_price_spirit_stones": 88,
@@ -69,8 +69,8 @@
     {
       "id": "stock-xinghe-auction",
       "code": "XHPM",
-      "name": "星河拍卖",
-      "short_name": "星河拍",
+      "name": "星瀚拍卖",
+      "short_name": "星瀚拍",
       "sector": "拍卖",
       "description": "承办跨州珍宝拍卖与鉴宝会，消息面受压轴拍品和大修士委托影响。",
       "initial_price_spirit_stones": 260,
@@ -80,8 +80,8 @@
     {
       "id": "stock-chixiao-sword",
       "code": "CXJZ",
-      "name": "赤霄剑宗",
-      "short_name": "赤霄剑",
+      "name": "沧雪剑宗",
+      "short_name": "沧雪剑",
       "sector": "宗门",
       "description": "以剑诀、剑胚和护宗委托闻名，行情受论剑成绩与边境战事带动。",
       "initial_price_spirit_stones": 230,
@@ -102,12 +102,34 @@
     {
       "id": "stock-beizhou-treasure",
       "code": "BZBL",
-      "name": "北州宝楼",
-      "short_name": "北州楼",
+      "name": "碧州宝楼",
+      "short_name": "碧州楼",
       "sector": "商贸",
       "description": "覆盖北州珍宝、符箓和灵兽材料贸易，行情随商队安全与市场人气变化。",
       "initial_price_spirit_stones": 142,
       "sort_weight": 100,
+      "enabled": true
+    },
+    {
+      "id": "stock-wuerdaha-trade",
+      "code": "WEDH",
+      "name": "乌尔达哈商会",
+      "short_name": "乌商",
+      "sector": "商贸",
+      "description": "跨州跨国贸易枢纽，经营灵石汇兑、商队护送与珍奇物资流转，行情受商路安全和各地物价差影响。",
+      "initial_price_spirit_stones": 156,
+      "sort_weight": 110,
+      "enabled": true
+    },
+    {
+      "id": "stock-jianqi-wall",
+      "code": "JQCC",
+      "name": "剑气长城",
+      "short_name": "剑气城",
+      "sector": "宗门",
+      "description": "以剑筑城、以城养剑，镇守疆界抵御外敌，行情受边境战事、剑修招募与护阵委托影响。",
+      "initial_price_spirit_stones": 245,
+      "sort_weight": 115,
       "enabled": true
     }
   ]

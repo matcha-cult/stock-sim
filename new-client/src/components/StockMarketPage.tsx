@@ -306,7 +306,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const buyActionMenuItems = useMemo<NonNullable<MenuProps['items']>>(() => [
     {
       key: 'buy-all',
-      label: '全部买入',
+      label: '梭哈',
       icon: <ShoppingCartOutlined />,
       disabled: !canBuyAll || localActionKey !== '',
     },
@@ -376,7 +376,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
           items={[
             {
               key: 'market',
-              label: '行情',
+              label: '股市行情',
               children: (
                 <MarketTabContent
                   overview={overview}
@@ -425,7 +425,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
             },
             {
               key: 'profit',
-              label: '收益详情',
+              label: '股市收益',
               children: (
                 <ProfitTab
                   profitModel={profitDetailModel}
@@ -433,6 +433,26 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   onRefresh={() => void stockStore.refreshProfitDetail()}
                 />
               ),
+            },
+            {
+              key: 'records',
+              label: '股市记录',
+              children: (
+                <RecordsTab
+                  tradeRecordViews={tradeRecordViews}
+                  tradesLoading={stockStore.tradesLoading}
+                  tradePage={stockStore.tradePage}
+                  tradePageSize={stockStore.tradePageSize}
+                  tradeTotal={stockStore.tradeTotal}
+                  onRefresh={() => void stockStore.refreshTrades(stockStore.tradePage)}
+                  onPageChange={(page) => { stockStore.tradePage = page; }}
+                />
+              ),
+            },
+            {
+              key: 'shop',
+              label: '店铺',
+              children: <ShopPanel />,
             },
             {
               key: 'ranking',
@@ -448,26 +468,6 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                     setActiveRankTab(tab);
                   }}
                   activeRankTab={activeRankTab}
-                />
-              ),
-            },
-            {
-              key: 'shop',
-              label: '店铺',
-              children: <ShopPanel />,
-            },
-            {
-              key: 'records',
-              label: '交易记录',
-              children: (
-                <RecordsTab
-                  tradeRecordViews={tradeRecordViews}
-                  tradesLoading={stockStore.tradesLoading}
-                  tradePage={stockStore.tradePage}
-                  tradePageSize={stockStore.tradePageSize}
-                  tradeTotal={stockStore.tradeTotal}
-                  onRefresh={() => void stockStore.refreshTrades(stockStore.tradePage)}
-                  onPageChange={(page) => { stockStore.tradePage = page; }}
                 />
               ),
             },
@@ -662,6 +662,7 @@ function NewsCard({ news, newsRecords, newsIndex, nextRefreshText, onShowNewerNe
       id="news-card"
       data-section="stock-market-news"
       size="small"
+      style={{ height: '100%' }}
       title="股市新闻"
       extra={
         <Flex gap={8} align="center">
@@ -693,16 +694,18 @@ function NewsCard({ news, newsRecords, newsIndex, nextRefreshText, onShowNewerNe
       }
     >
       {news ? (
-        <Flex vertical gap={12} data-element="news-content">
-          <div>
+        <Flex className="stock-market-news-content" data-element="news-content">
+          {/* 左侧/上方：新闻标题与摘要 */}
+          <Flex vertical gap={8} className="stock-market-news-body">
             <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{news.headline}</div>
-            <div style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 2 }}>
+            <div style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>
               {formatStockMarketTime(news.tickHour)}
             </div>
-            <div style={{ color: 'var(--text-secondary)', fontSize: 13, marginTop: 4 }}>{news.summary}</div>
-          </div>
+            <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{news.summary}</div>
+          </Flex>
+          {/* 右侧/下方：影响股票列表 */}
           {news.impacts.length > 0 && (
-            <Flex vertical gap={4} data-element="news-impacts">
+            <Flex vertical gap={4} className="stock-market-news-impacts" data-element="news-impacts">
               {news.impacts.map((impact) => {
                 const tone = resolveStockMarketTone(impact.changeBps);
                 return (
@@ -739,6 +742,7 @@ function PortfolioSummaryCard({ portfolio, canClearAll, localActionKey, onClearA
       id="portfolio-card"
       data-section="stock-market-portfolio"
       size="small"
+      style={{ height: '100%' }}
       title="持仓汇总"
       extra={
         <Button
@@ -940,36 +944,38 @@ function StockDetailContent({
             </Flex>
             <div style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 2 }}>{selectedStock.description}</div>
           </div>
-          <Flex align="center" gap={8}>
+          {/* <Flex align="center" gap={8}>
             <span style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{selectedStockView.priceText}</span>
             <span className={getStockMarketToneClassName(selectedStockView.changeTone)} style={{ fontWeight: 500 }}>
               {selectedStockView.changeText}
             </span>
-          </Flex>
+          </Flex> */}
         </Flex>
 
-        {/* 交易操作区 */}
-        <TradeBox
-          tradePreview={tradePreview}
-          quantity={quantity}
-          maxTradeQty={maxTradeQty}
-          canBuy={canBuy}
-          canBuyAll={canBuyAll}
-          canSell={canSell}
-          canClearSelected={canClearSelected}
-          maxAffordableBuyQty={maxAffordableBuyQty}
-          localActionKey={localActionKey}
-          onQuantityChange={onQuantityChange}
-          onUseLimitQuantity={onUseLimitQuantity}
-          onBuy={onBuy}
-          onBuyAll={onBuyAll}
-          onSell={onSell}
-          onClearStock={onClearStock}
-          onBuyMenuClick={onBuyMenuClick}
-          onSellMenuClick={onSellMenuClick}
-          buyActionMenuItems={buyActionMenuItems}
-          sellActionMenuItems={sellActionMenuItems}
-        />
+        {/* 交易操作区（Card 容器，响应亮暗色） */}
+        <Card size="small" data-element="trade-card">
+          <TradeBox
+            tradePreview={tradePreview}
+            quantity={quantity}
+            maxTradeQty={maxTradeQty}
+            canBuy={canBuy}
+            canBuyAll={canBuyAll}
+            canSell={canSell}
+            canClearSelected={canClearSelected}
+            maxAffordableBuyQty={maxAffordableBuyQty}
+            localActionKey={localActionKey}
+            onQuantityChange={onQuantityChange}
+            onUseLimitQuantity={onUseLimitQuantity}
+            onBuy={onBuy}
+            onBuyAll={onBuyAll}
+            onSell={onSell}
+            onClearStock={onClearStock}
+            onBuyMenuClick={onBuyMenuClick}
+            onSellMenuClick={onSellMenuClick}
+            buyActionMenuItems={buyActionMenuItems}
+            sellActionMenuItems={sellActionMenuItems}
+          />
+        </Card>
 
         {/* K 线图 */}
         <StockCandlestick
@@ -1020,79 +1026,81 @@ function TradeBox({
   return (
     <div data-section="trade-box">
       <Row gutter={[16, 16]}>
-        {/* 数量输入 */}
+        {/* 数量输入 + 买卖按钮（同一行） */}
         <Col span={24}>
-          <Flex gap={8} align="center" data-element="trade-quantity">
-            <span style={{ color: 'var(--text-secondary)' }}>数量</span>
-            <InputNumber<number>
-              min={1}
-              max={maxTradeQty}
-              precision={0}
-              value={quantity}
-              onChange={onQuantityChange}
-              style={{ width: 120 }}
-            />
-          </Flex>
-        </Col>
-
-        {/* 买卖按钮 */}
-        <Col span={24}>
-          <Flex gap={8} data-element="trade-actions">
-            <Dropdown.Button
-              type="primary"
-              trigger={['click']}
-              placement="bottomRight"
-              disabled={!canBuy && !canBuyAll}
-              loading={localActionKey === 'buy' || localActionKey === 'buy-all'}
-              menu={{ items: buyActionMenuItems, onClick: onBuyMenuClick }}
-              onClick={onBuy}
-              data-action="buy"
-            >
-              <ShoppingCartOutlined /> 买入
-            </Dropdown.Button>
-            <Dropdown.Button
-              trigger={['click']}
-              placement="bottomRight"
-              disabled={!canSell && !canClearSelected}
-              loading={localActionKey === 'sell'}
-              menu={{ items: sellActionMenuItems, onClick: onSellMenuClick }}
-              onClick={onSell}
-              data-action="sell"
-            >
-              <FallOutlined /> 卖出
-            </Dropdown.Button>
-            <Button
-              danger
-              icon={<ClearOutlined />}
-              disabled={!canClearSelected}
-              loading={localActionKey === 'clear-stock'}
-              onClick={onClearStock}
-              data-action="clear-stock"
-            >
-              清仓
-            </Button>
+          <Flex gap={8} align="center" wrap="wrap" justify="space-between">
+            <Flex gap={8} align="center" data-element="trade-quantity">
+              <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>数量</span>
+              <InputNumber<number>
+                size="small"
+                min={1}
+                max={maxTradeQty}
+                precision={0}
+                value={quantity}
+                onChange={onQuantityChange}
+                style={{ width: 120 }}
+              />
+            </Flex>
+            <Flex gap={8} data-element="trade-actions">
+              <Dropdown.Button
+                size="small"
+                type="primary"
+                trigger={['click']}
+                placement="bottomRight"
+                disabled={!canBuy && !canBuyAll}
+                loading={localActionKey === 'buy' || localActionKey === 'buy-all'}
+                menu={{ items: buyActionMenuItems, onClick: onBuyMenuClick }}
+                onClick={onBuy}
+                data-action="buy"
+              >
+                <ShoppingCartOutlined /> 买入
+              </Dropdown.Button>
+              <Dropdown.Button
+                size="small"
+                trigger={['click']}
+                placement="bottomRight"
+                disabled={!canSell && !canClearSelected}
+                loading={localActionKey === 'sell'}
+                menu={{ items: sellActionMenuItems, onClick: onSellMenuClick }}
+                onClick={onSell}
+                data-action="sell"
+              >
+                <FallOutlined /> 卖出
+              </Dropdown.Button>
+              {/* <Button
+                size="small"
+                danger
+                icon={<ClearOutlined />}
+                disabled={!canClearSelected}
+                loading={localActionKey === 'clear-stock'}
+                onClick={onClearStock}
+                data-action="clear-stock"
+              >
+                清仓
+              </Button> */}
+            </Flex>
           </Flex>
         </Col>
 
         {/* 交易预览 */}
         <Col span={24}>
-          <Row gutter={[8, 8]} data-element="trade-preview">
-            <Col span={8}>
+          <Row gutter={[16, 8]} data-element="trade-preview">
+            <Col span={12}>
               <TradePreviewItem label="买入成交额" value={tradePreview.grossAmountText} />
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <TradePreviewItem label="卖出成交额" value={tradePreview.sellGrossAmountText} />
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <TradePreviewItem label="买入扣款" value={tradePreview.buyCostText} />
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <TradePreviewItem label="卖出到账" value={tradePreview.sellReceiveText} />
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <TradePreviewItem label="买入费用" value={tradePreview.buyFeeAmountText} />
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <TradePreviewItem label="卖出费用" value={tradePreview.sellFeeAmountText} />
             </Col>
           </Row>
@@ -1101,7 +1109,7 @@ function TradeBox({
         {/* 快捷数量 */}
         <Col span={24}>
           <Row gutter={[16, 8]} data-element="trade-limits">
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Flex gap={4} wrap="wrap" data-element="buy-limits">
                 <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>可买</span>
                 {[0.25, 0.5, 0.75, 1].map((ratio) => {
@@ -1122,7 +1130,7 @@ function TradeBox({
                 })}
               </Flex>
             </Col>
-            <Col span={12}>
+            <Col xs={24} sm={12}>
               <Flex gap={4} wrap="wrap" data-element="sell-limits">
                 <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>可卖</span>
                 {[0.25, 0.5, 0.75, 1].map((ratio) => {
@@ -1152,9 +1160,9 @@ function TradeBox({
 
 function TradePreviewItem({ label, value }: { label: string; value: string }): React.ReactNode {
   return (
-    <Flex vertical data-element="trade-preview-item">
+    <Flex justify="space-between" data-element="trade-preview-item">
       <span style={{ color: 'var(--text-tertiary)', fontSize: 12 }}>{label}</span>
-      <strong style={{ color: 'var(--text-primary)', fontSize: 13 }}>{value}</strong>
+      <span style={{ color: 'var(--text-primary)', fontSize: 12 }}>{value}</span>
     </Flex>
   );
 }
@@ -1197,21 +1205,27 @@ function ProfitTab({ profitModel, profitLoading, onRefresh }: ProfitTabProps): R
         }
       >
         <Descriptions items={[
-          { label: '总收益', children: (
-            <span className={getStockMarketToneClassName(profitModel.summary.totalPnlTone)}>
-              {profitModel.summary.totalPnlText}
-            </span>
-          )},
-          { label: '已实现盈亏', children: (
-            <span className={getStockMarketToneClassName(profitModel.summary.realizedPnlTone)}>
-              {profitModel.summary.realizedPnlText}
-            </span>
-          )},
-          { label: '持仓浮盈亏', children: (
-            <span className={getStockMarketToneClassName(profitModel.summary.unrealizedPnlTone)}>
-              {profitModel.summary.unrealizedPnlText}
-            </span>
-          )},
+          {
+            label: '总收益', children: (
+              <span className={getStockMarketToneClassName(profitModel.summary.totalPnlTone)}>
+                {profitModel.summary.totalPnlText}
+              </span>
+            )
+          },
+          {
+            label: '已实现盈亏', children: (
+              <span className={getStockMarketToneClassName(profitModel.summary.realizedPnlTone)}>
+                {profitModel.summary.realizedPnlText}
+              </span>
+            )
+          },
+          {
+            label: '持仓浮盈亏', children: (
+              <span className={getStockMarketToneClassName(profitModel.summary.unrealizedPnlTone)}>
+                {profitModel.summary.unrealizedPnlText}
+              </span>
+            )
+          },
           { label: '总股数', children: profitModel.summary.totalHoldingQtyText },
           { label: '当前市值', children: profitModel.summary.totalMarketValueText },
           { label: '当前成本', children: profitModel.summary.totalCostText },
