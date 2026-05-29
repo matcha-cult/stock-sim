@@ -23,7 +23,7 @@
  * 3. 购买店铺成本较高（5 万灵石起），需确保灵石余额可见。
  */
 
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useState, useRef } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   App, Button, Card, Col, Descriptions, Empty, Flex, Modal, Row,
@@ -359,24 +359,35 @@ const ShopPanel = observer(() => {
 
   // 基于后端返回的下次收租时间计算倒计时
   const nextRentAt = shopStore.nextRentAt;
-  const getNextRentTime = (): string => {
-    if (!nextRentAt) return '--';
-    const remaining = nextRentAt.getTime() - Date.now();
-    if (remaining <= 0) return '0 秒后收租';
-    const totalSeconds = Math.floor(remaining / 1000);
-    const diffMinutes = Math.floor(totalSeconds / 60);
-    const diffSeconds = totalSeconds % 60;
-    if (diffMinutes > 0) {
-      return `${diffMinutes - 1} 分 ${diffSeconds} 秒后收租`;
-    }
-    return `${diffSeconds} 秒后收租`;
-  };
-
-  const [nextRentTime, setNextRentTime] = useState(getNextRentTime());
+  const nextRentAtRef = useRef(nextRentAt);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setNextRentTime(getNextRentTime());
-    }, 1000);
+    nextRentAtRef.current = nextRentAt;
+  }, [nextRentAt]);
+
+  const [nextRentTime, setNextRentTime] = useState('--');
+  useEffect(() => {
+    const tick = (): void => {
+      const current = nextRentAtRef.current;
+      if (!current) {
+        setNextRentTime('--');
+        return;
+      }
+      const remaining = current.getTime() - Date.now();
+      if (remaining <= 0) {
+        setNextRentTime('0 秒后收租');
+        return;
+      }
+      const totalSeconds = Math.floor(remaining / 1000);
+      const diffMinutes = Math.floor(totalSeconds / 60);
+      const diffSeconds = totalSeconds % 60;
+      setNextRentTime(diffMinutes > 0
+        ? `${diffMinutes - 1} 分 ${diffSeconds} 秒后收租`
+        : `${diffSeconds} 秒后收租`
+      );
+    };
+
+    tick();
+    const timer = setInterval(tick, 1000);
     return () => clearInterval(timer);
   }, []);
 
