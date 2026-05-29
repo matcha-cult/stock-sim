@@ -576,6 +576,20 @@ const ShopPanel = observer(() => {
         const decorCost = decorCostPerSqm * 10;
         const totalCost = spaceCost + decorCost;
 
+        // 升级前后对比数据
+        const currentLevel = expandShop.upgradeLevel;
+        const nextLevel = currentLevel + 1;
+        const currentArea = expandShop.area;
+        const nextArea = currentArea + 10;
+        const currentRent = expandShop.rentPerTick;
+        // 扩展后租金 = 初始租金 × 装修系数 × 新空间加成 × 升级加成
+        const shopConfig = shopStore.config.shopTypes[expandShop.shopType];
+        const nextSpaceBonus = 1 + (expandShop.spaceExpansion + 1) * 0.2;
+        const upgradeBonus = 1 + nextLevel * (shopStore.config.constants.upgradeLevelBonusRate ?? 0.1);
+        const nextRent = shopConfig
+          ? shopConfig.initialRent * tierConfig.rentMultiplier * nextSpaceBonus * upgradeBonus
+          : currentRent;
+
         return (
           <Modal
             open
@@ -591,19 +605,56 @@ const ShopPanel = observer(() => {
             okButtonProps={{ disabled: spiritStones < totalCost }}
           >
             <Flex vertical gap={12}>
-              <Flex justify="space-between">
-                <Text>当前面积</Text>
-                <Text strong>{expandShop.area} ㎡</Text>
+              {/* 升级前后对比面板 */}
+              <Flex
+                vertical
+                gap={6}
+                style={{
+                  background: 'var(--fill-quaternary)',
+                  borderRadius: 8,
+                  padding: '10px 12px',
+                }}
+              >
+                <Text style={{ fontSize: 12, fontWeight: 500, color: 'var(--text-secondary)' }}>
+                  扩展效果预览
+                </Text>
+                {/* 扩展等级 */}
+                <Flex justify="space-between" align="center">
+                  <Text type="secondary">扩展等级</Text>
+                  <Flex gap={8} align="center">
+                    <Text>+{expandShop.spaceExpansion}</Text>
+                    <Text type="secondary">→</Text>
+                    <Text strong style={{ color: 'var(--colorSuccess)' }}>+{expandShop.spaceExpansion + 1}</Text>
+                  </Flex>
+                </Flex>
+                {/* 面积 */}
+                <Flex justify="space-between" align="center">
+                  <Text type="secondary">面积</Text>
+                  <Flex gap={8} align="center">
+                    <Text>{currentArea} ㎡</Text>
+                    <Text type="secondary">→</Text>
+                    <Text strong style={{ color: 'var(--colorSuccess)' }}>{nextArea} ㎡</Text>
+                  </Flex>
+                </Flex>
+                {/* 每次租金 */}
+                <Flex justify="space-between" align="center">
+                  <Text type="secondary">每次租金</Text>
+                  <Flex gap={8} align="center">
+                    <Text>{formatSpiritStones(currentRent)} 灵石</Text>
+                    <Text type="secondary">→</Text>
+                    <Text strong style={{ color: 'var(--colorSuccess)' }}>{formatSpiritStones(Math.round(nextRent))} 灵石</Text>
+                  </Flex>
+                </Flex>
+                {/* 装修等级（不变） */}
+                <Flex justify="space-between" align="center">
+                  <Text type="secondary">装修等级</Text>
+                  <Text>{expandShop.decorationTierLabel}</Text>
+                </Flex>
               </Flex>
-              <Flex justify="space-between">
-                <Text>扩展后面积</Text>
-                <Text strong>{expandShop.area + 10} ㎡</Text>
-              </Flex>
+
               <Divider style={{ margin: '8px 0' }} />
-              <Descriptions size="small" column={1}>
-                <Descriptions.Item label="装修等级">{expandShop.decorationTierLabel}</Descriptions.Item>
-              </Descriptions>
-              <Divider style={{ margin: '8px 0' }} />
+
+              {/* 费用明细 */}
               <Flex justify="space-between">
                 <Text>空间阵法扩展费用</Text>
                 <Text>{formatSpiritStones(spaceCost)} 灵石</Text>
