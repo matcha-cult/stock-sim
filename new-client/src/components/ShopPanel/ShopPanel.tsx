@@ -243,6 +243,45 @@ const DecorationModalContent = observer(({
 
   const [selectedTier, setSelectedTier] = useState<string | null>(null);
 
+  // 计算选中目标的成本明细
+  const selectedTierConfig = selectedTier ? config.decorationTiers[selectedTier] : null;
+  const selectedIdx = selectedTierConfig?.index ?? -1;
+  const currentTierConfig = config.decorationTiers[shop.decorationTier];
+  const isUpgrade = selectedTierConfig && selectedIdx > currentIdx;
+  const isDowngrade = selectedTierConfig && selectedIdx < currentIdx;
+
+  let costDetail: JSX.Element | null = null;
+  if (isUpgrade && selectedTierConfig && currentTierConfig) {
+    const diff = selectedTierConfig.pricePerSqm - currentTierConfig.pricePerSqm;
+    const cost = diff * shop.area;
+    costDetail = (
+      <Flex vertical gap={4}>
+        <Text type="secondary" style={{ fontSize: 12 }}>成本公式：</Text>
+        <Text style={{ fontSize: 12 }}>(目标单价 - 当前单价) × 面积</Text>
+        <Text style={{ fontSize: 12 }}>({selectedTierConfig.pricePerSqm} - {currentTierConfig.pricePerSqm}) × {shop.area} ㎡</Text>
+        <Text strong style={{ fontSize: 13, color: 'var(--colorError)' }}>
+          消耗 {formatSpiritStones(cost)} 灵石
+        </Text>
+        {spiritStones < cost && (
+          <Tag color="red">灵石不足，差额 {formatSpiritStones(cost - spiritStones)} 灵石</Tag>
+        )}
+      </Flex>
+    );
+  } else if (isDowngrade && selectedTierConfig && currentTierConfig) {
+    const diff = currentTierConfig.pricePerSqm - selectedTierConfig.pricePerSqm;
+    const refund = diff * shop.area * config.constants.decorationRefundRate;
+    costDetail = (
+      <Flex vertical gap={4}>
+        <Text type="secondary" style={{ fontSize: 12 }}>退款公式：</Text>
+        <Text style={{ fontSize: 12 }}>(当前单价 - 目标单价) × 面积 × 回收比例</Text>
+        <Text style={{ fontSize: 12 }}>({currentTierConfig.pricePerSqm} - {selectedTierConfig.pricePerSqm}) × {shop.area} × {config.constants.decorationRefundRate}</Text>
+        <Text strong style={{ fontSize: 13, color: 'var(--colorSuccess)' }}>
+          返还 {formatSpiritStones(refund)} 灵石
+        </Text>
+      </Flex>
+    );
+  }
+
   return (
     <Flex vertical gap={12}>
       <Text>当前装修：<Tag color={TIER_COLORS[shop.decorationTier]}>{shop.decorationTierLabel}</Tag></Text>
@@ -251,6 +290,8 @@ const DecorationModalContent = observer(({
       )}
       <Descriptions size="small" column={1}>
         <Descriptions.Item label="面积">{shop.area} ㎡</Descriptions.Item>
+        <Descriptions.Item label="当前单价">{currentTierConfig?.pricePerSqm} 灵石/㎡</Descriptions.Item>
+        <Descriptions.Item label="基础装修费">{formatSpiritStones((currentTierConfig?.pricePerSqm ?? 10) * shop.area)} 灵石</Descriptions.Item>
       </Descriptions>
       <Divider style={{ margin: '8px 0' }} />
       <Text>选择目标装修等级：</Text>
@@ -261,6 +302,7 @@ const DecorationModalContent = observer(({
         onChange={setSelectedTier}
         placeholder="请选择"
       />
+      {costDetail}
       <Button
         type="primary"
         block
