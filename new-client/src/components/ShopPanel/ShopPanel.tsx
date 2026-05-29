@@ -27,16 +27,20 @@ import { useContext, useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   App, Button, Card, Col, Descriptions, Empty, Flex, Modal, Row,
-  Select, Spin, Statistic, Tag, Tooltip, Typography, Divider,
+  Select, Spin, Statistic, Tag, Tooltip, Typography, Divider, Table,
 } from 'antd';
 import {
   ShopOutlined, DollarOutlined, ArrowUpOutlined,
   ThunderboltOutlined, PlusOutlined,
   RiseOutlined, ApartmentOutlined,
+  ExperimentOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../../stores/RootStore';
 
 const { Text, Title } = Typography;
+
+// dev 模式判断
+const isDevMode = import.meta.env.DEV === true;
 
 // ==================== 装修等级颜色映射 ====================
 
@@ -284,6 +288,7 @@ const ShopPanel = observer(() => {
   const [decorateShopId, setDecorateShopId] = useState<number | null>(null);
   const [expandShopId, setExpandShopId] = useState<number | null>(null);
   const [purchaseVisible, setPurchaseVisible] = useState(false);
+  const [calcVisible, setCalcVisible] = useState(false);
 
   const shopStore = rootStore?.shopStore;
   const authStore = rootStore?.authStore;
@@ -371,6 +376,15 @@ const ShopPanel = observer(() => {
         >
           购买新店铺
         </Button>
+        {isDevMode && (
+          <Button
+            icon={<ExperimentOutlined />}
+            onClick={() => setCalcVisible(true)}
+            style={{ borderColor: '#faad14', color: '#faad14' }}
+          >
+            店铺收益测算
+          </Button>
+        )}
       </Flex>
 
       {/* 店铺列表 */}
@@ -547,6 +561,216 @@ const ShopPanel = observer(() => {
           </Flex>
         </Modal>
       )}
+      {/* dev-only: 店铺收益测算弹窗 */}
+      {isDevMode && calcVisible && shopStore.config && shopStore.shops.length > 0 && (
+        <Modal
+          open
+          title="店铺收益测算（仅 dev）"
+          onCancel={() => setCalcVisible(false)}
+          footer={null}
+          width={900}
+        >
+          <ShopProfitCalculator config={shopStore.config} shops={shopStore.shops} />
+        </Modal>
+      )}
+    </Flex>
+  );
+});
+
+/**
+ * dev-only 店铺收益测算器。
+ * 展示每间店铺从当前状态升级到各装修等级/扩展次数的成本和收益对比。
+ */
+type ShopProfitCalculatorProps = {
+  config: {
+    shopTypes: Record<string, { name: string; initialArea: number; initialRent: number; purchaseCost: number }>;
+    decorationTiers: Record<string, {
+      label: string;
+      index: number;
+      rentMultiplier: number;
+      pricePerSqm: number;
+      expansionMultiplier: number;
+    }>;
+    decorationTierOrder: string[];
+    constants: {
+      spaceExpansionAreaIncrement: number;
+      spaceExpansionBaseCost: number;
+      maxPendingRentTicks: number;
+      decorationRefundRate: number;
+      upgradeLevelBonusRate: number;
+      upgradeTicksBase: number;
+      rentTickIntervalMinutes: number;
+    };
+  };
+  shops: Array<{
+    id: number;
+    shopType: string;
+    shopTypeName: string;
+    area: number;
+    decorationTier: string;
+    decorationTierLabel: string;
+    upgradeLevel: number;
+    spaceExpansion: number;
+    rentPerTick: number;
+  }>;
+};
+
+type CalcRow = {
+  shopName: string;
+  currentRent: number;
+  targetTierLabel: string;
+  targetExpansion: number;
+  targetUpgradeLevel: number;
+  rentPerTick: number;
+  rentIncrease: number;
+  decorationCost: number;
+  expansionCost: number;
+  totalCost: number;
+  ticksToRecover: number;
+  ticksToUpgrade: number;
+};
+
+const calcRentPerTick = (
+  initialRent: number,
+  tierMultiplier: number,
+  expansion: number,
+  upgradeLevel: number,
+  bonusRate: number,
+): number => {
+  const spaceBonus = 1 + expansion * 0.5;
+  const upgradeBonus = 1 + upgradeLevel * bonusRate;
+  return initialRent * tierMultiplier * spaceBonus * upgradeBonus;
+};
+
+const calcDecorationCost = (
+  currentPricePerSqm: number,
+  targetPricePerSqm: number,
+  area: number,
+): number => {
+  return Math.abs(targetPricePerSqm - currentPricePerSqm) * area;
+};
+
+const calcExpansionCost = (
+  baseCost: number,
+  expansion: number,
+  tierMultiplier: number,
+): number => {
+  return baseCost * Math.pow(2, expansion) * tierMultiplier;
+};
+
+const calcUpgradeTicksNeeded = (level: number, base: number): number => {
+  return base * (level + 1);
+};
+
+const ShopProfitCalculator = observer(({ config, shops }: ShopProfitCalculatorProps) => {
+  const { constants, decorationTiers, decorationTierOrder } = config;
+
+  const rows: CalcRow[] = [];
+  const TICKS_PER_DAY = (24 * 60) / constants.rentTickIntervalMinutes;
+
+  for (const shop of shops) {
+    const shopConfig = config.shopTypes[shop.shopType];
+    if (!shopConfig) continue;
+
+    const currentTierIdx = decorationTiers[shop.decorationTier]?.index ?? 0;
+    const currentPricePerSqm = decorationTiers[shop.decorationTier]?.pricePerSqm ?? 10;
+
+    // 枚举目标装修等级（从当前等级到最高）
+    for (let ti = currentTierIdx; ti < decorationTierOrder.length; ti++) {
+      const targetTier = decorationTierOrder[ti];
+      const targetTierConfig = decorationTiers[targetTier];
+      if (!targetTierConfig) continue;
+
+      // 枚举扩展次数（从当前到 +3）
+      const maxExtraExpansion = 4;
+      for (let extraExp = 0; extraExp <= maxExtraExpansion; extraExp++) {
+        const targetExpansion = shop.spaceExpansion + extraExp;
+
+        // 枚举升级等级（从当前到 +3）
+        const maxExtraUpgrade = 4;
+        for (let extraUp = 0; extraUp <= maxExtraUpgrade; extraUp++) {
+          const targetUpgradeLevel = shop.upgradeLevel + extraUp;
+
+          // 跳过当前状态本身
+          if (ti === currentTierIdx && extraExp === 0 && extraUp === 0) continue;
+
+          const targetRent = calcRentPerTick(
+            shopConfig.initialRent,
+            targetTierConfig.rentMultiplier,
+            targetExpansion,
+            targetUpgradeLevel,
+            constants.upgradeLevelBonusRate,
+          );
+
+          // 装修成本（仅当 tier 变化）
+          const decorationCost = ti > currentTierIdx
+            ? calcDecorationCost(currentPricePerSqm, targetTierConfig.pricePerSqm, shop.area)
+            : 0;
+
+          // 扩展成本（累加从当前到目标的每次扩展费用）
+          let expansionCost = 0;
+          const tierMulti = targetTierConfig.expansionMultiplier;
+          for (let e = shop.spaceExpansion; e < targetExpansion; e++) {
+            expansionCost += calcExpansionCost(constants.spaceExpansionBaseCost, e, tierMulti);
+          }
+          // 扩展面积的装修费用
+          expansionCost += targetTierConfig.pricePerSqm * constants.spaceExpansionAreaIncrement * extraExp;
+
+          const totalCost = decorationCost + expansionCost;
+          const rentIncrease = targetRent - shop.rentPerTick;
+          const ticksToRecover = rentIncrease > 0 ? Math.ceil(totalCost / rentIncrease) : Infinity;
+          const ticksToUpgrade = calcUpgradeTicksNeeded(targetUpgradeLevel, constants.upgradeTicksBase);
+
+          rows.push({
+            shopName: shop.shopTypeName,
+            currentRent: shop.rentPerTick,
+            targetTierLabel: targetTierConfig.label,
+            targetExpansion,
+            targetUpgradeLevel,
+            rentPerTick: targetRent,
+            rentIncrease,
+            decorationCost,
+            expansionCost,
+            totalCost,
+            ticksToRecover,
+            ticksToUpgrade,
+          });
+        }
+      }
+    }
+  }
+
+  // 按 totalCost 排序
+  rows.sort((a, b) => a.totalCost - b.totalCost);
+
+  const columns = [
+    { title: '店铺', dataIndex: 'shopName', key: 'shopName', width: 80 },
+    { title: '当前产出', dataIndex: 'currentRent', key: 'currentRent', width: 80, render: (v: number) => `${v.toFixed(1)}` },
+    { title: '装修', dataIndex: 'targetTierLabel', key: 'targetTierLabel', width: 60 },
+    { title: '扩展', dataIndex: 'targetExpansion', key: 'targetExpansion', width: 50, render: (v: number) => `+${v}` },
+    { title: '等级', dataIndex: 'targetUpgradeLevel', key: 'targetUpgradeLevel', width: 50, render: (v: number) => `Lv.${v}` },
+    { title: '新产出/次', dataIndex: 'rentPerTick', key: 'rentPerTick', width: 90, render: (v: number) => `${v.toFixed(1)}` },
+    { title: '产出提升/次', dataIndex: 'rentIncrease', key: 'rentIncrease', width: 90, render: (v: number) => `+${v.toFixed(1)}` },
+    { title: '装修成本', dataIndex: 'decorationCost', key: 'decorationCost', width: 90, render: (v: number) => formatSpiritStones(v) },
+    { title: '扩展成本', dataIndex: 'expansionCost', key: 'expansionCost', width: 90, render: (v: number) => formatSpiritStones(v) },
+    { title: '总成本', dataIndex: 'totalCost', key: 'totalCost', width: 90, render: (v: number) => formatSpiritStones(v) },
+    { title: '回本tick数', dataIndex: 'ticksToRecover', key: 'ticksToRecover', width: 90, render: (v: number) => v === Infinity ? '∞' : `${v} (~${(v / TICKS_PER_DAY).toFixed(1)}天)` },
+    { title: '升级tick数', dataIndex: 'ticksToUpgrade', key: 'ticksToUpgrade', width: 90, render: (v: number) => `${v} (~${(v / TICKS_PER_DAY).toFixed(1)}天)` },
+  ];
+
+  return (
+    <Flex vertical gap={12}>
+      <Text type="secondary" style={{ fontSize: 12 }}>
+        基于当前状态，枚举各店铺升级装修、扩展空间、提升等级后的成本与收益。回本 tick 数 = 总成本 / 产出提升。
+      </Text>
+      <Table<CalcRow>
+        size="small"
+        columns={columns}
+        dataSource={rows}
+        rowKey={(_, idx) => `${idx}`}
+        scroll={{ y: 500 }}
+        pagination={false}
+      />
     </Flex>
   );
 });
