@@ -30,6 +30,7 @@ export type ShopDto = {
 export type ShopOverviewDto = {
   shops: ShopDto[];
   totalPendingRent: number;
+  nextRentAt: string;
 };
 
 export type CollectRentResult = {
@@ -93,6 +94,7 @@ export type ShopConfigDto = {
     decorationRefundRate: number;
     upgradeLevelBonusRate: number;
     upgradeTicksBase: number;
+    rentTickIntervalMinutes: number;
   };
 };
 

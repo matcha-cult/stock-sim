@@ -34,7 +34,6 @@ import {
   claimInitialShop,
   purchaseShop,
   type ShopDto,
-  type ShopOverviewDto,
   type ShopConfigDto,
 } from '../services/api/shop';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
@@ -42,10 +41,17 @@ import type { RootStore } from './RootStore';
 
 export class ShopStore {
   private rootStore: RootStore;
+  /** 上次刷新 shops 时间戳，用于短时间去重（避免 StrictMode 双挂载 / 快速切换 tab 重复请求）。 */
+  private lastFetchTs = 0;
+  /** 上次刷新 config 时间戳，用于去重。 */
+  private lastConfigFetchTs = 0;
+  /** 去重窗口：5s 内不重复请求。 */
+  private static readonly DEDUP_MS = 5_000;
 
   shops: ShopDto[] = [];
   config: ShopConfigDto | null = null;
   totalPendingRent: number = 0;
+  nextRentAt: Date | null = null;
   loading: boolean = false;
   configLoaded: boolean = false;
 
@@ -56,8 +62,15 @@ export class ShopStore {
 
   /**
    * 刷新店铺概览。
+   * 内置去重逻辑：5s 内不重复请求，避免 StrictMode 双挂载或快速切 tab 导致重复调用。
    */
   async fetchShops(background = false): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastFetchTs < ShopStore.DEDUP_MS) {
+      return;
+    }
+    this.lastFetchTs = now;
+
     if (!background) this.loading = true;
     try {
       const response = await getShopOverview(
@@ -66,14 +79,17 @@ export class ShopStore {
       if (response.success && response.data) {
         this.shops = response.data.shops;
         this.totalPendingRent = response.data.totalPendingRent;
+        this.nextRentAt = response.data.nextRentAt ? new Date(response.data.nextRentAt) : null;
       } else if (!background) {
         this.shops = [];
         this.totalPendingRent = 0;
+        this.nextRentAt = null;
       }
     } catch {
       if (!background) {
         this.shops = [];
         this.totalPendingRent = 0;
+        this.nextRentAt = null;
       }
     } finally {
       if (!background) this.loading = false;
@@ -81,10 +97,16 @@ export class ShopStore {
   }
 
   /**
-   * 加载店铺配置常量。
+   * 加载店铺配置常量（一次性加载，内置去重 + configLoaded 双重保护）。
    */
   async fetchConfig(): Promise<void> {
     if (this.configLoaded) return;
+    const now = Date.now();
+    if (now - this.lastConfigFetchTs < ShopStore.DEDUP_MS) {
+      return;
+    }
+    this.lastConfigFetchTs = now;
+
     try {
       const response = await getShopConfig();
       if (response.success && response.data) {

@@ -38,6 +38,7 @@ import {
   SPACE_EXPANSION_AREA_INCREMENT,
   SPACE_EXPANSION_BASE_COST,
   MAX_PENDING_RENT_TICKS,
+  SHOP_RENT_TICK_INTERVAL_MINUTES,
   DECORATION_REFUND_RATE,
   UPGRADE_LEVEL_BONUS_RATE,
   UPGRADE_TICKS_BASE,
@@ -51,6 +52,7 @@ import {
   calculateSpaceExpansionCost,
   calculateUpgradeTicksNeeded,
 } from './types.js';
+import { getNextShopRentTickAt } from './shopRentTime.js';
 
 // ==================== 类型定义 ====================
 
@@ -94,6 +96,7 @@ export type ShopDto = {
 export type ShopOverviewDto = {
   shops: ShopDto[];
   totalPendingRent: number;
+  nextRentAt: string;
 };
 
 export type CollectRentResult = {
@@ -183,7 +186,7 @@ class ShopService {
     const shops = rows.rows.map((row) => this.buildShopDto(row, latestTickId));
     const totalPendingRent = shops.reduce((sum, s) => sum + s.pendingRent, 0);
 
-    return { shops, totalPendingRent };
+    return { shops, totalPendingRent, nextRentAt: getNextShopRentTickAt().toISOString() };
   }
 
   /**
@@ -244,6 +247,7 @@ class ShopService {
       decorationRefundRate: number;
       upgradeLevelBonusRate: number;
       upgradeTicksBase: number;
+      rentTickIntervalMinutes: number;
     };
   } {
     return {
@@ -274,6 +278,7 @@ class ShopService {
         decorationRefundRate: DECORATION_REFUND_RATE,
         upgradeLevelBonusRate: UPGRADE_LEVEL_BONUS_RATE,
         upgradeTicksBase: UPGRADE_TICKS_BASE,
+        rentTickIntervalMinutes: SHOP_RENT_TICK_INTERVAL_MINUTES,
       },
     };
   }

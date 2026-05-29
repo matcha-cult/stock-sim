@@ -49,6 +49,11 @@ import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export class StockStore {
+  /** 上次刷新 overview 时间戳，用于短时间去重（避免 StrictMode 双挂载重复请求）。 */
+  private lastOverviewFetchTs = 0;
+  /** 去重窗口：5s 内不重复请求。 */
+  private static readonly DEDUP_MS = 5_000;
+
   overview: StockMarketOverviewDto | null = null;
   selectedStockId: string = '';
   historyPoints: StockMarketHistoryPointDto[] = [];
@@ -78,6 +83,12 @@ export class StockStore {
   }
 
   async refreshOverview(background = false): Promise<void> {
+    const now = Date.now();
+    if (!background && now - this.lastOverviewFetchTs < StockStore.DEDUP_MS) {
+      return;
+    }
+    this.lastOverviewFetchTs = now;
+
     if (!background) this.loading = true;
     try {
       const response = await getStockMarketOverview(

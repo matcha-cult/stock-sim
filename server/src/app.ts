@@ -29,6 +29,7 @@ import { logger } from './utils/logger.js';
 import { registerRoutes } from './bootstrap/registerRoutes.js';
 import { initStockDefinitions } from './services/staticConfigLoader.js';
 import { initializeStockMarketScheduler, stopStockMarketScheduler } from './services/stockMarket/stockMarketScheduler.js';
+import { initializeShopRentScheduler, stopShopRentScheduler } from './services/shop/shopRentScheduler.js';
 import './types/express.d.ts';
 
 dotenv.config();
@@ -53,6 +54,10 @@ async function startServer() {
   // 启动股市行情调度器（每 N 分钟生成 AI 新闻与行情 tick）
   const schedulerActive = await initializeStockMarketScheduler();
   logger.info(schedulerActive ? '股市行情调度器已启动' : '股市行情调度器已加载（tick 未启用）');
+
+  // 启动收租调度器（独立 tick 间隔，不与股市行情混用）
+  const shopRentActive = await initializeShopRentScheduler();
+  logger.info(shopRentActive ? '店铺收租调度器已启动' : '店铺收租调度器已加载（tick 未启用）');
 
   // 测试 Redis 连接
   try {
@@ -95,6 +100,7 @@ async function startServer() {
   const gracefulShutdown = async () => {
     logger.info('开始优雅关闭...');
     stopStockMarketScheduler();
+    stopShopRentScheduler();
     await pool.end();
     await redis.quit();
     logger.info('服务已关闭');

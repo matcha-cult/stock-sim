@@ -2,21 +2,19 @@
  * 股市 30 分钟行情调度器。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：在后台调度角色中按 30 分钟边界触发股市 AI 新闻与行情 tick，以及店铺收租结算。
- * 2. 不做什么：不实现 AI prompt、不拼交易 SQL、不接入 cleanupWorker。
+ * 1. 做什么：在后台调度角色中按 30 分钟边界触发股市 AI 新闻与行情 tick。
+ * 2. 不做什么：不参与收租调度（收租由独立的 shopRentScheduler 负责）。
  *
  * 输入 / 输出：
  * - 输入：启动流水线调用的 initialize/stop。
- * - 输出：定时触发 `stockMarketService.runScheduledTick` + `shopService.processRentTick`，并记录日志。
+ * - 输出：定时触发 `stockMarketService.runScheduledTick`，并记录日志。
  *
  * 数据流 / 状态流：
- * startupPipeline -> initializeStockMarketScheduler -> setTimeout 到下一周期边界 -> runScheduledTick -> processRentTick -> 重新安排下一轮。
+ * startupPipeline -> initializeStockMarketScheduler -> setTimeout 到下一周期边界 -> runScheduledTick -> 重新安排下一轮。
  *
  * 复用设计说明：
  * - 调度生命周期和排行夜间刷新保持同一模式，启动、互斥、停止都在一个模块中收敛。
  * - 周期边界计算复用 `stockMarketTime`，概览倒计时和后台触发不会各自计算。
- * - 收租结算复用 `shopService.processRentTick`，不在调度器中重复计算逻辑。
- * - 收租系统拥有独立的 shop_tick 表，不与 stock_market_tick 混用。
  *
  * 关键边界条件与坑点：
  * 1. 不能使用固定 setInterval，否则服务重启或执行耗时会让 30 分钟 tick 逐渐漂移。
@@ -24,7 +22,6 @@
  */
 import { stockMarketService } from './stockMarketService.js';
 import { getStockMarketRefreshDelayMs } from './stockMarketTime.js';
-import { shopService } from '../shop/shopService.js';
 
 let timer: NodeJS.Timeout | null = null;
 let initialized = false;
@@ -59,12 +56,6 @@ const runScheduledStockMarketTick = async (): Promise<void> => {
     console.log('[StockMarketScheduler] 开始生成股市新闻与行情');
     const result = await stockMarketService.runScheduledTick(now);
     console.log(`[StockMarketScheduler] ${result.message}`);
-
-    // 收租结算（独立 shop_tick 表，与股市 tick 并行）
-    if (result.status === 'generated') {
-      const rentResult = await shopService.processRentTick(now);
-      console.log(`[StockMarketScheduler] 店铺收租结算完成，处理 ${rentResult.processed} 间店铺`);
-    }
   } catch (error) {
     console.error('[StockMarketScheduler] 股市行情执行失败:', error);
   } finally {

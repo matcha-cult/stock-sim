@@ -137,8 +137,8 @@ export const createCharacter = async (
 
   const characterId = Number(row.id);
 
-  // 为新角色创建初始店铺（黄级·书籍）
-  await shopService.createInitialShopForCharacter(characterId);
+  // 为新角色创建初始店铺（黄级·书籍）— 临时屏蔽
+  // await shopService.createInitialShopForCharacter(characterId);
 
   return {
     success: true,

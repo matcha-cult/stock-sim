@@ -310,16 +310,15 @@ const ShopPanel = observer(() => {
       .sort(([, a], [, b]) => a.purchaseCost - b.purchaseCost)
     : [];
 
-  // 计算下次收租时间
+  // 基于后端返回的下次收租时间计算倒计时
+  const nextRentAt = shopStore.nextRentAt;
   const getNextRentTime = (): string => {
-    const now = new Date();
-    const minutes = now.getMinutes();
-    const seconds = now.getSeconds();
-    // 每 30 分钟一次：00 和 30 分
-    const nextMinutes = minutes < 30 ? 30 : 60;
-    const nextHour = nextMinutes === 60 ? now.getHours() + 1 : now.getHours();
-    const diffMinutes = nextMinutes - minutes;
-    const diffSeconds = 60 - seconds;
+    if (!nextRentAt) return '--';
+    const remaining = nextRentAt.getTime() - Date.now();
+    if (remaining <= 0) return '0 秒后收租';
+    const totalSeconds = Math.floor(remaining / 1000);
+    const diffMinutes = Math.floor(totalSeconds / 60);
+    const diffSeconds = totalSeconds % 60;
     if (diffMinutes > 0) {
       return `${diffMinutes - 1} 分 ${diffSeconds} 秒后收租`;
     }
