@@ -779,16 +779,10 @@ class ShopService {
         upgradeLevel,
       });
 
-      const lastRentTickId = row.last_rent_tick_id !== null
-        ? toBigIntValue(row.last_rent_tick_id)
-        : 0n;
-      const ticksSinceLastRent = currentTickId - lastRentTickId;
-
-      if (lastRentTickId !== 0n && ticksSinceLastRent > BigInt(MAX_PENDING_RENT_TICKS)) {
-        continue;
-      }
-
-      const newPendingRent = toBigIntValue(row.pending_rent) + rentPerTick;
+      const maxPendingRent = rentPerTick * BigInt(MAX_PENDING_RENT_TICKS);
+      const cappedPendingRent = toBigIntValue(row.pending_rent) + rentPerTick > maxPendingRent
+        ? maxPendingRent
+        : toBigIntValue(row.pending_rent) + rentPerTick;
 
       await query(
         `
@@ -798,7 +792,7 @@ class ShopService {
               updated_at = NOW()
           WHERE id = $3
         `,
-        [newPendingRent.toString(), currentTickId.toString(), toIntValue(row.id)],
+        [cappedPendingRent.toString(), currentTickId.toString(), toIntValue(row.id)],
       );
 
       processed++;
