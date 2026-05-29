@@ -11,7 +11,7 @@
  *
  * 关键边界条件与坑点：
  * 1. 初始租金含 0.5 的类型（如丹药 22.5）在存储时需 ×100 转为整数分（2250）。
- * 2. 装修等级系数翻倍增长，扩展费用指数增长，两者不可混淆。
+ * 2. 装修等级系数线性递增（黄 1x→玄 1.5x→地 3x→天 5x），扩展费用指数增长，两者不可混淆。
  */
 
 // ==================== 店面类型 ====================
@@ -71,9 +71,9 @@ export const DECORATION_TIER_LABEL: Record<DecorationTier, string> = {
 /** 装修等级租金系数 */
 export const DECORATION_TIER_RENT_MULTIPLIER: Record<DecorationTier, number> = {
   [DECORATION_TIERS.YELLOW]: 1.0,
-  [DECORATION_TIERS.MYSTIC]: 2.0,
-  [DECORATION_TIERS.EARTH]: 4.0,
-  [DECORATION_TIERS.HEAVEN]: 8.0,
+  [DECORATION_TIERS.MYSTIC]: 1.5,
+  [DECORATION_TIERS.EARTH]: 3.0,
+  [DECORATION_TIERS.HEAVEN]: 5.0,
 };
 
 /** 装修单价（灵石/㎡） */
@@ -101,7 +101,7 @@ export const BASE_RENT_PER_TICK = 10;
 export const SPACE_EXPANSION_AREA_INCREMENT = 10;
 
 /** 空间阵法扩展基础费用（灵石） */
-export const SPACE_EXPANSION_BASE_COST = 50;
+export const SPACE_EXPANSION_BASE_COST = 200;
 
 /** 空间阵法扩展费用指数底数 */
 export const SPACE_EXPANSION_EXPONENT_BASE = 2;
@@ -157,7 +157,7 @@ export const calculateRentPerTick = (params: {
   if (!config) throw new Error(`未知店铺类型: ${params.shopType}`);
 
   const rentMultiplier = DECORATION_TIER_RENT_MULTIPLIER[params.decorationTier];
-  const spaceBonus = 1 + params.spaceExpansion * 0.5;
+  const spaceBonus = 1 + params.spaceExpansion * 0.2;
   const upgradeBonus = 1 + params.upgradeLevel * UPGRADE_LEVEL_BONUS_RATE;
 
   const rawRent = config.initialRent * rentMultiplier * spaceBonus * upgradeBonus;

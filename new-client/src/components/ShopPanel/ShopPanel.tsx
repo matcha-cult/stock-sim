@@ -36,7 +36,7 @@ import {
   ExperimentOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../../stores/RootStore';
-import ShopProfitCurveChart, { type CalcRow } from './ShopProfitCurveChart';
+import ShopProfitCalculator from './ShopProfitCalculator';
 
 const { Text, Title } = Typography;
 
@@ -69,6 +69,7 @@ const ShopCard = observer(({
   onCollectRent,
   onDecorate,
   onExpand,
+  config,
 }: {
   shop: {
     id: number;
@@ -88,7 +89,62 @@ const ShopCard = observer(({
   onCollectRent: (id: number) => void;
   onDecorate: (id: number) => void;
   onExpand: (id: number) => void;
+  config?: {
+    shopTypes: Record<string, { name: string; initialArea: number; initialRent: number; purchaseCost: number }>;
+    decorationTiers: Record<string, {
+      label: string;
+      index: number;
+      rentMultiplier: number;
+    }>;
+    constants: {
+      upgradeLevelBonusRate: number;
+    };
+  } | null;
 }) => {
+  const shopConfig = config?.shopTypes[shop.shopType];
+  const tierConfig = config?.decorationTiers[shop.decorationTier];
+  const bonusRate = config?.constants.upgradeLevelBonusRate ?? 0.1;
+
+  // dev 模式下展示公式明细
+  const formulaDetail = isDevMode && shopConfig && tierConfig ? (() => {
+    const initialRent = shopConfig.initialRent;
+    const initialArea = shopConfig.initialArea;
+    const rentMultiplier = tierConfig.rentMultiplier;
+    const spaceBonus = 1 + shop.spaceExpansion * 0.2;
+    const upgradeBonus = 1 + shop.upgradeLevel * bonusRate;
+    const expectedRent = initialRent * rentMultiplier * spaceBonus * upgradeBonus;
+
+    return (
+      <Flex vertical gap={2} style={{ background: 'rgba(250, 173, 20, 0.06)', borderRadius: 6, padding: '6px 10px', border: '1px dashed rgba(250, 173, 20, 0.3)' }}>
+        <Text style={{ fontSize: 11, fontWeight: 500, color: '#d48806' }}>租金公式</Text>
+        <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+          初始租金 × 装修系数 × 空间加成 × 升级加成
+        </Text>
+        <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+          {initialRent} × {rentMultiplier} × {spaceBonus.toFixed(1)} × {upgradeBonus.toFixed(1)}
+        </Text>
+        <Flex justify="space-between" align="center">
+          <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>计算结果</Text>
+          <Text style={{ fontSize: 11, fontWeight: 500, color: expectedRent === shop.rentPerTick ? 'var(--colorSuccess)' : 'var(--colorError)' }}>
+            {expectedRent.toFixed(1)} 灵石
+            {expectedRent !== shop.rentPerTick && `（实际 ${shop.rentPerTick}）`}
+          </Text>
+        </Flex>
+        <Divider style={{ margin: '6px 0' }} />
+        <Text style={{ fontSize: 11, fontWeight: 500, color: '#d48806' }}>空间加成</Text>
+        <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+          公式：1 + 扩展次数 × 0.2
+        </Text>
+        <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+          = 1 + {shop.spaceExpansion} × 0.2 = {spaceBonus.toFixed(1)}
+        </Text>
+        <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+          当前面积 = 初始面积 + 扩展次数 × 10 = {initialArea} + {shop.spaceExpansion} × 10 = {shop.area} ㎡
+        </Text>
+      </Flex>
+    );
+  })() : null;
+
   return (
     <Card
       size="small"
@@ -142,6 +198,9 @@ const ShopCard = observer(({
             </Text>
           </Flex>
         </Flex>
+
+        {/* dev 模式公式明细 */}
+        {formulaDetail}
 
         {/* 操作按钮 */}
         <Flex gap={6} wrap="wrap">
@@ -469,6 +528,7 @@ const ShopPanel = observer(() => {
             <Col xs={24} sm={12} md={8} key={shop.id}>
               <ShopCard
                 shop={shop}
+                config={shopStore.config}
                 onCollectRent={async (id) => {
                   const result = await shopStore.collectRent(id);
                   if (result.success) message.success(result.message);
@@ -506,71 +566,91 @@ const ShopPanel = observer(() => {
       )}
 
       {/* 扩展空间确认弹窗 */}
-      {expandShop && shopStore.config && (
-        <Modal
-          open
-          title="空间阵法扩展"
-          onCancel={() => setExpandShopId(null)}
-          onOk={async () => {
-            setExpandShopId(null);
-            const result = await shopStore.expandSpace(expandShop.id);
-            if (result.success) message.success(result.message);
-            else message.error(result.message);
-          }}
-          okText="确认扩展"
-          okButtonProps={{ disabled: spiritStones < (() => {
-            const tierConfig = shopStore.config?.decorationTiers[expandShop.decorationTier];
-            const tierMulti = tierConfig?.expansionMultiplier ?? 1;
-            const spaceCost = 50 * Math.pow(2, expandShop.spaceExpansion) * tierMulti;
-            const decorCost = (tierConfig?.pricePerSqm ?? 10) * 10;
-            return spaceCost + decorCost;
-          })() }}
-        >
-          {(() => {
-            const tierConfig = shopStore.config?.decorationTiers[expandShop.decorationTier];
-            const tierMulti = tierConfig?.expansionMultiplier ?? 1;
-            const spaceCost = 50 * Math.pow(2, expandShop.spaceExpansion) * tierMulti;
-            const decorCostPerSqm = tierConfig?.pricePerSqm ?? 10;
-            const decorCost = decorCostPerSqm * 10; // 扩展面积 10 ㎡
-            const totalCost = spaceCost + decorCost;
-            return (
-              <Flex vertical gap={12}>
-                <Flex justify="space-between">
-                  <Text>当前面积</Text>
-                  <Text strong>{expandShop.area} ㎡</Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text>扩展后面积</Text>
-                  <Text strong>{expandShop.area + 10} ㎡</Text>
-                </Flex>
-                <Divider style={{ margin: '8px 0' }} />
-                <Descriptions size="small" column={1}>
-                  <Descriptions.Item label="装修等级">{expandShop.decorationTierLabel}</Descriptions.Item>
-                </Descriptions>
-                <Divider style={{ margin: '8px 0' }} />
-                <Flex justify="space-between">
-                  <Text>空间阵法扩展费用</Text>
-                  <Text>{formatSpiritStones(spaceCost)} 灵石</Text>
-                </Flex>
-                <Flex justify="space-between">
-                  <Text>扩展面积装修费用</Text>
-                  <Text>10 ㎡ × {formatSpiritStones(decorCostPerSqm)} = {formatSpiritStones(decorCost)} 灵石</Text>
-                </Flex>
-                <Divider style={{ margin: '8px 0' }} />
-                <Flex justify="space-between">
-                  <Text strong>合计费用</Text>
-                  <Text strong style={{ color: spiritStones >= totalCost ? 'var(--colorError)' : 'var(--text-disabled)' }}>
-                    {formatSpiritStones(totalCost)} 灵石
+      {expandShop && shopStore.config && (() => {
+        const tierConfig = shopStore.config.decorationTiers[expandShop.decorationTier];
+        const tierMulti = tierConfig?.expansionMultiplier ?? 1;
+        const baseCost = shopStore.config.constants.spaceExpansionBaseCost;
+        const expBase = 2;
+        const spaceCost = baseCost * Math.pow(expBase, expandShop.spaceExpansion) * tierMulti;
+        const decorCostPerSqm = tierConfig?.pricePerSqm ?? 10;
+        const decorCost = decorCostPerSqm * 10;
+        const totalCost = spaceCost + decorCost;
+
+        return (
+          <Modal
+            open
+            title="空间阵法扩展"
+            onCancel={() => setExpandShopId(null)}
+            onOk={async () => {
+              setExpandShopId(null);
+              const result = await shopStore.expandSpace(expandShop.id);
+              if (result.success) message.success(result.message);
+              else message.error(result.message);
+            }}
+            okText="确认扩展"
+            okButtonProps={{ disabled: spiritStones < totalCost }}
+          >
+            <Flex vertical gap={12}>
+              <Flex justify="space-between">
+                <Text>当前面积</Text>
+                <Text strong>{expandShop.area} ㎡</Text>
+              </Flex>
+              <Flex justify="space-between">
+                <Text>扩展后面积</Text>
+                <Text strong>{expandShop.area + 10} ㎡</Text>
+              </Flex>
+              <Divider style={{ margin: '8px 0' }} />
+              <Descriptions size="small" column={1}>
+                <Descriptions.Item label="装修等级">{expandShop.decorationTierLabel}</Descriptions.Item>
+              </Descriptions>
+              <Divider style={{ margin: '8px 0' }} />
+              <Flex justify="space-between">
+                <Text>空间阵法扩展费用</Text>
+                <Text>{formatSpiritStones(spaceCost)} 灵石</Text>
+              </Flex>
+              <Flex justify="space-between">
+                <Text>扩展面积装修费用</Text>
+                <Text>10 ㎡ × {formatSpiritStones(decorCostPerSqm)} = {formatSpiritStones(decorCost)} 灵石</Text>
+              </Flex>
+              <Divider style={{ margin: '8px 0' }} />
+              <Flex justify="space-between">
+                <Text strong>合计费用</Text>
+                <Text strong style={{ color: spiritStones >= totalCost ? 'var(--colorError)' : 'var(--text-disabled)' }}>
+                  {formatSpiritStones(totalCost)} 灵石
+                </Text>
+              </Flex>
+              {spiritStones < totalCost && (
+                <Tag color="red">灵石不足，差额 {formatSpiritStones(totalCost - spiritStones)} 灵石</Tag>
+              )}
+              {isDevMode && (
+                <Flex vertical gap={2} style={{ background: 'rgba(250, 173, 20, 0.06)', borderRadius: 6, padding: '6px 10px', border: '1px dashed rgba(250, 173, 20, 0.3)' }}>
+                  <Text style={{ fontSize: 11, fontWeight: 500, color: '#d48806' }}>公式明细</Text>
+                  <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                    空间阵法费用 = 基础费用 × 2^n × 装修等级系数
+                  </Text>
+                  <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                    = {baseCost} × {expBase}^{expandShop.spaceExpansion} × {tierMulti}
+                  </Text>
+                  <Text style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-primary)' }}>
+                    = {formatSpiritStones(spaceCost)} 灵石
+                  </Text>
+                  <Divider style={{ margin: '4px 0' }} />
+                  <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                    扩展面积装修费用 = 10 ㎡ × 单价
+                  </Text>
+                  <Text style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                    = 10 × {formatSpiritStones(decorCostPerSqm)} = {formatSpiritStones(decorCost)} 灵石
+                  </Text>
+                  <Divider style={{ margin: '4px 0' }} />
+                  <Text style={{ fontSize: 11, fontWeight: 500, color: 'var(--text-primary)' }}>
+                    合计 = {formatSpiritStones(spaceCost)} + {formatSpiritStones(decorCost)} = {formatSpiritStones(totalCost)} 灵石
                   </Text>
                 </Flex>
-                {spiritStones < totalCost && (
-                  <Tag color="red">灵石不足，差额 {formatSpiritStones(totalCost - spiritStones)} 灵石</Tag>
-                )}
-              </Flex>
-            );
-          })()}
-        </Modal>
-      )}
+              )}
+            </Flex>
+          </Modal>
+        );
+      })()}
 
       {/* 购买新店铺弹窗 */}
       {purchaseVisible && shopStore.config && (
@@ -626,200 +706,6 @@ const ShopPanel = observer(() => {
         >
           <ShopProfitCalculator config={shopStore.config} shops={shopStore.shops} />
         </Modal>
-      )}
-    </Flex>
-  );
-});
-
-/**
- * dev-only 店铺收益测算器。
- * 展示每间店铺从当前状态升级到各装修等级/扩展次数的成本和收益对比。
- */
-type ShopProfitCalculatorProps = {
-  config: {
-    shopTypes: Record<string, { name: string; initialArea: number; initialRent: number; purchaseCost: number }>;
-    decorationTiers: Record<string, {
-      label: string;
-      index: number;
-      rentMultiplier: number;
-      pricePerSqm: number;
-      expansionMultiplier: number;
-    }>;
-    decorationTierOrder: string[];
-    constants: {
-      spaceExpansionAreaIncrement: number;
-      spaceExpansionBaseCost: number;
-      maxPendingRentTicks: number;
-      decorationRefundRate: number;
-      upgradeLevelBonusRate: number;
-      upgradeTicksBase: number;
-      rentTickIntervalMinutes: number;
-    };
-  };
-  shops: Array<{
-    id: number;
-    shopType: string;
-    shopTypeName: string;
-    area: number;
-    decorationTier: string;
-    decorationTierLabel: string;
-    upgradeLevel: number;
-    spaceExpansion: number;
-    rentPerTick: number;
-  }>;
-};
-
-const calcRentPerTick = (
-  initialRent: number,
-  tierMultiplier: number,
-  expansion: number,
-  upgradeLevel: number,
-  bonusRate: number,
-): number => {
-  const spaceBonus = 1 + expansion * 0.5;
-  const upgradeBonus = 1 + upgradeLevel * bonusRate;
-  return initialRent * tierMultiplier * spaceBonus * upgradeBonus;
-};
-
-const calcDecorationCost = (
-  currentPricePerSqm: number,
-  targetPricePerSqm: number,
-  area: number,
-): number => {
-  return Math.abs(targetPricePerSqm - currentPricePerSqm) * area;
-};
-
-const calcExpansionCost = (
-  baseCost: number,
-  expansion: number,
-  tierMultiplier: number,
-): number => {
-  return baseCost * Math.pow(2, expansion) * tierMultiplier;
-};
-
-const calcUpgradeTicksNeeded = (level: number, base: number): number => {
-  return base * (level + 1);
-};
-
-const ShopProfitCalculator = observer(({ config, shops }: ShopProfitCalculatorProps) => {
-  const { constants, decorationTiers, decorationTierOrder } = config;
-
-  const rows: CalcRow[] = [];
-  const TICKS_PER_DAY = (24 * 60) / constants.rentTickIntervalMinutes;
-
-  for (const shop of shops) {
-    const shopConfig = config.shopTypes[shop.shopType];
-    if (!shopConfig) continue;
-
-    const currentTierIdx = decorationTiers[shop.decorationTier]?.index ?? 0;
-    const currentPricePerSqm = decorationTiers[shop.decorationTier]?.pricePerSqm ?? 10;
-
-    // 枚举目标装修等级（从当前等级到最高）
-    for (let ti = currentTierIdx; ti < decorationTierOrder.length; ti++) {
-      const targetTier = decorationTierOrder[ti];
-      const targetTierConfig = decorationTiers[targetTier];
-      if (!targetTierConfig) continue;
-
-      // 枚举扩展次数（从当前到 +3）
-      const maxExtraExpansion = 4;
-      for (let extraExp = 0; extraExp <= maxExtraExpansion; extraExp++) {
-        const targetExpansion = shop.spaceExpansion + extraExp;
-
-        // 枚举升级等级（从当前到 +3）
-        const maxExtraUpgrade = 4;
-        for (let extraUp = 0; extraUp <= maxExtraUpgrade; extraUp++) {
-          const targetUpgradeLevel = shop.upgradeLevel + extraUp;
-
-          // 跳过当前状态本身
-          if (ti === currentTierIdx && extraExp === 0 && extraUp === 0) continue;
-
-          const targetRent = calcRentPerTick(
-            shopConfig.initialRent,
-            targetTierConfig.rentMultiplier,
-            targetExpansion,
-            targetUpgradeLevel,
-            constants.upgradeLevelBonusRate,
-          );
-
-          // 装修成本（仅当 tier 变化）
-          const decorationCost = ti > currentTierIdx
-            ? calcDecorationCost(currentPricePerSqm, targetTierConfig.pricePerSqm, shop.area)
-            : 0;
-
-          // 扩展成本（累加从当前到目标的每次扩展费用）
-          let expansionCost = 0;
-          const tierMulti = targetTierConfig.expansionMultiplier;
-          for (let e = shop.spaceExpansion; e < targetExpansion; e++) {
-            expansionCost += calcExpansionCost(constants.spaceExpansionBaseCost, e, tierMulti);
-          }
-          // 扩展面积的装修费用
-          expansionCost += targetTierConfig.pricePerSqm * constants.spaceExpansionAreaIncrement * extraExp;
-
-          const totalCost = decorationCost + expansionCost;
-          const rentIncrease = targetRent - shop.rentPerTick;
-          const ticksToRecover = rentIncrease > 0 ? Math.ceil(totalCost / rentIncrease) : Infinity;
-          const ticksToUpgrade = calcUpgradeTicksNeeded(targetUpgradeLevel, constants.upgradeTicksBase);
-
-          rows.push({
-            shopName: shop.shopTypeName,
-            currentRent: shop.rentPerTick,
-            targetTierLabel: targetTierConfig.label,
-            targetExpansion,
-            targetUpgradeLevel,
-            rentPerTick: targetRent,
-            rentIncrease,
-            decorationCost,
-            expansionCost,
-            totalCost,
-            ticksToRecover,
-            ticksToUpgrade,
-          });
-        }
-      }
-    }
-  }
-
-  // 按 totalCost 排序
-  rows.sort((a, b) => a.totalCost - b.totalCost);
-
-  const [selectedRowIdx, setSelectedRowIdx] = useState<number | null>(null);
-  const selectedRow = selectedRowIdx !== null ? rows[selectedRowIdx] ?? null : null;
-
-  const columns = [
-    { title: '店铺', dataIndex: 'shopName', key: 'shopName', width: 80 },
-    { title: '当前产出', dataIndex: 'currentRent', key: 'currentRent', width: 80, render: (v: number) => `${v.toFixed(1)}` },
-    { title: '装修', dataIndex: 'targetTierLabel', key: 'targetTierLabel', width: 60 },
-    { title: '扩展', dataIndex: 'targetExpansion', key: 'targetExpansion', width: 50, render: (v: number) => `+${v}` },
-    { title: '等级', dataIndex: 'targetUpgradeLevel', key: 'targetUpgradeLevel', width: 50, render: (v: number) => `Lv.${v}` },
-    { title: '新产出/次', dataIndex: 'rentPerTick', key: 'rentPerTick', width: 90, render: (v: number) => `${v.toFixed(1)}` },
-    { title: '产出提升/次', dataIndex: 'rentIncrease', key: 'rentIncrease', width: 90, render: (v: number) => `+${v.toFixed(1)}` },
-    { title: '装修成本', dataIndex: 'decorationCost', key: 'decorationCost', width: 90, render: (v: number) => formatSpiritStones(v) },
-    { title: '扩展成本', dataIndex: 'expansionCost', key: 'expansionCost', width: 90, render: (v: number) => formatSpiritStones(v) },
-    { title: '总成本', dataIndex: 'totalCost', key: 'totalCost', width: 90, render: (v: number) => formatSpiritStones(v) },
-    { title: '回本tick数', dataIndex: 'ticksToRecover', key: 'ticksToRecover', width: 90, render: (v: number) => v === Infinity ? '∞' : `${v} (~${(v / TICKS_PER_DAY).toFixed(1)}天)` },
-    { title: '升级tick数', dataIndex: 'ticksToUpgrade', key: 'ticksToUpgrade', width: 90, render: (v: number) => `${v} (~${(v / TICKS_PER_DAY).toFixed(1)}天)` },
-  ];
-
-  return (
-    <Flex vertical gap={12}>
-      <Text type="secondary" style={{ fontSize: 12 }}>
-        基于当前状态，枚举各店铺升级装修、扩展空间、提升等级后的成本与收益。点击表格行查看收益曲线。
-      </Text>
-      <Table<CalcRow>
-        size="small"
-        columns={columns}
-        dataSource={rows}
-        rowKey={(_, idx) => `${idx}`}
-        scroll={{ y: 400 }}
-        pagination={false}
-        onRow={(_, idx) => ({
-          style: { cursor: 'pointer' },
-          onClick: () => setSelectedRowIdx(idx ?? null),
-        })}
-        rowClassName={(_, idx) => idx === selectedRowIdx ? 'ant-table-row-selected' : ''}
-      />
-      {selectedRow && (
-        <ShopProfitCurveChart row={selectedRow} ticksPerDay={TICKS_PER_DAY} />
       )}
     </Flex>
   );
