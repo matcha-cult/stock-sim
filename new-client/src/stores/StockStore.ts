@@ -37,6 +37,12 @@ import {
   type StockMarketProfitDetailDto,
   type StockMarketTradeRecordDto,
   type StockMarketTradeSide,
+  createPendingOrder,
+  cancelPendingOrder,
+  getPendingOrders,
+  type PendingOrderDto,
+  type PendingOrderSide,
+  type PendingOrderTriggerMode,
 } from '../services/api/stockMarket';
 import {
   getWealthRanks,
@@ -73,6 +79,10 @@ export class StockStore {
   wealthRanks: WealthRankDto[] = [];
   stockMarketRanks: StockMarketRankDto[] = [];
   rankLoading: boolean = false;
+
+  // 挂单相关
+  pendingOrders: PendingOrderDto[] = [];
+  pendingOrdersLoading: boolean = false;
 
   constructor() {
     makeAutoObservable(this);
@@ -256,5 +266,55 @@ export class StockStore {
     this.wealthRanks = [];
     this.stockMarketRanks = [];
     this.rankLoading = false;
+    this.pendingOrders = [];
+    this.pendingOrdersLoading = false;
+  }
+
+  // ---- 挂单操作 ----
+
+  async refreshPendingOrders(): Promise<void> {
+    this.pendingOrdersLoading = true;
+    try {
+      const response = await getPendingOrders(SILENT_API_REQUEST_CONFIG);
+      this.pendingOrders = response.data?.orders ?? [];
+    } catch {
+      this.pendingOrders = [];
+    } finally {
+      this.pendingOrdersLoading = false;
+    }
+  }
+
+  async createPendingOrder(params: {
+    stockId: string;
+    side: PendingOrderSide;
+    quantity: number;
+    limitPrice: number;
+    triggerMode?: PendingOrderTriggerMode;
+  }): Promise<{ success: boolean; message: string; orderId?: number }> {
+    try {
+      const response = await createPendingOrder(params);
+      if (response.success) {
+        await this.refreshPendingOrders();
+        return { success: true, message: response.message ?? '挂单创建成功', orderId: response.orderId };
+      }
+      return { success: false, message: response.message ?? '挂单创建失败' };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '挂单创建失败';
+      return { success: false, message };
+    }
+  }
+
+  async cancelPendingOrder(orderId: number): Promise<{ success: boolean; message: string }> {
+    try {
+      const response = await cancelPendingOrder(orderId);
+      if (response.success) {
+        await this.refreshPendingOrders();
+        return { success: true, message: response.message ?? '挂单已取消' };
+      }
+      return { success: false, message: response.message ?? '取消失败' };
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : '取消失败';
+      return { success: false, message };
+    }
   }
 }

@@ -397,12 +397,12 @@ const StockCandlestick = memo(function StockCandlestick({
       }
     >
       {loading ? (
-        <Flex justify="center" style={{ padding: 16 }}>
+        <Flex justify="center" align="center" style={{ height: 200 }}>
           <Spin size="small" />
         </Flex>
       ) : null}
       {!loading && !hasChartData ? (
-        <div style={{ color: 'var(--text-tertiary)', textAlign: 'center', padding: 16 }}>暂无走势记录</div>
+        <div style={{ height: 200, color: 'var(--text-tertiary)', textAlign: 'center', lineHeight: '200px' }}>暂无走势记录</div>
       ) : null}
       {shouldRenderChart ? (
         <div className="stock-market-kline-chart" aria-label="股票近期K线" data-element="kline-container">

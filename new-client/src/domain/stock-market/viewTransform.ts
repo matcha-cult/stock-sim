@@ -34,6 +34,7 @@ import type {
   StockMarketStockDto,
   StockMarketTradeRulesDto,
   StockMarketTradeRecordDto,
+  PendingOrderDto,
 } from '../../services/api/stockMarket';
 import type {
   StockMarketCandlestickView,
@@ -48,6 +49,7 @@ import type {
   StockMarketTone,
   StockMarketTradePreview,
   StockMarketTradeRecordView,
+  PendingOrderView,
 } from './types';
 
 const STOCK_MARKET_MA_PERIODS: ReadonlyArray<{
@@ -526,4 +528,58 @@ export const buildStockMarketProfitDetailViewModel = (
     },
     dailyRows: detail.daily.map((record) => buildStockMarketProfitDailyView(record)),
   };
+};
+
+// ---- 挂单视图转换 ----
+
+const buildPendingOrderSideText = (side: PendingOrderView['side']): string => {
+  return side === 'buy' ? '买入' : '卖出';
+};
+
+const buildPendingOrderSideTone = (side: PendingOrderView['side']): StockMarketTone => {
+  return side === 'buy' ? 'up' : 'down';
+};
+
+const buildPendingOrderStatusText = (status: PendingOrderView['status']): string => {
+  const map: Record<PendingOrderView['status'], string> = {
+    active: '待成交',
+    filled: '已成交',
+    cancelled: '已取消',
+    expired: '已过期',
+  };
+  return map[status] ?? status;
+};
+
+const buildPendingOrderTriggerModeText = (mode: PendingOrderView['triggerMode']): string => {
+  return mode === 'normal' ? '常规' : '溢价';
+};
+
+export const buildPendingOrderView = (
+  dto: PendingOrderDto,
+): PendingOrderView => {
+  return {
+    id: dto.id,
+    stockId: dto.stockId,
+    stockName: dto.stockName,
+    stockCode: dto.stockCode,
+    side: dto.side,
+    sideText: buildPendingOrderSideText(dto.side),
+    sideTone: buildPendingOrderSideTone(dto.side),
+    status: dto.status,
+    statusText: buildPendingOrderStatusText(dto.status),
+    quantity: dto.quantity,
+    quantityText: formatStockMarketQuantity(dto.quantity),
+    limitPriceSpiritStones: dto.limitPriceSpiritStones,
+    limitPriceText: formatStockMarketPrice(dto.limitPriceSpiritStones),
+    triggerMode: dto.triggerMode,
+    triggerModeText: buildPendingOrderTriggerModeText(dto.triggerMode),
+    createdAt: dto.createdAt,
+    createdAtText: formatStockMarketTime(dto.createdAt),
+  };
+};
+
+export const buildPendingOrderViews = (
+  dtos: readonly PendingOrderDto[],
+): PendingOrderView[] => {
+  return dtos.map((dto) => buildPendingOrderView(dto));
 };

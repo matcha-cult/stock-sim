@@ -39,6 +39,7 @@ model characters {
   users                        users  @relation(fields: [user_id], references: [id], onDelete: Cascade)
   stock_holdings               character_stock_holding[]
   stock_trade_records          stock_market_trade_record[]
+  stock_pending_orders         stock_market_pending_order[]
   shop_details                 shop_detail[]
 }
 
@@ -164,4 +165,25 @@ model shop_detail {
 
   @@unique([character_id, shop_type])
   @@index([character_id])
+}
+
+// 股市挂单表
+model stock_market_pending_order {
+  id                Int       @id @default(autoincrement())
+  character_id      Int
+  stock_id          String    @db.VarChar(50)
+  side              String    @db.VarChar(10)       // buy/sell
+  status            String    @db.VarChar(20)       @default("active") // active/filled/cancelled/expired
+  quantity          Int
+  limit_price_units BigInt
+  trigger_mode      String    @db.VarChar(10)       @default("normal") // normal/premium
+  created_at        DateTime  @default(now())       @db.Timestamp(6)
+  filled_at         DateTime? @db.Timestamp(6)
+  cancelled_at      DateTime? @db.Timestamp(6)
+
+  character         characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@index([stock_id, status], map: "idx_pending_orders_stock_status")
+  @@index([character_id, status], map: "idx_pending_orders_character_status")
+  @@index([character_id], map: "idx_pending_orders_character")
 }

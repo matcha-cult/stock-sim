@@ -28,6 +28,7 @@ import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 import { sendResult, sendSuccess } from '../middleware/response.js';
 import { parseFiniteNumber, parseNonEmptyText, getSingleQueryValue } from '../services/shared/httpParam.js';
 import { stockMarketService } from '../services/stockMarket/stockMarketService.js';
+import { pendingOrderService } from '../services/stockMarket/pendingOrderService.js';
 
 const router: RouterType = Router();
 
@@ -62,6 +63,9 @@ const stockMarketSellQpsLimit = createStockMarketQpsLimit('sell', STOCK_MARKET_M
 const stockMarketClearQpsLimit = createStockMarketQpsLimit('clear', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketNewsEventListQpsLimit = createStockMarketQpsLimit('news-event-list', STOCK_MARKET_QUERY_QPS_LIMIT);
 const stockMarketNewsEventChainQpsLimit = createStockMarketQpsLimit('news-event-chain', STOCK_MARKET_QUERY_QPS_LIMIT);
+const stockMarketCreatePendingOrderQpsLimit = createStockMarketQpsLimit('create-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketCancelPendingOrderQpsLimit = createStockMarketQpsLimit('cancel-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketListPendingOrdersQpsLimit = createStockMarketQpsLimit('list-pending-orders', STOCK_MARKET_QUERY_QPS_LIMIT);
 
 const parseTradeBody = (body: StockMarketTradeBody): { stockId: string; quantity: number } | null => {
   const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
@@ -182,6 +186,71 @@ router.get('/news-events/:eventId/chain', requireGm, stockMarketNewsEventChainQp
 
   const data = await stockMarketService.getNewsEventChain(eventId);
   sendSuccess(res, data);
+}));
+
+// ---- 挂单 ----
+
+type CreatePendingOrderBody = {
+  stockId?: string | null;
+  side?: string | null;
+  quantity?: string | number | null;
+  limitPrice?: string | number | null;
+  triggerMode?: string | null;
+};
+
+const parseCreatePendingOrderBody = (body: CreatePendingOrderBody): {
+  stockId: string;
+  side: 'buy' | 'sell';
+  quantity: number;
+  limitPrice: number;
+  triggerMode: 'normal' | 'premium' | undefined;
+} | null => {
+  const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
+  const side = body.side === 'buy' || body.side === 'sell' ? body.side : null;
+  const quantity = parseFiniteNumber(body.quantity ?? undefined);
+  const limitPrice = parseFiniteNumber(body.limitPrice ?? undefined);
+  const triggerMode = (body.triggerMode === 'normal' || body.triggerMode === 'premium')
+    ? body.triggerMode
+    : undefined;
+  if (!stockId || !side || quantity === undefined || limitPrice === undefined) return null;
+  return { stockId, side, quantity, limitPrice, triggerMode };
+};
+
+router.post('/pending-orders', requireCharacter, stockMarketCreatePendingOrderQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const parsed = parseCreatePendingOrderBody(req.body as CreatePendingOrderBody);
+  if (!parsed) {
+    sendResult(res, { success: false, message: '挂单参数无效' });
+    return;
+  }
+
+  const result = await pendingOrderService.createOrder({
+    characterId,
+    stockId: parsed.stockId,
+    side: parsed.side,
+    quantity: parsed.quantity,
+    limitPriceSpiritStones: parsed.limitPrice,
+    triggerMode: parsed.triggerMode,
+  });
+  sendResult(res, result);
+}));
+
+router.delete('/pending-orders/:orderId', requireCharacter, stockMarketCancelPendingOrderQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const orderId = parseFiniteNumber(typeof req.params.orderId === 'string' ? req.params.orderId : undefined);
+  if (orderId === undefined) {
+    sendResult(res, { success: false, message: '订单ID参数无效' });
+    return;
+  }
+
+  const result = await pendingOrderService.cancelOrder(orderId, characterId);
+  sendResult(res, result);
+}));
+
+router.get('/pending-orders', requireCharacter, stockMarketListPendingOrdersQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const orders = await pendingOrderService.getActiveOrders(characterId);
+  sendSuccess(res, { orders });
 }));
 
 export default router;

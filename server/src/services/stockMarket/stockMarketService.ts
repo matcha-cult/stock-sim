@@ -70,6 +70,7 @@ import {
   floorStockMarketTickTime,
   getNextStockMarketRefreshAt,
 } from './stockMarketTime.js';
+import { pendingOrderService } from './pendingOrderService.js';
 import { STOCK_MARKET_SCENARIO_RECENT_TICK_LIMIT } from './stockMarketScenarioSelector.js';
 
 type StockMarketQuoteRow = {
@@ -1894,6 +1895,11 @@ class StockMarketService {
           );
         }
       }
+
+      // 所有股票价格更新后，撮合活跃挂单
+      console.log('[PendingOrder] 开始撮合挂单...');
+      await pendingOrderService.processAllActiveOrders();
+      console.log('[PendingOrder] 撮合完成');
     });
   }
 

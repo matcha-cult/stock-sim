@@ -55,12 +55,14 @@ import {
   formatStockMarketTime,
 } from '../domain/stock-market/viewTransform';
 import StockCandlestick from './StockCandlestick';
+import PendingOrderCard from './PendingOrderCard';
+import PendingOrderManagement from './PendingOrderManagement';
 
 const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'profit' | 'records' | 'ranking' | 'shop' | 'gm-news-viewer';
+type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'gm-news-viewer';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
@@ -304,7 +306,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'gm-news-viewer') {
+    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'gm-news-viewer') {
       setActiveTab(key);
     }
   }, []);
@@ -442,6 +444,11 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   }}
                 />
               ),
+            },
+            {
+              key: 'pending-orders',
+              label: '挂单管理',
+              children: <PendingOrderManagement />,
             },
             {
               key: 'profit',
@@ -1014,6 +1021,9 @@ function StockDetailContent({
           latestChangeText={selectedStockView.changeText}
           latestTone={selectedStockView.changeTone}
         />
+
+        {/* 挂单交易 */}
+        <PendingOrderCard selectedStock={selectedStock} />
       </Flex>
     </Card>
   );
@@ -1127,10 +1137,10 @@ function TradeBox({
               <TradePreviewItem label="卖出到账" value={tradePreview.sellReceiveText} />
             </Col>
             <Col span={12}>
-              <TradePreviewItem label="买入费用" value={tradePreview.buyFeeAmountText} />
+              <TradePreviewItem label="买入费用(佣金+过户)" value={tradePreview.buyFeeAmountText} />
             </Col>
             <Col span={12}>
-              <TradePreviewItem label="卖出费用" value={tradePreview.sellFeeAmountText} />
+              <TradePreviewItem label="卖出费用(印花税+过户)" value={tradePreview.sellFeeAmountText} />
             </Col>
           </Row>
         </Col>
