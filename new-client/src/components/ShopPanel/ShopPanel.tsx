@@ -445,7 +445,7 @@ const ShopPanel = observer(() => {
               title="待收租金"
               value={shopStore.totalPendingRent}
               suffix="灵石"
-              valueStyle={{ fontSize: 20, fontWeight: 600 }}
+              valueStyle={{ fontSize: 16, fontWeight: 600 }}
               formatter={(v) => Number(v).toLocaleString('zh-CN')}
             />
           </Col>
@@ -454,7 +454,7 @@ const ShopPanel = observer(() => {
               title="已收租金"
               value={totalCollectedRent}
               suffix="灵石"
-              valueStyle={{ fontSize: 20, fontWeight: 600 }}
+              valueStyle={{ fontSize: 16, fontWeight: 600 }}
               formatter={(v) => Number(v).toLocaleString('zh-CN')}
             />
           </Col>
@@ -464,10 +464,10 @@ const ShopPanel = observer(() => {
                 title="下次收租"
                 value={nextRentAt.getTime()}
                 format="mm 分 ss 秒"
-                valueStyle={{ fontSize: 20, fontWeight: 600 }}
+                valueStyle={{ fontSize: 16, fontWeight: 600 }}
               />
             ) : (
-              <Statistic title="下次收租" value={0} suffix="--" valueStyle={{ fontSize: 20, fontWeight: 600 }} />
+              <Statistic title="下次收租" value={0} suffix="--" valueStyle={{ fontSize: 16, fontWeight: 600 }} />
             )}
           </Col>
         </Row>
