@@ -36,6 +36,7 @@ const PASSWORD_MIN_LENGTH = 6;
 export interface JwtPayload {
   id: number;
   username: string;
+  permissions: string[];
 }
 
 export interface TokenVerifyResult {
@@ -49,7 +50,7 @@ export interface TokenVerifyResult {
 export const register = async (
   username: string,
   password: string,
-): Promise<{ success: boolean; message: string; data?: { token: string; user: { id: number; username: string } } }> => {
+): Promise<{ success: boolean; message: string; data?: { token: string; user: { id: number; username: string; permissions: string[] } } }> => {
   // 参数校验
   const normalizedUsername = username.trim();
   if (!normalizedUsername) {
@@ -74,21 +75,22 @@ export const register = async (
   // 加密密码
   const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
 
-  // 创建用户
+  // 创建用户（permissions 默认空数组）
   const result = await query(
-    'INSERT INTO users (username, password, updated_at) VALUES ($1, $2, CURRENT_TIMESTAMP) RETURNING id, username',
-    [normalizedUsername, hashedPassword],
+    'INSERT INTO users (username, password, permissions, updated_at) VALUES ($1, $2, $3, CURRENT_TIMESTAMP) RETURNING id, username, permissions',
+    [normalizedUsername, hashedPassword, []],
   );
 
   const user = result.rows[0];
-  const token = generateToken({ id: Number(user.id), username: String(user.username) });
+  const permissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
+  const token = generateToken({ id: Number(user.id), username: String(user.username), permissions });
 
   return {
     success: true,
     message: '注册成功',
     data: {
       token,
-      user: { id: Number(user.id), username: String(user.username) },
+      user: { id: Number(user.id), username: String(user.username), permissions },
     },
   };
 };
@@ -99,7 +101,7 @@ export const register = async (
 export const login = async (
   username: string,
   password: string,
-): Promise<{ success: boolean; message: string; data?: { token: string; user: { id: number; username: string }; character?: { id: number; nickname: string; spiritStones: number } | null } }> => {
+): Promise<{ success: boolean; message: string; data?: { token: string; user: { id: number; username: string; permissions: string[] }; character?: { id: number; nickname: string; spiritStones: number } | null } }> => {
   // 参数校验
   const normalizedUsername = username.trim();
   if (!normalizedUsername || !password) {
@@ -108,7 +110,7 @@ export const login = async (
 
   // 查询用户
   const userResult = await query(
-    'SELECT id, username, password FROM users WHERE username = $1',
+    'SELECT id, username, password, permissions FROM users WHERE username = $1',
     [normalizedUsername],
   );
 
@@ -147,15 +149,17 @@ export const login = async (
     }
     : null;
 
+  const permissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
+
   // 生成 Token
-  const token = generateToken({ id: Number(user.id), username: String(user.username) });
+  const token = generateToken({ id: Number(user.id), username: String(user.username), permissions });
 
   return {
     success: true,
     message: '登录成功',
     data: {
       token,
-      user: { id: Number(user.id), username: String(user.username) },
+      user: { id: Number(user.id), username: String(user.username), permissions },
       character,
     },
   };
@@ -166,14 +170,15 @@ export const login = async (
  */
 export const bootstrap = async (
   userId: number,
-): Promise<{ success: boolean; data?: { user: { id: number; username: string }; character?: { id: number; nickname: string; gender: string; title: string | null; spiritStones: number } | null } }> => {
+): Promise<{ success: boolean; data?: { user: { id: number; username: string; permissions: string[] }; character?: { id: number; nickname: string; gender: string; title: string | null; spiritStones: number } | null } }> => {
   // 查询用户
-  const userResult = await query('SELECT id, username FROM users WHERE id = $1', [userId]);
+  const userResult = await query('SELECT id, username, permissions FROM users WHERE id = $1', [userId]);
   if (userResult.rows.length === 0) {
     return { success: false };
   }
 
   const user = userResult.rows[0];
+  const permissions: string[] = Array.isArray(user.permissions) ? user.permissions : [];
 
   // 查询角色
   const characterResult = await query(
@@ -195,7 +200,7 @@ export const bootstrap = async (
   return {
     success: true,
     data: {
-      user: { id: Number(user.id), username: String(user.username) },
+      user: { id: Number(user.id), username: String(user.username), permissions },
       character,
     },
   };

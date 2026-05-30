@@ -1,13 +1,13 @@
 /**
- * DEV 新闻事件查看器。
+ * GM 新闻事件查看器。
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：以列表展示所有新闻事件，点击事件后以时间线展示完整续写链路。
- * 2. 不做什么：不参与任何生产逻辑，仅在 import.meta.env.DEV 下渲染。
+ * 2. 不做什么：不参与任何业务逻辑，仅供 GM 查看和调试。
  *
  * 输入 / 输出：
- * - 输入：无 props，自行调用 API 拉取事件列表和续写链。
- * - 输出：事件列表 + 续写时间线（支持内联展开 / Drawer 两种模式）。
+ * - 输入：definitionMap（股票 ID -> 中文名映射），自行调用 API 拉取事件列表和续写链。
+ * - 输出：事件列表 + 续写时间线（支持 Drawer 内联展示）。
  *
  * 数据流 / 状态流：
  * 组件挂载 -> getNewsEventList() -> 渲染 Table -> 点击行 -> getNewsEventChain() -> 渲染 Timeline。
@@ -17,8 +17,7 @@
  * - 时间格式化复用 formatStockMarketTime。
  *
  * 关键边界条件与坑点：
- * 1. 组件顶部有 import.meta.env.DEV 守卫，非 dev 模式不渲染任何 DOM。
- * 2. 续写链可能为空（事件创建了但 tick 未关联），需要友好展示空状态。
+ * 1. 续写链可能为空（事件创建了但 tick 未关联），需要友好展示空状态。
  */
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
@@ -49,11 +48,11 @@ const statusColorMap: Record<string, string> = {
   resolved: 'default',
 };
 
-interface DevNewsViewerProps {
+interface GmNewsViewerProps {
   definitionMap: ReadonlyMap<string, string>;
 }
 
-const DevNewsViewer: React.FC<DevNewsViewerProps> = ({ definitionMap }) => {
+const GmNewsViewer: React.FC<GmNewsViewerProps> = ({ definitionMap }) => {
   const { message } = App.useApp();
 
   const [events, setEvents] = useState<NewsEventDto[]>([]);
@@ -176,7 +175,7 @@ const DevNewsViewer: React.FC<DevNewsViewerProps> = ({ definitionMap }) => {
       width: 140,
       render: (ts: number | null) => ts ? formatStockMarketTime(ts) : '—',
     },
-  ], []);
+  ], [definitionMap]);
 
   const selectedEventInfo = useMemo(
     () => events.find((e) => e.id === selectedEventId) ?? null,
@@ -184,12 +183,11 @@ const DevNewsViewer: React.FC<DevNewsViewerProps> = ({ definitionMap }) => {
   );
 
   return (
-    <Flex vertical gap={16} data-section="dev-news-viewer">
+    <Flex vertical gap={16} data-section="gm-news-viewer">
       {/* 顶部控制栏 */}
       <Flex justify="space-between" align="center" gap={12} wrap="wrap">
         <Title level={5} style={{ margin: 0 }}>新闻事件查看器</Title>
         <Flex gap={12} align="center">
-          <Tag color="orange">DEV ONLY</Tag>
           <Button size="small" icon={<ReloadOutlined />} onClick={fetchEvents} loading={loading}>
             刷新
           </Button>
@@ -353,11 +351,4 @@ function TickNode({ tick }: TickNodeProps): React.ReactNode {
   );
 }
 
-// ---- 导出（dev 守卫） ----
-
-const DevNewsViewerWithGuard: React.FC<DevNewsViewerProps> = (props) => {
-  if (import.meta.env.DEV !== true) return null;
-  return <DevNewsViewer {...props} />;
-};
-
-export default DevNewsViewerWithGuard;
+export default GmNewsViewer;

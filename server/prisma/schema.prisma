@@ -19,6 +19,7 @@ model users {
   last_login    DateTime? @db.Timestamp(6)
   status        Int       @default(1) @db.SmallInt
   session_token String?   @db.VarChar(64)
+  permissions   String[]  @default([])
 
   characters    characters?
 }

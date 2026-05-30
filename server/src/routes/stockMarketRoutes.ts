@@ -22,7 +22,7 @@
  */
 import { Router, type Router as RouterType } from 'express';
 import { asyncHandler } from '../middleware/asyncHandler.js';
-import { requireCharacter } from '../middleware/auth.js';
+import { requireCharacter, requireGm } from '../middleware/auth.js';
 import { createQpsLimitMiddleware } from '../middleware/qpsLimit.js';
 import { safePushCharacterUpdate } from '../middleware/pushUpdate.js';
 import { sendResult, sendSuccess } from '../middleware/response.js';
@@ -168,12 +168,12 @@ router.post('/clear', requireCharacter, stockMarketClearQpsLimit, asyncHandler(a
   sendResult(res, result);
 }));
 
-router.get('/news-events', requireCharacter, stockMarketNewsEventListQpsLimit, asyncHandler(async (req, res) => {
+router.get('/news-events', requireGm, stockMarketNewsEventListQpsLimit, asyncHandler(async (req, res) => {
   const data = await stockMarketService.getNewsEventList();
   sendSuccess(res, data);
 }));
 
-router.get('/news-events/:eventId/chain', requireCharacter, stockMarketNewsEventChainQpsLimit, asyncHandler(async (req, res) => {
+router.get('/news-events/:eventId/chain', requireGm, stockMarketNewsEventChainQpsLimit, asyncHandler(async (req, res) => {
   const eventId = typeof req.params.eventId === 'string' ? req.params.eventId.trim() : '';
   if (!eventId) {
     sendResult(res, { success: false, message: 'eventId 参数无效' });
