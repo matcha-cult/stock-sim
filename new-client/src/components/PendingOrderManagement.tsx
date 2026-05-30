@@ -31,6 +31,7 @@ import type { ColumnsType } from 'antd/es/table';
 import { CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import {
+  formatStockMarketBps,
   formatStockMarketPrice,
   formatStockMarketQuantity,
   formatStockMarketTime,
@@ -67,11 +68,11 @@ const PendingOrderManagement = observer(function PendingOrderManagement(): React
     }
   }, [stockStore, message]);
 
-  // 当前股价映射（从 overview 中读取）
-  const priceByStockId = useMemo(() => {
-    const map = new Map<string, number>();
+  // 当前股价 + 涨跌映射（从 overview 中读取）
+  const stockInfoByStockId = useMemo(() => {
+    const map = new Map<string, { priceSpiritStones: number; lastChangeBps: number }>();
     for (const stock of stockStore.overview?.stocks ?? []) {
-      map.set(stock.stockId, stock.priceSpiritStones);
+      map.set(stock.stockId, { priceSpiritStones: stock.priceSpiritStones, lastChangeBps: stock.lastChangeBps });
     }
     return map;
   }, [stockStore.overview?.stocks]);
@@ -121,15 +122,16 @@ const PendingOrderManagement = observer(function PendingOrderManagement(): React
       width: 100,
       align: 'right',
       render: (_, record) => {
-        const currentPrice = priceByStockId.get(record.stockId);
-        if (currentPrice === undefined) return '--';
-        const diffRatio = ((currentPrice - record.limitPriceSpiritStones) / record.limitPriceSpiritStones * 100).toFixed(2);
-        const isUp = parseFloat(diffRatio) >= 0;
+        const info = stockInfoByStockId.get(record.stockId);
+        if (info === undefined) return '--';
         return (
           <Flex vertical align="flex-end">
-            <span>{formatStockMarketPrice(currentPrice)}</span>
-            <span style={{ fontSize: 11, color: isUp ? '#f05b4f' : '#58a678' }}>
-              {isUp ? '+' : ''}{diffRatio}%
+            <span>{formatStockMarketPrice(info.priceSpiritStones)}</span>
+            <span
+              className={getStockMarketToneClassName(resolveStockMarketTone(info.lastChangeBps))}
+              style={{ fontSize: 11 }}
+            >
+              {formatStockMarketBps(info.lastChangeBps)}
             </span>
           </Flex>
         );
