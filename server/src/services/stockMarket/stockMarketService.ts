@@ -35,8 +35,12 @@ import {
 } from './stockMarketDefinitions.js';
 import {
   generateStockMarketAiNewsDraft,
+  STOCK_MARKET_TREND_LOOKBACK_TICKS,
+  STOCK_MARKET_TREND_SIGNIFICANT_BPS_THRESHOLD,
   type StockMarketValidatedEvent,
   type StockMarketValidatedImpact,
+  type StockMarketPriceTrendInfo,
+  type StockMarketTrendDirection,
 } from './stockMarketAi.js';
 import {
   STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT,
@@ -135,6 +139,12 @@ type StockMarketTickInsertRow = {
 type StockMarketTickRow = {
   id: string | number | bigint;
   status: string;
+};
+
+type StockMarketRecentTrendRow = {
+  stock_id: string;
+  tick_hour: Date | string;
+  change_bps: string | number | null;
 };
 
 type StockMarketRecentImpactRow = {
@@ -1200,6 +1210,7 @@ class StockMarketService {
       [definitions.map((definition) => definition.id)],
     );
     const recentImpactStockIds = await this.loadRecentImpactStockIds();
+    const recentTrends = await this.loadRecentPriceTrend(STOCK_MARKET_TREND_LOOKBACK_TICKS);
     await this.coolInactiveNewsEvents(tickId);
     const activeEvents = await this.loadActiveNewsEvents();
     const newsResult = await generateStockMarketAiNewsDraft({
@@ -1209,6 +1220,7 @@ class StockMarketService {
         currentPriceUnits: toBigIntValue(row.current_price_spirit_stones),
       })),
       recentImpactStockIds,
+      recentTrends,
       activeEvents,
       tickHour,
     });
@@ -1464,6 +1476,74 @@ class StockMarketService {
       [STOCK_MARKET_SCENARIO_RECENT_TICK_LIMIT],
     );
     return result.rows.map((row) => row.stock_id);
+  }
+
+  /** 查询近 N 个 tick 的价格走势，按股票聚合最近一次 changeBps。 */
+  private async loadRecentPriceTrend(lookbackTicks: number): Promise<StockMarketPriceTrendInfo[]> {
+    const result = await query<StockMarketRecentTrendRow>(
+      `
+        WITH recent_ticks AS (
+          SELECT id, tick_hour
+          FROM stock_market_tick
+          WHERE status = 'generated'
+          ORDER BY tick_hour DESC
+          LIMIT $1
+        ),
+        latest_changes AS (
+          SELECT DISTINCT ON (h.stock_id)
+            h.stock_id,
+            rt.tick_hour,
+            h.change_bps
+          FROM recent_ticks rt
+          JOIN stock_market_price_history h ON h.tick_id = rt.id
+          ORDER BY h.stock_id ASC, rt.tick_hour DESC, h.id DESC
+        )
+        SELECT stock_id, tick_hour, change_bps
+        FROM latest_changes
+        ORDER BY stock_id ASC
+      `,
+      [lookbackTicks],
+    );
+
+    const trendByStock = new Map<string, { lastTickHour: Date; lastChangeBps: number; tickCount: number; netChangeBps: number }>();
+
+    for (const row of result.rows) {
+      const stockId = row.stock_id;
+      const changeBps = row.change_bps !== null ? Number(row.change_bps) : 0;
+      const tickHour = new Date(row.tick_hour);
+      const existing = trendByStock.get(stockId);
+      if (!existing) {
+        trendByStock.set(stockId, {
+          lastTickHour: tickHour,
+          lastChangeBps: changeBps,
+          tickCount: 1,
+          netChangeBps: changeBps,
+        });
+      } else {
+        existing.tickCount += 1;
+        existing.netChangeBps += changeBps;
+      }
+    }
+
+    const trends: StockMarketPriceTrendInfo[] = [];
+    for (const [stockId, info] of trendByStock) {
+      const direction: StockMarketTrendDirection =
+        info.netChangeBps < -STOCK_MARKET_TREND_SIGNIFICANT_BPS_THRESHOLD
+          ? 'bearish'
+          : info.netChangeBps > STOCK_MARKET_TREND_SIGNIFICANT_BPS_THRESHOLD
+            ? 'bullish'
+            : 'neutral';
+      trends.push({
+        stockId,
+        direction,
+        lastChangeBps: info.lastChangeBps,
+        netChangeBps: Math.round(info.netChangeBps),
+        tickCount: info.tickCount,
+        lastTickHour: info.lastTickHour,
+      });
+    }
+
+    return trends;
   }
 
   private async coolInactiveNewsEvents(currentTickId: bigint): Promise<void> {

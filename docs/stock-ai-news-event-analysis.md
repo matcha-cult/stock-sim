@@ -122,6 +122,14 @@ ORDER BY t.tick_hour ASC, h.id ASC
              · 场景的 focusStockIds 近期频繁出现 → 权重扣减
              · 场景的 focusStockIds 近期没出现 → 权重加分
 
+  ③½ loadRecentPriceTrend(32)
+      └── 查询最近 32 个 generated tick 的 price_history，按股票聚合
+          · 计算每只股票最近 N 次出现的净变化（netChangeBps）
+          · 根据净变化判定方向：bullish（累计涨超 1%）、bearish（累计跌超 1%）、neutral
+          · 传入 AI prompt 的 recentTrends 字段，指导 AI 做趋势对冲
+          · bearish 股票 → AI 优先给予利好/修复题材
+          · bullish 股票 → AI 适度给予利空/回调压力
+
 ④ coolInactiveNewsEvents(currentTickId)
    └── UPDATE stock_market_news_event
        · active  → cooling: last_tick_id 距当前 tick ≥ 48
@@ -136,7 +144,7 @@ ORDER BY t.tick_hour ASC, h.id ASC
    至此所有数据就绪，传入 AI 生成器
    ─────────────────────────────────────────────────────────
 
-⑥ generateStockMarketAiNewsDraft({ definitions, quotes, recentImpactStockIds, activeEvents, tickHour })
+⑥ generateStockMarketAiNewsDraft({ definitions, quotes, recentImpactStockIds, recentTrends, activeEvents, tickHour })
    │
    ├── selectStockMarketNewsEventContext()  ← 纯函数：事件池权重计算 + 轮盘赌
    │   · 对每条事件计算权重，再加一个虚拟 "new" 候选
