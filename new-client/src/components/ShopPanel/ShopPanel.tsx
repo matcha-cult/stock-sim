@@ -423,7 +423,7 @@ const ShopPanel = observer(() => {
   const totalCollectedRent = shopStore.shops.reduce((sum, s) => sum + s.totalRentCollected, 0);
 
   return (
-    <Flex vertical gap={12} style={{ padding: 12 }}>
+    <Flex vertical gap={12} style={{  }}>
       {/* 顶部汇总 */}
       <Card
         size="small"
