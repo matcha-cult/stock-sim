@@ -285,7 +285,7 @@ const loadShopRentRanks = async (limit: number): Promise<ShopRentRankRow[]> => {
           c.id AS character_id,
           c.nickname AS name,
           c.title,
-          SUM(s.total_rent_collected)::bigint AS total_collected,
+          SUM(s.total_rent_collected)::bigint / 100 AS total_collected,
           COUNT(*)::int AS shop_count
         FROM shop_detail s
         JOIN characters c ON c.id = s.character_id
