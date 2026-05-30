@@ -1582,7 +1582,7 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
                   dataIndex: 'totalRentCollected',
                   key: 'totalRentCollected',
                   align: 'right',
-                  render: (v: number) => `${formatSpiritStones(v)} 灵石`,
+                  render: (v: number) => `${v.toLocaleString()} 灵石`,
                 },
                 {
                   title: '店铺数',
