@@ -149,7 +149,7 @@ const PendingOrderManagement = observer(function PendingOrderManagement(): React
       ),
     },
     {
-      title: '创建时间',
+      title: '挂单时间',
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 140,

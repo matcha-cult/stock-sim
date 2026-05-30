@@ -171,13 +171,15 @@ class PendingOrderService {
       }
     }
 
+    const now = new Date();
+
     const insertResult = await query<{ id: string | number | bigint }>(
       `
         INSERT INTO stock_market_pending_order (
           character_id, stock_id, side, status, quantity,
-          limit_price_units, trigger_mode
+          limit_price_units, trigger_mode, created_at
         )
-        VALUES ($1, $2, $3, 'active', $4, $5, $6)
+        VALUES ($1, $2, $3, 'active', $4, $5, $6, $7)
         RETURNING id
       `,
       [
@@ -187,6 +189,7 @@ class PendingOrderService {
         quantity,
         limitPriceUnits.toString(),
         triggerMode,
+        now,
       ],
     );
 
