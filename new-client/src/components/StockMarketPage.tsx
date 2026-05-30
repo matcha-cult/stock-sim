@@ -34,11 +34,12 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   ClearOutlined, FallOutlined, LeftOutlined, ReloadOutlined,
-  RightOutlined, ShoppingCartOutlined, LineChartOutlined, CrownOutlined,
+  RightOutlined, ShoppingCartOutlined, LineChartOutlined, CrownOutlined, ShopOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import { useIsMobile } from '../shared/responsive';
-import type { StockMarketRankDto, WealthRankDto } from '../services/api/rank';
+import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto } from '../services/api/rank';
+import { getShopRentRanks } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import ShopPanel from './ShopPanel';
 import {
@@ -74,7 +75,18 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const [activeTab, setActiveTab] = useState<ActiveTab>('market');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<ActionKey>('');
-  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket'>('wealth');
+  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket' | 'shopRent'>('wealth');
+
+  // 收租排行
+  const [shopRentRanks, setShopRentRanks] = useState<ShopRentRankDto[]>([]);
+  const fetchShopRentRanks = async (): Promise<void> => {
+    try {
+      const response = await getShopRentRanks(50);
+      setShopRentRanks(response.data ?? []);
+    } catch {
+      setShopRentRanks([]);
+    }
+  };
 
   // 从 stockStore 读取数据并派生 ViewModel
   const overview = stockStore.overview;
@@ -461,9 +473,11 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                 <RankingTab
                   wealthRanks={stockStore.wealthRanks}
                   stockMarketRanks={stockStore.stockMarketRanks}
+                  shopRentRanks={shopRentRanks}
                   rankLoading={stockStore.rankLoading}
                   onRefreshWealth={() => void stockStore.refreshWealthRanks()}
                   onRefreshStockMarket={() => void stockStore.refreshStockMarketRanks()}
+                  onRefreshShopRent={fetchShopRentRanks}
                   onTabChange={(tab) => {
                     setActiveRankTab(tab);
                   }}
@@ -1269,11 +1283,13 @@ function ProfitTab({ profitModel, profitLoading, onRefresh }: ProfitTabProps): R
 interface RankingTabProps {
   wealthRanks: WealthRankDto[];
   stockMarketRanks: StockMarketRankDto[];
+  shopRentRanks: ShopRentRankDto[];
   rankLoading: boolean;
   onRefreshWealth: () => void;
   onRefreshStockMarket: () => void;
-  onTabChange: (tab: 'wealth' | 'stockMarket') => void;
-  activeRankTab: 'wealth' | 'stockMarket';
+  onRefreshShopRent: () => void;
+  onTabChange: (tab: 'wealth' | 'stockMarket' | 'shopRent') => void;
+  activeRankTab: 'wealth' | 'stockMarket' | 'shopRent';
 }
 
 const formatSpiritStones = (value: number): string => {
@@ -1450,41 +1466,43 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
 
 function RankingTab(props: RankingTabProps): React.ReactNode {
   const {
-    wealthRanks, stockMarketRanks,
-    rankLoading, onRefreshWealth, onRefreshStockMarket,
+    wealthRanks, stockMarketRanks, shopRentRanks,
+    rankLoading, onRefreshWealth, onRefreshStockMarket, onRefreshShopRent,
     onTabChange, activeRankTab,
   } = props;
 
-  const isWealthTab = activeRankTab === 'wealth';
-  const currentData = isWealthTab ? wealthRanks : stockMarketRanks;
-  const onRefresh = isWealthTab ? onRefreshWealth : onRefreshStockMarket;
+  const onRefresh = activeRankTab === 'wealth'
+    ? onRefreshWealth
+    : activeRankTab === 'stockMarket'
+      ? onRefreshStockMarket
+      : onRefreshShopRent;
 
-  if (rankLoading && currentData.length === 0) {
-    return (
-      <Flex data-section="ranking-loading" justify="center" style={{ padding: 24 }}>
-        <Spin size="small" />
-      </Flex>
-    );
-  }
-
-  if (currentData.length === 0) {
-    return (
-      <Flex data-section="ranking-empty" justify="center" style={{ padding: 24 }}>
-        <Empty description="暂无排行数据" />
-      </Flex>
-    );
+  if (rankLoading) {
+    const currentData = activeRankTab === 'wealth'
+      ? wealthRanks
+      : activeRankTab === 'stockMarket'
+        ? stockMarketRanks
+        : shopRentRanks;
+    if (currentData.length === 0) {
+      return (
+        <Flex data-section="ranking-loading" justify="center" style={{ padding: 24 }}>
+          <Spin size="small" />
+        </Flex>
+      );
+    }
   }
 
   return (
     <Flex vertical gap={12} data-section="ranking-tab">
       {/* 排行类型切换 */}
       <Flex justify="space-between" align="center" gap={12} wrap="wrap">
-        <Segmented<'wealth' | 'stockMarket'>
+        <Segmented<'wealth' | 'stockMarket' | 'shopRent'>
           value={activeRankTab}
           onChange={onTabChange}
           options={[
-            { label: '财富排行', value: 'wealth', icon: <CrownOutlined /> },
-            { label: '股市排行', value: 'stockMarket', icon: <LineChartOutlined /> },
+            { label: '财富', value: 'wealth', icon: <CrownOutlined /> },
+            { label: '股市', value: 'stockMarket', icon: <LineChartOutlined /> },
+            { label: '收租', value: 'shopRent', icon: <ShopOutlined /> },
           ]}
         />
         <Button
@@ -1497,32 +1515,86 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
         </Button>
       </Flex>
 
-      {/* 排行表格 */}
-      <Card size="small" style={{ overflow: 'hidden' }}>
-        {isWealthTab ? (
-          <Table<WealthRankDto>
-            columns={wealthRankColumns}
-            dataSource={wealthRanks}
-            rowKey="characterId"
-            size="small"
-            loading={rankLoading}
-            pagination={false}
-            scroll={{ x: 500 }}
-            style={{ fontSize: 13 }}
-          />
-        ) : (
-          <Table<StockMarketRankDto>
-            columns={stockMarketRankColumns}
-            dataSource={stockMarketRanks}
-            rowKey="characterId"
-            size="small"
-            loading={rankLoading}
-            pagination={false}
-            scroll={{ x: 800 }}
-            style={{ fontSize: 13 }}
-          />
-        )}
-      </Card>
+      {/* 财富排行 */}
+      {activeRankTab === 'wealth' ? (
+        <Card size="small" style={{ overflow: 'hidden' }}>
+          {wealthRanks.length === 0 ? (
+            <Empty description="暂无排行数据" />
+          ) : (
+            <Table<WealthRankDto>
+              columns={wealthRankColumns}
+              dataSource={wealthRanks}
+              rowKey="characterId"
+              size="small"
+              pagination={false}
+              scroll={{ x: 500 }}
+              style={{ fontSize: 13 }}
+            />
+          )}
+        </Card>
+      ) : activeRankTab === 'stockMarket' ? (
+        <Card size="small" style={{ overflow: 'hidden' }}>
+          {stockMarketRanks.length === 0 ? (
+            <Empty description="暂无排行数据" />
+          ) : (
+            <Table<StockMarketRankDto>
+              columns={stockMarketRankColumns}
+              dataSource={stockMarketRanks}
+              rowKey="characterId"
+              size="small"
+              pagination={false}
+              scroll={{ x: 800 }}
+              style={{ fontSize: 13 }}
+            />
+          )}
+        </Card>
+      ) : (
+        <Card size="small" style={{ overflow: 'hidden' }}>
+          {shopRentRanks.length === 0 ? (
+            <Empty description="暂无排行数据" />
+          ) : (
+            <Table<ShopRentRankDto>
+              columns={[
+                {
+                  title: '排名',
+                  dataIndex: 'rank',
+                  key: 'rank',
+                  width: 60,
+                  align: 'center',
+                  render: (rank: number) => {
+                    if (rank <= 3) {
+                      const colors = ['#d48806', '#8c8c8c', '#b87a36'];
+                      return <span style={{ color: colors[rank - 1], fontWeight: 600 }}>{rank}</span>;
+                    }
+                    return rank;
+                  },
+                },
+                { title: '角色', dataIndex: 'name', key: 'name', ellipsis: true },
+                {
+                  title: '已收租金',
+                  dataIndex: 'totalRentCollected',
+                  key: 'totalRentCollected',
+                  align: 'right',
+                  render: (v: number) => `${formatSpiritStones(v)} 灵石`,
+                },
+                {
+                  title: '店铺数',
+                  dataIndex: 'shopCount',
+                  key: 'shopCount',
+                  width: 70,
+                  align: 'center',
+                },
+              ]}
+              dataSource={shopRentRanks}
+              rowKey="characterId"
+              size="small"
+              pagination={false}
+              scroll={{ x: 400 }}
+              style={{ fontSize: 13 }}
+            />
+          )}
+        </Card>
+      )}
     </Flex>
   );
 }

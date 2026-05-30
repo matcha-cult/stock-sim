@@ -23,7 +23,7 @@
  * 3. 购买店铺成本较高（5 万灵石起），需确保灵石余额可见。
  */
 
-import { useContext, useEffect, useState, useRef } from 'react';
+import { useContext, useEffect, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   App, Button, Card, Col, Descriptions, Empty, Flex, Modal, Row,
@@ -33,7 +33,7 @@ import {
   ShopOutlined, DollarOutlined, ArrowUpOutlined,
   ThunderboltOutlined, PlusOutlined,
   RiseOutlined, ApartmentOutlined,
-  ExperimentOutlined,
+  ExperimentOutlined, ReloadOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../../stores/RootStore';
 import ShopProfitCalculator from './ShopProfitCalculator';
@@ -419,51 +419,56 @@ const ShopPanel = observer(() => {
 
   // 基于后端返回的下次收租时间计算倒计时
   const nextRentAt = shopStore.nextRentAt;
-  const nextRentAtRef = useRef(nextRentAt);
-  useEffect(() => {
-    nextRentAtRef.current = nextRentAt;
-  }, [nextRentAt]);
-
-  const [nextRentTime, setNextRentTime] = useState('--');
-  useEffect(() => {
-    const tick = (): void => {
-      const current = nextRentAtRef.current;
-      if (!current) {
-        setNextRentTime('--');
-        return;
-      }
-      const remaining = current.getTime() - Date.now();
-      if (remaining <= 0) {
-        setNextRentTime('0 秒后收租');
-        return;
-      }
-      const totalSeconds = Math.floor(remaining / 1000);
-      const diffMinutes = Math.floor(totalSeconds / 60);
-      const diffSeconds = totalSeconds % 60;
-      setNextRentTime(diffMinutes > 0
-        ? `${diffMinutes - 1} 分 ${diffSeconds} 秒后收租`
-        : `${diffSeconds} 秒后收租`
-      );
-    };
-
-    tick();
-    const timer = setInterval(tick, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  /** 已收租金总和（由各店铺 totalRentCollected 聚合） */
+  const totalCollectedRent = shopStore.shops.reduce((sum, s) => sum + s.totalRentCollected, 0);
 
   return (
     <Flex vertical gap={12} style={{ padding: 12 }}>
       {/* 顶部汇总 */}
-      <Card size="small">
+      <Card
+        size="small"
+        title="租金汇总"
+        extra={
+          <Button
+            size="small"
+            icon={<ReloadOutlined />}
+            onClick={() => shopStore.fetchShops()}
+            loading={shopStore.loading}
+          >
+            刷新
+          </Button>
+        }
+      >
         <Row gutter={16}>
-          <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>待收租金</Text>
-            <Text style={{ fontSize: 20, fontWeight: 600 }}>{formatSpiritStones(shopStore.totalPendingRent)}</Text>
-            <Text type="secondary" style={{ fontSize: 12 }}> 灵石</Text>
+          <Col span={8}>
+            <Statistic
+              title="待收租金"
+              value={shopStore.totalPendingRent}
+              suffix="灵石"
+              valueStyle={{ fontSize: 20, fontWeight: 600 }}
+              formatter={(v) => Number(v).toLocaleString('zh-CN')}
+            />
           </Col>
-          <Col span={12}>
-            <Text type="secondary" style={{ fontSize: 12, display: 'block', marginBottom: 4 }}>下次收租</Text>
-            <Text style={{ fontSize: 20, fontWeight: 600 }}>{nextRentTime}</Text>
+          <Col span={8}>
+            <Statistic
+              title="已收租金"
+              value={totalCollectedRent}
+              suffix="灵石"
+              valueStyle={{ fontSize: 20, fontWeight: 600 }}
+              formatter={(v) => Number(v).toLocaleString('zh-CN')}
+            />
+          </Col>
+          <Col span={8}>
+            {nextRentAt ? (
+              <Statistic.Countdown
+                title="下次收租"
+                value={nextRentAt.getTime()}
+                format="mm 分 ss 秒"
+                valueStyle={{ fontSize: 20, fontWeight: 600 }}
+              />
+            ) : (
+              <Statistic title="下次收租" value={0} suffix="--" valueStyle={{ fontSize: 20, fontWeight: 600 }} />
+            )}
           </Col>
         </Row>
       </Card>

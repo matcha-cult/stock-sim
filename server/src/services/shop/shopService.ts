@@ -37,6 +37,7 @@ import {
   DECORATION_TIER_LABEL,
   SPACE_EXPANSION_AREA_INCREMENT,
   SPACE_EXPANSION_BASE_COST,
+  SPACE_EXPANSION_MAX_COUNT,
   MAX_PENDING_RENT_TICKS,
   SHOP_RENT_TICK_INTERVAL_MINUTES,
   DECORATION_REFUND_RATE,
@@ -51,6 +52,7 @@ import {
   calculateDecorationRefund,
   calculateSpaceExpansionCost,
   calculateUpgradeTicksNeeded,
+  UPGRADE_MAX_LEVEL,
 } from './types.js';
 import { getNextShopRentTickAt } from './shopRentTime.js';
 
@@ -325,8 +327,8 @@ class ShopService {
     const addResult = await addSpiritStones(characterId, stonesToAdd);
     if (!addResult.success) return { success: false, message: addResult.message };
 
-    // 更新店铺状态
-    const newTickCount = toBigIntValue(shop.rent_tick_count) + 1n;
+    // 更新店铺状态（rent_tick_count 已在 tick 时累加，收取时直接使用当前值）
+    const currentTickCount = toBigIntValue(shop.rent_tick_count);
     const newTotalCollected = toBigIntValue(shop.total_rent_collected) + pendingRent;
     await query(
       `
@@ -337,15 +339,15 @@ class ShopService {
             updated_at = NOW()
         WHERE id = $3 AND character_id = $4
       `,
-      [newTotalCollected.toString(), newTickCount.toString(), shopId, characterId],
+      [newTotalCollected.toString(), currentTickCount.toString(), shopId, characterId],
     );
 
-    // 升级判定
+    // 升级判定（使用 tick 已累加的 rent_tick_count）
     let upgraded = false;
     let newUpgradeLevel = toIntValue(shop.upgrade_level);
     const currentLevel = newUpgradeLevel;
     const ticksNeeded = calculateUpgradeTicksNeeded(currentLevel);
-    if (newTickCount >= BigInt(ticksNeeded)) {
+    if (currentLevel < UPGRADE_MAX_LEVEL && currentTickCount >= BigInt(ticksNeeded)) {
       newUpgradeLevel = currentLevel + 1;
       upgraded = true;
       await query(
@@ -426,16 +428,15 @@ class ShopService {
     const addResult = await addSpiritStones(characterId, stonesToAdd);
     if (!addResult.success) return { success: false, message: addResult.message, totalCollected: 0, upgradedShops: [] };
 
-    // 批量更新
+    // 批量更新（rent_tick_count 已在 tick 时累加，直接使用当前值）
     const upgradedShops: number[] = [];
     for (const s of shopUpdates) {
-      const newTickCount = s.rentTickCount + 1n;
       const newTotalCollected = s.totalRentCollected + s.pendingRent;
 
       let upgraded = false;
       let newLevel = s.upgradeLevel;
       const ticksNeeded = calculateUpgradeTicksNeeded(s.upgradeLevel);
-      if (newTickCount >= BigInt(ticksNeeded)) {
+      if (s.upgradeLevel < UPGRADE_MAX_LEVEL && s.rentTickCount >= BigInt(ticksNeeded)) {
         newLevel = s.upgradeLevel + 1;
         upgraded = true;
         upgradedShops.push(s.id);
@@ -451,7 +452,7 @@ class ShopService {
               updated_at = NOW()
           WHERE id = $4 AND character_id = $5
         `,
-        [newTotalCollected.toString(), newTickCount.toString(), newLevel, s.id, characterId],
+        [newTotalCollected.toString(), s.rentTickCount.toString(), newLevel, s.id, characterId],
       );
     }
 
@@ -565,6 +566,9 @@ class ShopService {
     if (!shop) return { success: false, message: '店铺不存在' };
 
     const expansion = toIntValue(shop.space_expansion);
+    if (expansion >= SPACE_EXPANSION_MAX_COUNT) {
+      return { success: false, message: `空间扩展已达上限（${SPACE_EXPANSION_MAX_COUNT} 次）` };
+    }
     const tier = shop.decoration_tier as DecorationTier;
     const tierPrice = DECORATION_TIER_PRICE_PER_SQM[tier];
     const spaceCost = calculateSpaceExpansionCost({ currentExpansion: expansion, decorationTier: tier });
@@ -790,6 +794,7 @@ class ShopService {
         `
           UPDATE shop_detail
           SET pending_rent = $1,
+              rent_tick_count = rent_tick_count + 1,
               last_rent_tick_id = $2,
               updated_at = NOW()
           WHERE id = $3

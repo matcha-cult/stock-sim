@@ -106,6 +106,9 @@ export const SPACE_EXPANSION_BASE_COST = 200;
 /** 空间阵法扩展费用指数底数 */
 export const SPACE_EXPANSION_EXPONENT_BASE = 2;
 
+/** 空间阵法扩展最大次数（默认 10 次） */
+export const SPACE_EXPANSION_MAX_COUNT = 10;
+
 /** 各装修等级的空间阵法扩展费用系数 */
 export const DECORATION_TIER_EXPANSION_MULTIPLIER: Record<DecorationTier, number> = {
   [DECORATION_TIERS.YELLOW]: 1.0,
@@ -132,6 +135,9 @@ export const UPGRADE_LEVEL_BONUS_RATE = 0.1;
 
 /** 升级所需收租次数基数（每级 × 10） */
 export const UPGRADE_TICKS_BASE = 10;
+
+/** 店铺最大升级等级（默认 10 级） */
+export const UPGRADE_MAX_LEVEL = 10;
 
 /** 初始店铺类型（角色创建时赠送） */
 export const INITIAL_SHOP_TYPE = SHOP_TYPES.BOOK;

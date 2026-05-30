@@ -125,6 +125,7 @@ export class ShopStore {
     try {
       const response = await collectShopRent(shopId);
       if (response.success && response.data?.success) {
+        this.lastFetchTs = 0;
         await this.fetchShops();
         await this.rootStore.authStore.refreshCharacter();
         return { success: true, message: response.data.message };
@@ -142,6 +143,7 @@ export class ShopStore {
     try {
       const response = await collectAllRent();
       if (response.success && response.data?.success) {
+        this.lastFetchTs = 0;
         await this.fetchShops();
         await this.rootStore.authStore.refreshCharacter();
         return { success: true, message: response.data.message };
