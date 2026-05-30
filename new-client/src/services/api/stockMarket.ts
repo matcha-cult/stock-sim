@@ -5,7 +5,9 @@
  */
 import type { AxiosRequestConfig } from 'axios';
 import api from './core';
-import { withRequestParams } from './requestConfig';
+import { SILENT_API_REQUEST_CONFIG, withRequestParams } from './requestConfig';
+
+export { SILENT_API_REQUEST_CONFIG };
 
 export type StockMarketTradeSide = 'buy' | 'sell';
 
@@ -182,4 +184,68 @@ export const clearStockMarketPosition = (
   requestConfig?: AxiosRequestConfig,
 ): Promise<StockMarketTradeResponse> => {
   return api.post('/api/stock-market/clear', body, requestConfig);
+};
+
+// ---- 新闻事件查看器 (DEV) ----
+
+export interface NewsEventImpactDto {
+  stockId: string;
+  stockName: string;
+  changeBps: number;
+  direction: string;
+  reason: string | null;
+}
+
+export interface NewsEventChainTickDto {
+  tickId: string;
+  tickHour: number;
+  headline: string;
+  summary: string;
+  status: string;
+  impacts: NewsEventImpactDto[];
+}
+
+export interface NewsEventDto {
+  id: string;
+  status: string;
+  theme: string;
+  headline: string;
+  summary: string;
+  stage: string;
+  affectedStockIds: string[];
+  startedTickId: string | null;
+  lastTickId: string | null;
+  continuationCount: number;
+  lastContinuedAt: number | null;
+}
+
+export interface NewsEventChainDto {
+  event: {
+    id: string;
+    status: string;
+    theme: string;
+    headline: string;
+    summary: string;
+    stage: string;
+    affectedStockIds: string[];
+    startedTickId: string | null;
+    lastTickId: string | null;
+  };
+  ticks: NewsEventChainTickDto[];
+}
+
+export type NewsEventListResponse = { success: boolean; data: NewsEventDto[]; message?: string };
+export type NewsEventChainResponse = { success: boolean; data: NewsEventChainDto | null; message?: string };
+
+export const getNewsEventList = (
+  requestConfig?: AxiosRequestConfig,
+): Promise<NewsEventListResponse> => {
+  return api.get('/api/stock-market/news-events', requestConfig);
+};
+
+export const getNewsEventChain = (
+  eventId: string,
+  requestConfig?: AxiosRequestConfig,
+): Promise<NewsEventChainResponse> => {
+  return api.get(`/api/stock-market/news-events/${eventId}/chain`, requestConfig);
 };

@@ -129,6 +129,7 @@ model stock_market_trade_record {
   character                    characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
 
   @@index([character_id, created_at])
+  @@index([stock_id, created_at])
 }
 
 // 店铺Tick表（收租系统独立tick）

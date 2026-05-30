@@ -57,6 +57,7 @@ import {
   calculateReleasedStockHoldingCost,
   calculateStockMarketGrossAmount,
   calculateStockMarketTradeFee,
+  calculateStockMarketPressureChangeBps,
   generateStockMarketNoiseChangeBps,
   stockMarketPriceToStorageUnits,
   stockMarketPriceUnitsToSpiritStones,
@@ -86,6 +87,7 @@ type StockMarketNewsRow = {
   headline: string | null;
   summary: string | null;
   created_at: Date | string;
+  status: string | null;
   stock_id: string | null;
   change_bps: string | number | null;
   direction: string | null;
@@ -147,10 +149,54 @@ type StockMarketNewsEventRow = {
   summary: string;
   stage: string;
   affected_stock_ids: string[] | string;
+  started_tick_id: string | number | bigint | null;
+  last_tick_id: string | number | bigint | null;
 };
 
 type StockMarketNewsEventInsertRow = {
   id: string | number | bigint;
+};
+
+export type StockMarketNewsEventListItemDto = {
+  id: string;
+  status: string;
+  theme: string;
+  headline: string;
+  summary: string;
+  stage: string;
+  affectedStockIds: string[];
+  startedTickId: string | null;
+  lastTickId: string | null;
+  continuationCount: number;
+  lastContinuedAt: number | null;
+};
+
+export type StockMarketNewsEventChainDto = {
+  event: {
+    id: string;
+    status: string;
+    theme: string;
+    headline: string;
+    summary: string;
+    stage: string;
+    affectedStockIds: string[];
+    startedTickId: string | null;
+    lastTickId: string | null;
+  };
+  ticks: Array<{
+    tickId: string;
+    tickHour: number;
+    headline: string;
+    summary: string;
+    status: string;
+    impacts: Array<{
+      stockId: string;
+      stockName: string;
+      changeBps: number;
+      direction: string;
+      reason: string | null;
+    }>;
+  }>;
 };
 
 type StockMarketSellExecutionPlan = {
@@ -308,6 +354,7 @@ const STOCK_MARKET_PROFIT_DETAIL_DAY_LIMIT = 30;
 const STOCK_MARKET_PRICE_SCALE_SQL = STOCK_MARKET_PRICE_SCALE.toString();
 const STOCK_MARKET_PRICE_SCALE_OFFSET_SQL = (STOCK_MARKET_PRICE_SCALE - 1n).toString();
 const STOCK_MARKET_NOISE_REASON = '市场正常起伏';
+const STOCK_MARKET_PRESSURE_REASON = '买卖压力';
 
 const normalizeTradeQuantity = (quantity: number): number | null => {
   if (!Number.isInteger(quantity) || quantity <= 0) return null;
@@ -425,6 +472,73 @@ class StockMarketService {
       [stockIds],
     );
     return new Map(result.rows.map((row) => [row.stock_id, row] as const));
+  }
+
+  /**
+   * 批量查询最近 N 个 tick 内各股票的买卖量。
+   *
+   * 输入：股票 ID 列表、参考 tick ID、窗口大小（默认 10）
+   * 输出：Map<stockId, { buyQty: number, sellQty: number }>
+   *
+   * 数据流：先查最早那个 tick 的 tick_hour，再用时间窗聚合交易量。
+   */
+  private async getTradePressureMap(
+    stockIds: readonly string[],
+    referenceTickId: bigint,
+    windowSize: number = 10,
+  ): Promise<Map<string, { buyQty: number; sellQty: number }>> {
+    if (stockIds.length === 0) return new Map();
+
+    // 取窗口内最早那个 tick 的 tick_hour 作为时间窗起点
+    const earliestTickResult = await query<{ tick_hour: Date }>(
+      `
+        SELECT tick_hour
+        FROM stock_market_tick
+        WHERE id < $1
+        ORDER BY id DESC
+        LIMIT 1 OFFSET $2
+      `,
+      [referenceTickId.toString(), windowSize - 1],
+    );
+
+    // tick 不足 10 条时，取最早一条；完全没有历史则回退到空 Map
+    let earliestTickHour: Date;
+    if (earliestTickResult.rows.length > 0) {
+      earliestTickHour = earliestTickResult.rows[0].tick_hour instanceof Date
+        ? earliestTickResult.rows[0].tick_hour
+        : new Date(earliestTickResult.rows[0].tick_hour);
+    } else {
+      // 系统刚启动，还没有 tick 历史
+      return new Map();
+    }
+
+    const tradeResult = await query<{
+      stock_id: string;
+      side: string;
+      total_qty: string;
+    }>(
+      `
+        SELECT stock_id, side, SUM(quantity) as total_qty
+        FROM stock_market_trade_record
+        WHERE stock_id = ANY($1::text[])
+          AND created_at >= $2
+        GROUP BY stock_id, side
+      `,
+      [stockIds, earliestTickHour],
+    );
+
+    const result = new Map<string, { buyQty: number; sellQty: number }>();
+    for (const stockId of stockIds) {
+      result.set(stockId, { buyQty: 0, sellQty: 0 });
+    }
+    for (const row of tradeResult.rows) {
+      const entry = result.get(row.stock_id);
+      if (!entry) continue;
+      const qty = parseInt(row.total_qty, 10);
+      if (row.side === 'buy') entry.buyQty = qty;
+      else if (row.side === 'sell') entry.sellQty = qty;
+    }
+    return result;
   }
 
   async getOverview(characterId: number): Promise<StockMarketOverviewDto> {
@@ -1626,21 +1740,48 @@ class StockMarketService {
         );
       }
 
-      // 未受 AI 影响的股票追加随机噪音波动
-      // 写入 history 以在 K 线中展示，但新闻查询会按 reason 过滤掉
+      // 未受 AI 影响的股票根据最近 10 tick 的买卖压力决定涨跌
+      // 写入 history 以在 K 线中展示，新闻查询会按 reason 过滤
       const impactedStockIdSet = new Set(impactedStockIds);
       const unimpactedStockIds = params.allStockIds.filter((id) => !impactedStockIdSet.has(id));
       if (unimpactedStockIds.length > 0) {
         const unimpactedQuotes = await this.loadQuoteRowsForUpdate(unimpactedStockIds);
+        const pressureMap = await this.getTradePressureMap(
+          unimpactedStockIds,
+          params.tickId,
+          10,
+        );
+        const tickIdNum = Number(params.tickId);
+
         for (const stockId of unimpactedStockIds) {
           const quote = unimpactedQuotes.get(stockId);
           if (!quote) continue;
           const currentPrice = toBigIntValue(quote.current_price_spirit_stones);
-          const changeBps = generateStockMarketNoiseChangeBps(
-            Number(params.tickId),
-            stockId,
-            params.tickHour,
-          );
+
+          const pressure = pressureMap.get(stockId);
+          const totalVolume = pressure ? pressure.buyQty + pressure.sellQty : 0;
+
+          let changeBps: number;
+          let reason: string;
+
+          if (totalVolume === 0) {
+            // 无交易回退到随机噪声
+            changeBps = generateStockMarketNoiseChangeBps(
+              tickIdNum,
+              stockId,
+              params.tickHour,
+            );
+            reason = STOCK_MARKET_NOISE_REASON;
+          } else {
+            changeBps = calculateStockMarketPressureChangeBps(
+              pressure!.buyQty,
+              pressure!.sellQty,
+              stockId,
+              tickIdNum,
+            );
+            reason = STOCK_MARKET_PRESSURE_REASON;
+          }
+
           const nextPrice = applyStockMarketPriceChange(currentPrice, changeBps);
           const direction = buildStockMarketDirection(changeBps);
           await query(
@@ -1667,13 +1808,166 @@ class StockMarketService {
               nextPrice.toString(),
               changeBps,
               direction,
-              STOCK_MARKET_NOISE_REASON,
+              reason,
               params.tickHour,
             ],
           );
         }
       }
     });
+  }
+
+  async getNewsEventList(): Promise<StockMarketNewsEventListItemDto[]> {
+    const eventResult = await query<StockMarketNewsEventRow>(
+      `
+        SELECT id, status, theme, headline, summary, stage, affected_stock_ids,
+               started_tick_id, last_tick_id
+        FROM stock_market_news_event
+        ORDER BY updated_at DESC, id DESC
+      `,
+    );
+
+    const tickCountResult = await query<{ event_id: string; cnt: string; max_tick_hour: Date | string }>(
+      `
+        SELECT event_id, COUNT(*)::int AS cnt, MAX(tick_hour) AS max_tick_hour
+        FROM stock_market_tick
+        WHERE event_id IS NOT NULL
+        GROUP BY event_id
+      `,
+    );
+    const tickInfoByEventId = new Map(
+      tickCountResult.rows.map((row) => [
+        String(row.event_id),
+        { count: Number(row.cnt), lastTickHour: row.max_tick_hour } as const,
+      ]),
+    );
+
+    return eventResult.rows.map((row) => {
+      const tickInfo = tickInfoByEventId.get(toBigIntValue(row.id).toString());
+      return {
+        id: toBigIntValue(row.id).toString(),
+        status: row.status,
+        theme: row.theme,
+        headline: row.headline,
+        summary: row.summary,
+        stage: row.stage,
+        affectedStockIds: parseStockMarketEventStockIds(row.affected_stock_ids),
+        startedTickId: row.started_tick_id !== null && row.started_tick_id !== undefined
+          ? toBigIntValue(row.started_tick_id).toString()
+          : null,
+        lastTickId: row.last_tick_id !== null && row.last_tick_id !== undefined
+          ? toBigIntValue(row.last_tick_id).toString()
+          : null,
+        continuationCount: tickInfo?.count ?? 0,
+        lastContinuedAt: tickInfo?.lastTickHour !== undefined && tickInfo.lastTickHour !== null
+          ? toTimestamp(tickInfo.lastTickHour)
+          : null,
+      };
+    });
+  }
+
+  async getNewsEventChain(eventId: string): Promise<StockMarketNewsEventChainDto | null> {
+    const eventResult = await query<StockMarketNewsEventRow>(
+      `
+        SELECT id, status, theme, headline, summary, stage, affected_stock_ids,
+               started_tick_id, last_tick_id
+        FROM stock_market_news_event
+        WHERE id = $1
+      `,
+      [eventId],
+    );
+    const eventRow = eventResult.rows[0];
+    if (!eventRow) return null;
+
+    const tickResult = await query<StockMarketNewsRow>(
+      `
+        SELECT
+          t.id,
+          t.tick_hour,
+          t.headline,
+          t.summary,
+          t.status,
+          h.stock_id,
+          h.change_bps,
+          h.direction,
+          h.reason
+        FROM stock_market_tick t
+        LEFT JOIN stock_market_price_history h ON h.tick_id = t.id
+          AND h.reason != $1
+        WHERE t.event_id = $2
+        ORDER BY t.tick_hour ASC, h.id ASC
+      `,
+      [STOCK_MARKET_NOISE_REASON, eventId],
+    );
+
+    const impactsByTickId = new Map<string, StockMarketNewsEventChainDto['ticks'][number]['impacts']>();
+    const tickInfos: Array<{ tickId: string; tickHour: Date; headline: string; summary: string; status: string }> = [];
+    const seenTickIds = new Set<string>();
+    const definitionMap = new Map(getEnabledStockDefinitions().map((d) => [d.id, d] as const));
+
+    for (const row of tickResult.rows) {
+      const tickId = String(row.id);
+      if (!seenTickIds.has(tickId)) {
+        seenTickIds.add(tickId);
+        tickInfos.push({
+          tickId,
+          tickHour: row.tick_hour instanceof Date ? row.tick_hour : new Date(row.tick_hour),
+          headline: row.headline ?? '',
+          summary: row.summary ?? '',
+          status: row.status ?? 'unknown',
+        });
+      }
+      if (row.stock_id) {
+        const stockName = definitionMap.get(row.stock_id)?.name ?? row.stock_id;
+        const impacts = impactsByTickId.get(tickId);
+        if (impacts) {
+          impacts.push({
+            stockId: row.stock_id,
+            stockName,
+            changeBps: toIntValue(row.change_bps ?? 0),
+            direction: row.direction ?? 'flat',
+            reason: row.reason,
+          });
+        } else {
+          impactsByTickId.set(tickId, [{
+            stockId: row.stock_id,
+            stockName,
+            changeBps: toIntValue(row.change_bps ?? 0),
+            direction: row.direction ?? 'flat',
+            reason: row.reason,
+          }]);
+        }
+      }
+    }
+
+    const ticks: StockMarketNewsEventChainDto['ticks'] = tickInfos.map((info) => ({
+      tickId: info.tickId,
+      tickHour: info.tickHour.getTime(),
+      headline: info.headline,
+      summary: info.summary,
+      status: info.status,
+      impacts: impactsByTickId.get(info.tickId) ?? [],
+    }));
+
+    const affectedStockIds = parseStockMarketEventStockIds(eventRow.affected_stock_ids);
+    return {
+      event: {
+        id: toBigIntValue(eventRow.id).toString(),
+        status: eventRow.status,
+        theme: eventRow.theme,
+        headline: eventRow.headline,
+        summary: eventRow.summary,
+        stage: eventRow.stage,
+        affectedStockIds,
+        startedTickId: eventRow.started_tick_id !== null && eventRow.started_tick_id !== undefined
+          ? toBigIntValue(eventRow.started_tick_id).toString()
+          : null,
+        lastTickId: eventRow.last_tick_id !== null && eventRow.last_tick_id !== undefined
+          ? toBigIntValue(eventRow.last_tick_id).toString()
+          : null,
+      },
+      ticks,
+    };
   }
 }
 

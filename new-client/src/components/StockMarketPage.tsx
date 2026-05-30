@@ -42,6 +42,7 @@ import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto } from '../serv
 import { getShopRentRanks } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import ShopPanel from './ShopPanel';
+import DevNewsViewer from './DevNewsViewer/DevNewsViewer';
 import {
   buildStockMarketOverviewViewModel,
   buildStockMarketTradePreview,
@@ -59,7 +60,7 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'profit' | 'records' | 'ranking' | 'shop';
+type ActiveTab = 'market' | 'profit' | 'records' | 'ranking' | 'shop' | 'dev-news-viewer';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
@@ -303,7 +304,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop') {
+    if (key === 'market' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'dev-news-viewer') {
       setActiveTab(key);
     }
   }, []);
@@ -492,6 +493,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                 />
               ),
             },
+            ...(import.meta.env.DEV === true
+              ? [{
+                key: 'dev-news-viewer' as const,
+                label: 'DEV新闻事件查看器',
+                children: <DevNewsViewer definitionMap={new Map(overview.stocks.map((s) => [s.stockId, s.name] as const))} />,
+              }]
+              : []),
           ]}
         />
       </Content>

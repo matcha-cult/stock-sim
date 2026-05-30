@@ -60,6 +60,8 @@ const stockMarketProfitDetailQpsLimit = createStockMarketQpsLimit('profit-detail
 const stockMarketBuyQpsLimit = createStockMarketQpsLimit('buy', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketSellQpsLimit = createStockMarketQpsLimit('sell', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketClearQpsLimit = createStockMarketQpsLimit('clear', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketNewsEventListQpsLimit = createStockMarketQpsLimit('news-event-list', STOCK_MARKET_QUERY_QPS_LIMIT);
+const stockMarketNewsEventChainQpsLimit = createStockMarketQpsLimit('news-event-chain', STOCK_MARKET_QUERY_QPS_LIMIT);
 
 const parseTradeBody = (body: StockMarketTradeBody): { stockId: string; quantity: number } | null => {
   const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
@@ -164,6 +166,22 @@ router.post('/clear', requireCharacter, stockMarketClearQpsLimit, asyncHandler(a
     await safePushCharacterUpdate(req.userId!);
   }
   sendResult(res, result);
+}));
+
+router.get('/news-events', requireCharacter, stockMarketNewsEventListQpsLimit, asyncHandler(async (req, res) => {
+  const data = await stockMarketService.getNewsEventList();
+  sendSuccess(res, data);
+}));
+
+router.get('/news-events/:eventId/chain', requireCharacter, stockMarketNewsEventChainQpsLimit, asyncHandler(async (req, res) => {
+  const eventId = typeof req.params.eventId === 'string' ? req.params.eventId.trim() : '';
+  if (!eventId) {
+    sendResult(res, { success: false, message: 'eventId 参数无效' });
+    return;
+  }
+
+  const data = await stockMarketService.getNewsEventChain(eventId);
+  sendSuccess(res, data);
 }));
 
 export default router;

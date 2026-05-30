@@ -81,7 +81,7 @@ export const addSpiritStones = async (
     `,
     [amount.toString(), characterId],
   );
-
+  console.log('[addSpiritStones] characterId:', characterId, 'amount:', amount.toString());
   if (result.rowCount === 0) {
     return { success: false, message: '角色不存在' };
   }
