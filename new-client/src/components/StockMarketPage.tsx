@@ -88,6 +88,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
     }
   };
 
+  // 切换到收租 tab 时自动加载数据
+  useEffect(() => {
+    if (activeRankTab === 'shopRent' && shopRentRanks.length === 0) {
+      fetchShopRentRanks();
+    }
+  }, [activeRankTab]);
+
   // 从 stockStore 读取数据并派生 ViewModel
   const overview = stockStore.overview;
   const selectedStockId = stockStore.selectedStockId;
