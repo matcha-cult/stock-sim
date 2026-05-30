@@ -213,17 +213,18 @@ export type StockMarketOverviewDto = {
   nextRefreshAt: number;
 };
 
+/**
+ * 历史走势单条 K 线数据。
+ * 字段名使用单字母缩写以压缩报文体积：o(开盘)、h(最高)、l(最低)、c(收盘)、cb(涨跌幅bp)、r(原因)、t(时间戳秒)。
+ */
 export type StockMarketHistoryPointDto = {
-  stockId: string;
-  priceSpiritStones: number;
-  openPriceSpiritStones: number;
-  highPriceSpiritStones: number;
-  lowPriceSpiritStones: number;
-  closePriceSpiritStones: number;
-  changeBps: number;
-  direction: string;
-  reason: string | null;
-  createdAt: number;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  cb: number;
+  r: string;
+  t: number;
 };
 
 export type StockMarketTradeRecordDto = {
@@ -526,7 +527,7 @@ class StockMarketService {
   async getHistory(stockId: string): Promise<{
     success: boolean;
     message: string;
-    data?: { points: StockMarketHistoryPointDto[] };
+    data?: { stockId: string; points: StockMarketHistoryPointDto[] };
   }> {
     const definition = getEnabledStockDefinitionById(stockId);
     if (!definition) return { success: false, message: '股票不存在' };
@@ -583,7 +584,8 @@ class StockMarketService {
       success: true,
       message: 'ok',
       data: {
-        points: this.buildHistoryPointDtos(definition.id, result.rows),
+        stockId: definition.id,
+        points: this.buildHistoryPointDtos(result.rows),
       },
     };
   }
@@ -1195,8 +1197,12 @@ class StockMarketService {
     return records;
   }
 
+  /**
+   * 将 SQL 结果行转换为精简 K 线 DTO。
+   * 字段使用单字母缩写（o/h/l/c/cb/r/t）以压缩报文体积，
+   * stockId 已在 getHistory 返回外层单独下发，此处不再重复。
+   */
   private buildHistoryPointDtos(
-    stockId: string,
     rows: readonly StockMarketHistoryRow[],
   ): StockMarketHistoryPointDto[] {
     const points: StockMarketHistoryPointDto[] = [];
@@ -1210,16 +1216,13 @@ class StockMarketService {
       const ohlc = buildStockMarketHistoryOhlc(openPrice, price);
 
       points.push({
-        stockId,
-        priceSpiritStones: toDtoStockMarketPrice(price),
-        openPriceSpiritStones: toDtoStockMarketPrice(ohlc.openPriceUnits),
-        highPriceSpiritStones: toDtoStockMarketPrice(ohlc.highPriceUnits),
-        lowPriceSpiritStones: toDtoStockMarketPrice(ohlc.lowPriceUnits),
-        closePriceSpiritStones: toDtoStockMarketPrice(ohlc.closePriceUnits),
-        changeBps,
-        direction: changed ? row.direction ?? buildStockMarketDirection(changeBps) : 'flat',
-        reason: changed ? row.reason : null,
-        createdAt: toTimestamp(row.tick_hour),
+        o: toDtoStockMarketPrice(ohlc.openPriceUnits),
+        h: toDtoStockMarketPrice(ohlc.highPriceUnits),
+        l: toDtoStockMarketPrice(ohlc.lowPriceUnits),
+        c: toDtoStockMarketPrice(ohlc.closePriceUnits),
+        cb: changeBps,
+        r: changed ? row.reason ?? '' : '',
+        t: toTimestamp(row.tick_hour),
       });
 
       lastPrice = price;

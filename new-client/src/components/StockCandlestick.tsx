@@ -111,7 +111,7 @@ const MA_KEYS: readonly StockMarketMovingAverageView['key'][] = ['ma5', 'ma10', 
 const CHART_BAR_SPACING = 6;
 const CHART_MIN_BAR_SPACING = 3;
 const CHART_RIGHT_OFFSET = 1;
-const CHART_MIN_VISIBLE_BARS = 72;
+const CHART_DEFAULT_VISIBLE_BARS = 48;
 const PRICE_RANGE_PADDING_RATIO = 0.12;
 const PRICE_RANGE_MIN_PADDING = 2;
 const TOOLTIP_OFFSET = 12;
@@ -123,10 +123,6 @@ const readCssColor = (element: HTMLElement, variableName: string, fallback: stri
 };
 
 const toChartTime = (value: number): UTCTimestamp => value as UTCTimestamp;
-
-const resolveVisibleBarCount = (containerWidth: number): number => {
-  return Math.max(CHART_MIN_VISIBLE_BARS, Math.ceil(containerWidth / CHART_BAR_SPACING));
-};
 
 const autoscaleInfoProvider: AutoscaleInfoProvider = (baseImplementation) => {
   const baseInfo = baseImplementation();
@@ -165,6 +161,7 @@ const updateTooltip = (
   refs.low.textContent = `低 ${data.lowPriceText}`;
   refs.close.textContent = `收 ${data.closePriceText}`;
   refs.reason.textContent = data.reasonText;
+  refs.reason.style.display = data.reasonText ? '' : 'none';
 
   const tooltipWidth = refs.root.offsetWidth;
   const tooltipHeight = refs.root.offsetHeight;
@@ -291,8 +288,8 @@ const StockCandlestick = memo(function StockCandlestick({
         horzLine: { color: textColor, style: LineStyle.Dotted, width: 1, visible: true, labelVisible: true },
         vertLine: { color: textColor, style: LineStyle.Dotted, width: 1, visible: true, labelVisible: false },
       },
-      handleScroll: false,
-      handleScale: false,
+      handleScroll: true,
+      handleScale: true,
       localization: { priceFormatter: (price: number) => price.toFixed(2) },
     });
 
@@ -374,8 +371,7 @@ const StockCandlestick = memo(function StockCandlestick({
         movingAverageDataByKey.get(average.key) ?? [],
       );
     }
-    const containerWidth = containerRef.current?.clientWidth ?? 0;
-    const requestedVisibleBars = resolveVisibleBarCount(containerWidth);
+    const requestedVisibleBars = CHART_DEFAULT_VISIBLE_BARS;
     const effectiveBarCount = Math.min(candlestickData.length, requestedVisibleBars);
     const fromIndex = Math.max(0, candlestickData.length - effectiveBarCount - CHART_RIGHT_OFFSET);
     refs.chart.timeScale().setVisibleLogicalRange({

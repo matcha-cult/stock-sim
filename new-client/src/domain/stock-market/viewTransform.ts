@@ -397,7 +397,13 @@ export const buildStockMarketTradePreview = (
   };
 };
 
+/**
+ * 将历史 K 线 DTO 派生 ViewModel。
+ * @param stockId 当前选中股票 ID（已从 API 响应外层单独下发，不再在每条 point 中重复）
+ * @param points 精简字段 K 线数组（o/h/l/c/cb/r/t）
+ */
 export const buildStockMarketHistoryViewModel = (
+  stockId: string,
   points: readonly StockMarketHistoryPointDto[],
 ): StockMarketHistoryViewModel => {
   if (points.length <= 0) {
@@ -410,10 +416,10 @@ export const buildStockMarketHistoryViewModel = (
   const drafts: StockMarketCandlestickDraft[] = [];
 
   for (const point of points) {
-    const openPrice = toFiniteNumber(point.openPriceSpiritStones);
-    const highPrice = toFiniteNumber(point.highPriceSpiritStones);
-    const lowPrice = toFiniteNumber(point.lowPriceSpiritStones);
-    const closePrice = toFiniteNumber(point.closePriceSpiritStones);
+    const openPrice = toFiniteNumber(point.o);
+    const highPrice = toFiniteNumber(point.h);
+    const lowPrice = toFiniteNumber(point.l);
+    const closePrice = toFiniteNumber(point.c);
 
     drafts.push({
       point,
@@ -421,7 +427,7 @@ export const buildStockMarketHistoryViewModel = (
       highPrice,
       lowPrice,
       closePrice,
-      time: toStockMarketChartTime(point.createdAt),
+      time: toStockMarketChartTime(point.t),
     });
   }
 
@@ -436,11 +442,10 @@ export const buildStockMarketHistoryViewModel = (
     const highPriceText = formatStockMarketPrice(draft.highPrice);
     const lowPriceText = formatStockMarketPrice(draft.lowPrice);
     const closePriceText = formatStockMarketPrice(draft.closePrice);
-    const changeText = formatStockMarketBps(point.changeBps);
-    const reasonText = point.reason ? `影响：${point.reason}` : '影响：无直接影响';
-
+    const changeText = formatStockMarketBps(point.cb);
+    const reasonText = point.r || '';
     return {
-      key: `${point.stockId}:${point.createdAt}`,
+      key: `${stockId}:${point.t}`,
       time: draft.time,
       open: draft.openPrice,
       high: draft.highPrice,
@@ -452,7 +457,7 @@ export const buildStockMarketHistoryViewModel = (
       closePriceText,
       changeText,
       tone: candleTone,
-      timeText: formatStockMarketTime(point.createdAt),
+      timeText: formatStockMarketTime(point.t),
       reasonText,
     };
   });

@@ -100,8 +100,8 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, quantity, selectedStockDto, spiritStones]);
 
   const historyModel = useMemo(() =>
-    buildStockMarketHistoryViewModel(stockStore.historyPoints),
-    [stockStore.historyPoints],
+    buildStockMarketHistoryViewModel(stockStore.selectedStockId, stockStore.historyPoints),
+    [stockStore.selectedStockId, stockStore.historyPoints],
   );
 
   const tradeRecordViews = useMemo(() =>
