@@ -84,7 +84,7 @@ export const STOCK_MARKET_SCENARIO_GUIDES: readonly StockMarketScenarioGuide[] =
     id: 'sect-defense',
     title: '边境战事与防务委托',
     focusStockIds: ['stock-chixiao-sword', 'stock-jianqi-wall', 'stock-tiangong-armory', 'stock-qiankun-array', 'stock-lingzhou-shipyard'],
-    guide: '围绕边境战事、护宗委托、法器与阵法需求写作，至少包含一个受益方和一个成本或风险承压方。剑气长城作为新增防务标的，应优先参与战事题材。',
+    guide: '围绕边境战事、护宗委托、法器与阵法需求写作，至少包含一个受益方和一个成本或风险承压方。',
   },
   {
     id: 'weather-harvest',

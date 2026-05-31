@@ -26,7 +26,7 @@
 ### 状态机
 
 ```
-active ──(48 tick 未续写)──▶ cooling ──(64 tick 未续写)──▶ resolved
+active ──(144 tick 未续写)──▶ cooling ──(288 tick 未续写)──▶ resolved
 ```
 
 - **`active`**：正常续写中，续写时 `last_tick_id` 被更新，超时计数器重置
@@ -36,8 +36,8 @@ active ──(48 tick 未续写)──▶ cooling ──(64 tick 未续写)─�
 ### 超时阈值常量
 
 ```typescript
-STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS = 48   // active → cooling
-STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS = 64 // cooling → resolved
+STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS = 144   // active → cooling
+STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS = 288 // cooling → resolved
 STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT = 6               // 候选池最大事件数
 ```
 
@@ -132,8 +132,8 @@ ORDER BY t.tick_hour ASC, h.id ASC
 
 ④ coolInactiveNewsEvents(currentTickId)
    └── UPDATE stock_market_news_event
-       · active  → cooling: last_tick_id 距当前 tick ≥ 48
-       · cooling → resolved: last_tick_id 距当前 tick ≥ 64
+       · active  → cooling: last_tick_id 距当前 tick ≥ 144
+       · cooling → resolved: last_tick_id 距当前 tick ≥ 288
 
 ⑤ loadActiveNewsEvents()
    └── SELECT stock_market_news_event WHERE status IN ('active', 'cooling') LIMIT 6
