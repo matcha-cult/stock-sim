@@ -10,7 +10,7 @@
  * - 输出：挂单列表 + 取消交互界面。
  *
  * 数据流 / 状态流：
- * Tab 激活 -> stockStore.refreshPendingOrders -> 渲染列表 -> 用户点击取消 -> stockStore.cancelPendingOrder -> 刷新列表。
+ * Tab 激活 -> stockStore.refreshPendingOrders -> 渲染列表 -> 用户点击取消 -> stockStore.cancelPendingOrder -> 刷新列表 + 刷新角色灵石。
  *
  * 复用设计说明：
  * - 列表使用 antd Table 展示，便于后续扩展筛选/排序。
@@ -63,10 +63,12 @@ const PendingOrderManagement = observer(function PendingOrderManagement(): React
     const result = await stockStore.cancelPendingOrder(orderId);
     if (result.success) {
       message.success(result.message);
+      // 取消挂单返还灵石，需刷新角色资源
+      void rootStore.authStore.refreshCharacter();
     } else {
       message.error(result.message);
     }
-  }, [stockStore, message]);
+  }, [stockStore, message, rootStore]);
 
   // 当前股价 + 涨跌映射（从 overview 中读取）
   const stockInfoByStockId = useMemo(() => {

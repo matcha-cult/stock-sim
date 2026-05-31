@@ -142,31 +142,42 @@ class PendingOrderService {
       return { success: false, message: '成交模式不合法' };
     }
 
-    // 卖出单：校验持仓
+    // 卖出单：校验持仓并冻结股票数量
     if (params.side === 'sell') {
-      const holdingResult = await query<{ quantity: string | number }>(
-        `SELECT quantity FROM character_stock_holding WHERE character_id = $1 AND stock_id = $2`,
+      const holdingResult = await query<{ quantity: string | number; frozen_quantity: string | number }>(
+        `SELECT quantity, frozen_quantity FROM character_stock_holding WHERE character_id = $1 AND stock_id = $2 FOR UPDATE`,
         [params.characterId, params.stockId],
       );
-      const holdingQty = toIntValue(holdingResult.rows[0]?.quantity ?? 0);
-      const maxSellQty = calculateStockMarketMaxSellQuantity(holdingQty);
-      if (quantity > maxSellQty) {
-        return { success: false, message: `持仓不足，当前可卖 ${maxSellQty} 股` };
+      const holdingRow = holdingResult.rows[0];
+      if (!holdingRow) {
+        return { success: false, message: '未持有该股票' };
       }
+      const holdingQty = toIntValue(holdingRow.quantity);
+      const frozenQty = toIntValue(holdingRow.frozen_quantity ?? 0);
+      const availableQty = calculateStockMarketMaxSellQuantity(holdingQty - frozenQty);
+      if (quantity > availableQty) {
+        return { success: false, message: `可卖持仓不足，当前可卖 ${availableQty} 股` };
+      }
+      // 冻结股票数量
+      await query(
+        `
+          UPDATE character_stock_holding
+          SET frozen_quantity = frozen_quantity + $3,
+              updated_at = NOW()
+          WHERE character_id = $1 AND stock_id = $2
+        `,
+        [params.characterId, params.stockId, quantity],
+      );
     }
 
-    // 买入单：校验余额（预估费用按限价计算）
+    // 买入单：校验余额并冻结灵石（预估费用按限价计算）
     if (params.side === 'buy') {
       const grossAmount = calculateStockMarketGrossAmount(limitPriceUnits, quantity, 'buy');
       const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
       const totalCost = grossAmount + fee;
 
-      const balanceResult = await query<{ spirit_stones: string | number | bigint }>(
-        `SELECT spirit_stones FROM characters WHERE id = $1`,
-        [params.characterId],
-      );
-      const balance = toBigIntValue(balanceResult.rows[0]?.spirit_stones ?? 0);
-      if (balance < totalCost) {
+      const consumeResult = await consumeSpiritStones(params.characterId, totalCost);
+      if (!consumeResult.success) {
         return { success: false, message: `灵石不足，预计需要 ${toDtoNumber(totalCost)} 灵石` };
       }
     }
@@ -198,23 +209,62 @@ class PendingOrderService {
   }
 
   /**
-   * 取消挂单。仅允许取消自己且处于 active 状态的挂单。
+   * 取消挂单。
+   * 买入单取消时返还冻结的灵石，卖出单取消时恢复冻结的股票数量。
    */
   @Transactional
   async cancelOrder(orderId: number, characterId: number): Promise<{ success: boolean; message: string }> {
-    const result = await query(
+    // 先查出挂单详情，确认属于该角色且处于 active 状态
+    const orderResult = await query<PendingOrderRow>(
       `
-        UPDATE stock_market_pending_order
-        SET status = 'cancelled', cancelled_at = NOW()
+        SELECT id, character_id, stock_id, side, status, quantity, limit_price_units
+        FROM stock_market_pending_order
         WHERE id = $1 AND character_id = $2 AND status = 'active'
-        RETURNING id
+        FOR UPDATE
       `,
       [orderId.toString(), characterId],
     );
 
-    if (result.rowCount === 0) {
+    if (orderResult.rowCount === 0) {
       return { success: false, message: '挂单不存在或已成交/已取消' };
     }
+
+    const order = orderResult.rows[0];
+    const side = order.side as PendingOrderSide;
+    const quantity = toIntValue(order.quantity);
+    const limitPriceUnits = toBigIntValue(order.limit_price_units);
+
+    // 买入单：返还创建时冻结的灵石
+    if (side === 'buy') {
+      const grossAmount = calculateStockMarketGrossAmount(limitPriceUnits, quantity, 'buy');
+      const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
+      const totalCost = grossAmount + fee;
+      await addSpiritStones(characterId, totalCost);
+    }
+
+    // 卖出单：恢复创建时冻结的股票数量（仅解冻，quantity 不变）
+    if (side === 'sell') {
+      const stockId = order.stock_id;
+      await query(
+        `
+          UPDATE character_stock_holding
+          SET frozen_quantity = frozen_quantity - $3,
+              updated_at = NOW()
+          WHERE character_id = $1 AND stock_id = $2
+        `,
+        [characterId, stockId, quantity],
+      );
+    }
+
+    // 更新挂单状态
+    await query(
+      `
+        UPDATE stock_market_pending_order
+        SET status = 'cancelled', cancelled_at = NOW()
+        WHERE id = $1
+      `,
+      [orderId.toString()],
+    );
 
     return { success: true, message: '挂单已取消' };
   }
@@ -346,7 +396,7 @@ class PendingOrderService {
 
     try {
       if (side === 'buy') {
-        await this.executeBuyOrder(characterId, stockId, quantity, currentPriceUnits, orderId);
+        await this.executeBuyOrder(characterId, stockId, quantity, currentPriceUnits, orderId, limitPriceUnits);
         console.log(`[PendingOrder] 挂单 ${orderId} 买入成交，数量=${quantity}`);
       } else {
         await this.executeSellOrder(characterId, stockId, quantity, currentPriceUnits, orderId, definitionMap);
@@ -382,7 +432,8 @@ class PendingOrderService {
 
   /**
    * 执行买入挂单成交。
-   * 二次校验余额，扣款，更新持仓，写 trade_record，标记 filled。
+   * 创建挂单时已冻结灵石（限价 gross + 限价 fee），此处按实际成交价计算真实成本，
+   * 返还冻结金额与实际成本之间的差额。
    */
   private async executeBuyOrder(
     characterId: number,
@@ -390,17 +441,21 @@ class PendingOrderService {
     quantity: number,
     priceUnits: bigint,
     orderId: bigint,
+    limitPriceUnits: bigint,
   ): Promise<void> {
     const grossAmount = calculateStockMarketGrossAmount(priceUnits, quantity, 'buy');
     const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
     const totalCost = grossAmount + fee;
 
-    // 二次校验余额
-    const consumeResult = await consumeSpiritStones(characterId, totalCost);
-    if (!consumeResult.success) {
-      // 余额不足，取消该挂单
-      await this.markOrderFailed(orderId, '余额不足');
-      return;
+    // 计算创建挂单时冻结的金额（限价 gross + 限价 fee）
+    const frozenGross = calculateStockMarketGrossAmount(limitPriceUnits, quantity, 'buy');
+    const frozenFee = calculateStockMarketTradeFee(frozenGross, 'buy');
+    const frozenTotal = frozenGross + frozenFee;
+
+    // 返还冻结金额与实际成本之间的差额
+    if (frozenTotal > totalCost) {
+      const refund = frozenTotal - totalCost;
+      await addSpiritStones(characterId, refund);
     }
 
     // 更新/创建持仓
@@ -438,7 +493,7 @@ class PendingOrderService {
 
   /**
    * 执行卖出挂单成交。
-   * 二次校验持仓，加款，减少持仓，写 trade_record，标记 filled。
+   * 创建挂单时已冻结股票数量，此处直接解冻并扣减持仓。
    */
   private async executeSellOrder(
     characterId: number,
@@ -448,13 +503,14 @@ class PendingOrderService {
     orderId: bigint,
     definitionMap: ReadonlyMap<string, StockMarketDefinition>,
   ): Promise<void> {
-    // 二次校验持仓
+    // 获取持仓（创建挂单时已冻结，此处只需解冻并扣减）
     const holdingResult = await query<{
       stock_id: string;
       quantity: string | number;
+      frozen_quantity: string | number;
       total_cost_spirit_stones: string | number | bigint;
     }>(
-      `SELECT stock_id, quantity, total_cost_spirit_stones FROM character_stock_holding
+      `SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones FROM character_stock_holding
        WHERE character_id = $1 AND stock_id = $2 FOR UPDATE`,
       [characterId, stockId],
     );
@@ -465,9 +521,9 @@ class PendingOrderService {
     }
 
     const holdingQty = toIntValue(holding.quantity);
-    const maxSellQty = calculateStockMarketMaxSellQuantity(holdingQty);
-    if (quantity > maxSellQty) {
-      await this.markOrderFailed(orderId, '持仓不足');
+    const frozenQty = toIntValue(holding.frozen_quantity ?? 0);
+    if (quantity > frozenQty) {
+      await this.markOrderFailed(orderId, '冻结持仓不足');
       return;
     }
 
@@ -476,15 +532,12 @@ class PendingOrderService {
     const netAmount = grossAmount > fee ? grossAmount - fee : 0n;
     const holdingCost = toBigIntValue(holding.total_cost_spirit_stones);
     const releasedCost = calculateReleasedStockHoldingCost(holdingCost, holdingQty, quantity);
-    const realizedPnl = netAmount - releasedCost;
 
-    // 加款
-    if (netAmount > 0n) {
-      await addSpiritStones(characterId, netAmount);
-    }
-
-    // 减少/清除持仓
-    if (quantity >= holdingQty) {
+    // 解冻并扣减持仓
+    const remainingFrozen = frozenQty - quantity;
+    const remainingQty = holdingQty - quantity;
+    if (remainingQty <= 0) {
+      // 全部卖出，直接清除
       await query(
         `DELETE FROM character_stock_holding WHERE character_id = $1 AND stock_id = $2`,
         [characterId, stockId],
@@ -493,11 +546,19 @@ class PendingOrderService {
       await query(
         `UPDATE character_stock_holding
          SET quantity = quantity - $3,
+             frozen_quantity = frozen_quantity - $3,
              total_cost_spirit_stones = total_cost_spirit_stones - $4,
              updated_at = NOW()
          WHERE character_id = $1 AND stock_id = $2`,
         [characterId, stockId, quantity, releasedCost.toString()],
       );
+    }
+
+    const realizedPnl = netAmount - releasedCost;
+
+    // 加款
+    if (netAmount > 0n) {
+      await addSpiritStones(characterId, netAmount);
     }
 
     // 写 trade_record

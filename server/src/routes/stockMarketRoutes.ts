@@ -232,6 +232,9 @@ router.post('/pending-orders', requireCharacter, stockMarketCreatePendingOrderQp
     limitPriceSpiritStones: parsed.limitPrice,
     triggerMode: parsed.triggerMode,
   });
+  if (result.success) {
+    await safePushCharacterUpdate(req.userId!);
+  }
   sendResult(res, result);
 }));
 
@@ -244,6 +247,9 @@ router.delete('/pending-orders/:orderId', requireCharacter, stockMarketCancelPen
   }
 
   const result = await pendingOrderService.cancelOrder(orderId, characterId);
+  if (result.success) {
+    await safePushCharacterUpdate(req.userId!);
+  }
   sendResult(res, result);
 }));
 

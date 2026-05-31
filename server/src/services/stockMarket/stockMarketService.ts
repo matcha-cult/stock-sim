@@ -83,6 +83,7 @@ type StockMarketQuoteRow = {
 type StockMarketHoldingRow = {
   stock_id: string;
   quantity: string | number;
+  frozen_quantity: string | number;
   total_cost_spirit_stones: string | number | bigint;
 };
 
@@ -329,6 +330,7 @@ type StockMarketStockBuildInput = {
   lastChangeBps: number;
   updatedAt: Date | string;
   quantity: number;
+  frozenQuantity: number;
   holdingCost: bigint;
   marketValue: bigint;
 };
@@ -567,7 +569,7 @@ class StockMarketService {
       ),
       query<StockMarketHoldingRow>(
         `
-          SELECT stock_id, quantity, total_cost_spirit_stones
+          SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones
           FROM character_stock_holding
           WHERE character_id = $1
         `,
@@ -616,6 +618,7 @@ class StockMarketService {
         quote?.current_price_spirit_stones ?? stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones),
       );
       const quantity = toIntValue(holding?.quantity ?? 0);
+      const frozenQuantity = toIntValue(holding?.frozen_quantity ?? 0);
       const holdingCost = toBigIntValue(holding?.total_cost_spirit_stones ?? 0);
       const marketValue = calculateStockMarketMarketValue(price, quantity);
       totalHoldingQty += quantity;
@@ -627,6 +630,7 @@ class StockMarketService {
         lastChangeBps: toIntValue(quote?.last_change_bps ?? 0),
         updatedAt: quote?.updated_at ?? new Date(),
         quantity,
+        frozenQuantity,
         holdingCost,
         marketValue,
       });
@@ -1001,8 +1005,9 @@ class StockMarketService {
     const holding = await this.loadHoldingForUpdate(params.characterId, definition.id);
     if (!holding) return { success: false, message: '未持有该股票' };
     const holdingQuantity = toIntValue(holding.quantity);
-    const maxSellQuantity = calculateStockMarketMaxSellQuantity(holdingQuantity);
-    if (quantity > maxSellQuantity) return { success: false, message: '持仓数量不足' };
+    const frozenQuantity = toIntValue(holding.frozen_quantity ?? 0);
+    const availableQty = calculateStockMarketMaxSellQuantity(holdingQuantity - frozenQuantity);
+    if (quantity > availableQty) return { success: false, message: '可卖持仓数量不足' };
 
     const price = toBigIntValue(quote.current_price_spirit_stones);
     const executionResult = await this.executeSellPlans(params.characterId, [
@@ -1052,13 +1057,14 @@ class StockMarketService {
       if (!quote) return { success: false, message: '股票报价不存在' };
 
       const holdingQuantity = toIntValue(holding.quantity);
-      const quantity = calculateStockMarketMaxSellQuantity(holdingQuantity);
-      if (quantity <= 0) continue;
+      const frozenQuantity = toIntValue(holding.frozen_quantity ?? 0);
+      const availableQty = calculateStockMarketMaxSellQuantity(holdingQuantity - frozenQuantity);
+      if (availableQty <= 0) continue;
       plans.push(this.buildSellExecutionPlan({
         stockId: definition.id,
         holding,
         price: toBigIntValue(quote.current_price_spirit_stones),
-        quantity,
+        quantity: availableQty,
       }));
     }
 
@@ -1251,6 +1257,7 @@ class StockMarketService {
     lastChangeBps: number;
     updatedAt: Date | string;
     quantity: number;
+    frozenQuantity: number;
     holdingCost: bigint;
     marketValue: bigint;
   }): StockMarketStockDto {
@@ -1268,7 +1275,7 @@ class StockMarketService {
       holdingCostSpiritStones: toDtoNumber(params.holdingCost),
       holdingMarketValueSpiritStones: toDtoNumber(params.marketValue),
       unrealizedPnlSpiritStones: toDtoNumber(params.marketValue - params.holdingCost),
-      maxSellQty: calculateStockMarketMaxSellQuantity(params.quantity),
+      maxSellQty: calculateStockMarketMaxSellQuantity(params.quantity - params.frozenQuantity),
     };
   }
 
@@ -1429,7 +1436,7 @@ class StockMarketService {
   ): Promise<StockMarketHoldingRow | null> {
     const result = await query<StockMarketHoldingRow>(
       `
-        SELECT stock_id, quantity, total_cost_spirit_stones
+        SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones
         FROM character_stock_holding
         WHERE character_id = $1 AND stock_id = $2
         FOR UPDATE
@@ -1446,7 +1453,7 @@ class StockMarketService {
     if (stockIds.length <= 0) return [];
     const result = await query<StockMarketHoldingRow>(
       `
-        SELECT stock_id, quantity, total_cost_spirit_stones
+        SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones
         FROM character_stock_holding
         WHERE character_id = $1
           AND stock_id = ANY($2::text[])
