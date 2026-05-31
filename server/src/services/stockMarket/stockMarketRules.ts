@@ -107,26 +107,28 @@ export const normalizeStockMarketAiChangeBps = (changePercent: number): number |
  * 纯函数：同一 seed + stockId + tickHour 调用结果一致。
  * 返回范围：[-max, -min] 或 [min, max] 内的整数基点，正负方向随机。
  */
-export const generateStockMarketNoiseChangeBps = (
-  seed: number,
-  stockId: string,
-  tickHour: Date,
-): number => {
-  const hashHex = createHash('md5')
-    .update(`${seed}:${stockId}:${tickHour.toISOString()}`)
-    .digest('hex');
-  const hashInt = parseInt(hashHex.slice(0, 8), 16) >>> 0;
-
-  // 正负方向
-  const isPositive = (hashInt & 1) === 1;
-  const fractional = ((hashInt >> 1) & 0x7FFFFFFF) / 0x7FFFFFFF;
-
-  const minBps = Math.round(STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT * STOCK_MARKET_PERCENT_TO_BPS);
-  const maxBps = Math.round(STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT * STOCK_MARKET_PERCENT_TO_BPS);
-  const noiseBps = Math.round(minBps + fractional * (maxBps - minBps));
-
-  return isPositive ? noiseBps : -noiseBps;
-};
+// TODO: 临时屏蔽随机噪音抖动
+// export const generateStockMarketNoiseChangeBps = (
+//   seed: number,
+//   stockId: string,
+//   tickHour: Date,
+// ): number => {
+//   const hashHex = createHash('md5')
+//     .update(`${seed}:${stockId}:${tickHour.toISOString()}`)
+//     .digest('hex');
+//   const hashInt = parseInt(hashHex.slice(0, 8), 16) >>> 0;
+//
+//   // 正负方向
+//   const isPositive = (hashInt & 1) === 1;
+//   const fractional = ((hashInt >> 1) & 0x7FFFFFFF) / 0x7FFFFFFF;
+//
+//   const minBps = Math.round(STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT * STOCK_MARKET_PERCENT_TO_BPS);
+//   const maxBps = Math.round(STOCK_MARKET_NOISE_MAX_CHANGE_PERCENT * STOCK_MARKET_PERCENT_TO_BPS);
+//   const noiseBps = Math.round(minBps + fractional * (maxBps - minBps));
+//
+//   return isPositive ? noiseBps : -noiseBps;
+// };
+export const generateStockMarketNoiseChangeBps = (_seed: number, _stockId: string, _tickHour: Date): number => 0;
 
 /**
  * 根据最近 N 个 tick 的买卖量计算压力驱动涨跌基点。

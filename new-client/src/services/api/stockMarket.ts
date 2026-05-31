@@ -265,6 +265,7 @@ export interface PendingOrderDto {
   status: PendingOrderStatus;
   quantity: number;
   limitPriceSpiritStones: number;
+  frozenSpiritStones: number;
   triggerMode: PendingOrderTriggerMode;
   createdAt: number;
 }
