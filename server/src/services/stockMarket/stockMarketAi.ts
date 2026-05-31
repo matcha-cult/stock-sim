@@ -41,6 +41,8 @@ import {
 } from './stockMarketScenarioSelector.js';
 import {
   selectStockMarketNewsEventContext,
+  STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION,
+  STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION,
   type StockMarketNewsEventPromptContext,
   type StockMarketNewsEventSelectionWeight,
 } from './stockMarketNewsEventContext.js';
@@ -313,6 +315,7 @@ export const validateStockMarketAiNewsPayload = (
   enabledStockIdSet: ReadonlySet<string>,
   options?: {
     selectedEventId?: string | null;
+    selectedEventContinuationCount?: number;
   },
 ): StockMarketAiNewsDraftResult => {
   const headline = readTrimmedText(payload, 'headline', 40);
@@ -325,6 +328,21 @@ export const validateStockMarketAiNewsPayload = (
   if (!event) {
     return { success: false, reason: 'AI 新闻事件上下文无效' };
   }
+
+  // 最小续写次数校验：低于最小次数时不允许 resolve
+  if (event.action === 'resolve'
+    && options?.selectedEventId != null
+    && (options.selectedEventContinuationCount ?? 0) < STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION) {
+    return { success: false, reason: `事件续写次数不足最低 ${STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION} 次，不能结束` };
+  }
+
+  // 最大续写次数校验：达到最大次数时只能 resolve
+  if (event.action !== 'resolve'
+    && options?.selectedEventId != null
+    && (options.selectedEventContinuationCount ?? 0) >= STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION) {
+    return { success: false, reason: `事件已达最大续写次数 ${STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION} 次，必须结束` };
+  }
+
   if (!Array.isArray(rawImpacts) || rawImpacts.length <= 0) {
     return { success: false, reason: 'AI 新闻影响列表无效' };
   }
@@ -431,6 +449,8 @@ const buildStockMarketUserMessage = (params: {
       selectedEvent,
       eventDirective: eventSelection.directive,
       weights: eventWeights,
+      minContination: STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION,
+      maxContination: STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION,
     },
     stocks: params.definitions.map((definition) => ({
       stockId: definition.id,
@@ -457,6 +477,8 @@ const buildStockMarketUserMessage = (params: {
       '本轮新闻题材必须优先围绕 marketScenario，impacts 优先从 marketScenario.focusStockIds 中选择',
       'eventContext.selectedEvent 非空时，本轮必须续写该事件，event.action 只能是 continue、escalate 或 resolve',
       'eventContext.selectedEvent 为空时，本轮必须开启新事件，event.action 必须是 new',
+      `事件续写次数低于 ${STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION} 次时，event.action 不能是 resolve，必须继续或升级`,
+      `事件续写次数达到 ${STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION} 次时，event.action 必须是 resolve，不得继续或升级`,
       'event.theme、event.headline、event.summary、event.stage 用于内部事件池，不会直接展示给玩家，但必须概括本轮新闻脉络',
       'event.affectedStockIds 只能填写本事件明确关联股票，必须来自 stocks，不能重复',
       'recentImpactStockIds 表示近期已频繁波动的股票，用于降低重复题材；它不是禁用名单，确有强关联时可以少量复用',
@@ -532,6 +554,7 @@ export const generateStockMarketAiNewsDraft = async (params: {
       enabledStockIdSet,
       {
         selectedEventId: eventSelection.selectedEvent?.eventId ?? null,
+        selectedEventContinuationCount: eventSelection.selectedEvent?.continuationCount ?? undefined,
       },
     );
     if (!validated.success) {

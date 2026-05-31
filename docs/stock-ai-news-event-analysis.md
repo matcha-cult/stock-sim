@@ -38,12 +38,21 @@ active ──(144 tick 未续写)──▶ cooling ──(288 tick 未续写)─
 ```typescript
 STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS = 144   // active → cooling
 STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS = 288 // cooling → resolved
+STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION = 3            // 最少续写次数
+STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION = 10           // 最多续写次数
 STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT = 6               // 候选池最大事件数
 ```
 
 ### 续写上限
 
-**无硬性次数上限**。只要事件持续被权重选中续写，`last_tick_id` 持续更新，事件就永远不会超时进入 cooling。理论上一支事件可以无限续写下去。
+**硬上限：最多续写 `STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION`（默认 10）次**。达到此次数后：
+- 事件自动从候选池移除，不能再被权重选中续写
+- AI 若返回 continue / escalate action 会被校验拒绝
+- 事件状态自动转为 `resolved`（通过 `last_tick_id` 超时机制兜底）
+
+**硬下限：最少续写 `STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION`（默认 3）次**。低于此次数时：
+- AI 若返回 resolve action 会被校验拒绝
+- 事件必须继续或升级
 
 实际约束来自间接因素：
 - 事件池满（6 条）时新事件权重降低，已有事件之间互相稀释竞争
@@ -280,7 +289,11 @@ weight = 64
 | `new` | 创建全新事件 | 仅当 selectedEvent 为空（directive = 'new'） |
 | `continue` | 继续当前事件叙事 | 仅当 selectedEvent 非空 |
 | `escalate` | 升级当前事件强度 | 仅当 selectedEvent 非空 |
-| `resolve` | 结束当前事件 | 仅当 selectedEvent 非空，事件状态转为 resolved |
+| `resolve` | 结束当前事件 | 仅当 selectedEvent 非空，事件状态转为 resolved；且续写次数 ≥ 最小续写次数 |
+
+**续写次数约束**：
+- 续写次数 < `MIN_CONTINUATION` 时，AI 不能返回 `resolve`（校验拒绝）
+- 续写次数 ≥ `MAX_CONTINUATION` 时，事件自动从候选池移除，AI 不能再续写它
 
 ---
 

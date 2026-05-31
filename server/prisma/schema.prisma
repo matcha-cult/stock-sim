@@ -96,6 +96,7 @@ model stock_market_news_event {
   affected_stock_ids String[]
   started_tick_id    BigInt?
   last_tick_id       BigInt?
+  continuation_count Int       @default(0)
   updated_at         DateTime  @default(now()) @db.Timestamp(6)
   created_at         DateTime  @default(now()) @db.Timestamp(6)
 }

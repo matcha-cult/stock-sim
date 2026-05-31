@@ -46,6 +46,8 @@ import {
   STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT,
   STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS,
   STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS,
+  STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION,
+  STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION,
   type StockMarketNewsEventPromptContext,
   type StockMarketNewsEventStatus,
 } from './stockMarketNewsEventContext.js';
@@ -163,6 +165,7 @@ type StockMarketNewsEventRow = {
   affected_stock_ids: string[] | string;
   started_tick_id: string | number | bigint | null;
   last_tick_id: string | number | bigint | null;
+  continuation_count: number | string | null;
 };
 
 type StockMarketNewsEventInsertRow = {
@@ -1582,7 +1585,7 @@ class StockMarketService {
   private async loadActiveNewsEvents(): Promise<StockMarketNewsEventPromptContext[]> {
     const result = await query<StockMarketNewsEventRow>(
       `
-        SELECT id, status, theme, headline, summary, stage, affected_stock_ids
+        SELECT id, status, theme, headline, summary, stage, affected_stock_ids, continuation_count
         FROM stock_market_news_event
         WHERE status IN ('active', 'cooling')
         ORDER BY updated_at DESC, id DESC
@@ -1607,6 +1610,7 @@ class StockMarketService {
         summary: row.summary,
         stage: row.stage,
         affectedStockIds,
+        continuationCount: row.continuation_count != null ? Number(row.continuation_count) : 0,
       });
     }
 
@@ -1669,9 +1673,9 @@ class StockMarketService {
         `
           INSERT INTO stock_market_news_event (
             status, theme, headline, summary, stage, affected_stock_ids,
-            started_tick_id, last_tick_id, updated_at
+            started_tick_id, last_tick_id, continuation_count, updated_at
           )
-          VALUES ('active', $1, $2, $3, $4, $5::text[], $6, $6, NOW())
+          VALUES ('active', $1, $2, $3, $4, $5::text[], $6, $6, 0, NOW())
           RETURNING id
         `,
         [
@@ -1695,6 +1699,7 @@ class StockMarketService {
     }
 
     const nextStatus = params.event.action === 'resolve' ? 'resolved' : 'active';
+    const shouldIncrementCount = params.event.action === 'continue' || params.event.action === 'escalate';
     const updateResult = await query<StockMarketNewsEventInsertRow>(
       `
         UPDATE stock_market_news_event
@@ -1705,6 +1710,7 @@ class StockMarketService {
             stage = $6,
             affected_stock_ids = $7::text[],
             last_tick_id = $8,
+            continuation_count = continuation_count + $9,
             updated_at = NOW()
         WHERE id = $1
           AND status IN ('active', 'cooling')
@@ -1719,6 +1725,7 @@ class StockMarketService {
         params.event.stage,
         params.event.affectedStockIds,
         params.tickId.toString(),
+        shouldIncrementCount ? 1 : 0,
       ],
     );
     const updatedEventId = updateResult.rows[0]?.id;
@@ -1914,29 +1921,30 @@ class StockMarketService {
     const eventResult = await query<StockMarketNewsEventRow>(
       `
         SELECT id, status, theme, headline, summary, stage, affected_stock_ids,
-               started_tick_id, last_tick_id
+               started_tick_id, last_tick_id, continuation_count
         FROM stock_market_news_event
         ORDER BY updated_at DESC, id DESC
       `,
     );
 
-    const tickCountResult = await query<{ event_id: string; cnt: string; max_tick_hour: Date | string }>(
+    // lastContinuedAt 仍需从 tick 表获取最近一次 tick 的时间戳
+    const tickHourResult = await query<{ event_id: string; max_tick_hour: Date | string }>(
       `
-        SELECT event_id, COUNT(*)::int AS cnt, MAX(tick_hour) AS max_tick_hour
+        SELECT event_id, MAX(tick_hour) AS max_tick_hour
         FROM stock_market_tick
         WHERE event_id IS NOT NULL
         GROUP BY event_id
       `,
     );
-    const tickInfoByEventId = new Map(
-      tickCountResult.rows.map((row) => [
+    const lastTickHourByEventId = new Map(
+      tickHourResult.rows.map((row) => [
         String(row.event_id),
-        { count: Number(row.cnt), lastTickHour: row.max_tick_hour } as const,
+        row.max_tick_hour,
       ]),
     );
 
     return eventResult.rows.map((row) => {
-      const tickInfo = tickInfoByEventId.get(toBigIntValue(row.id).toString());
+      const lastTickHour = lastTickHourByEventId.get(toBigIntValue(row.id).toString());
       return {
         id: toBigIntValue(row.id).toString(),
         status: row.status,
@@ -1951,9 +1959,9 @@ class StockMarketService {
         lastTickId: row.last_tick_id !== null && row.last_tick_id !== undefined
           ? toBigIntValue(row.last_tick_id).toString()
           : null,
-        continuationCount: tickInfo?.count ?? 0,
-        lastContinuedAt: tickInfo?.lastTickHour !== undefined && tickInfo.lastTickHour !== null
-          ? toTimestamp(tickInfo.lastTickHour)
+        continuationCount: row.continuation_count != null ? Number(row.continuation_count) : 0,
+        lastContinuedAt: lastTickHour !== undefined && lastTickHour !== null
+          ? toTimestamp(lastTickHour)
           : null,
       };
     });
