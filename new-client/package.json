@@ -20,7 +20,8 @@
     "mobx-state-tree": "^7.2.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
-    "react-router-dom": "^7.15.0"
+    "react-router-dom": "^7.15.0",
+    "recharts": "2.15.4"
   },
   "devDependencies": {
     "@rsbuild/core": "^2.0.3",

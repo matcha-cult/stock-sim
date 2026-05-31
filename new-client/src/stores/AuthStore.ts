@@ -33,6 +33,7 @@ import api from '../services/api/core';
 export interface UserDto {
   id: number;
   username: string;
+  permissions: string[];
 }
 
 export interface CharacterDto {
@@ -69,6 +70,7 @@ interface AuthPayload {
   user: {
     id: number;
     username: string;
+    permissions: string[];
   };
   token: string;
   character: {
@@ -86,6 +88,7 @@ interface BootstrapPayload {
   user: {
     id: number;
     username: string;
+    permissions: string[];
   };
   character: {
     id: number;
@@ -163,7 +166,7 @@ export class AuthStore {
         }
         const raw = response.data.character;
         runInAction(() => {
-          this.user = { id: response.data.user.id, username: response.data.user.username };
+          this.user = { id: response.data.user.id, username: response.data.user.username, permissions: response.data.user.permissions };
           this.character = raw
             ? { id: raw.id, nickname: raw.nickname, gender: raw.gender, title: raw.title, spiritStones: raw.spiritStones, silver: raw.silver }
             : null;
@@ -185,7 +188,7 @@ export class AuthStore {
           localStorage.setItem('token', response.data.token);
         }
         runInAction(() => {
-          this.user = { id: response.data.user.id, username: response.data.user.username };
+          this.user = { id: response.data.user.id, username: response.data.user.username, permissions: response.data.user.permissions };
           this.character = null; // register 不返回 character
         });
         return { success: true, message: '注册成功' };

@@ -26,16 +26,19 @@ import { makeAutoObservable } from 'mobx';
 import { AuthStore } from './AuthStore';
 import { StockStore } from './StockStore';
 import { ThemeStore } from './ThemeStore';
+import { ShopStore } from './ShopStore';
 
 export class RootStore {
   authStore: AuthStore;
   stockStore: StockStore;
   themeStore: ThemeStore;
+  shopStore: ShopStore;
 
   constructor() {
     this.themeStore = new ThemeStore();
     this.stockStore = new StockStore();
     this.authStore = new AuthStore();
+    this.shopStore = new ShopStore(this);
     makeAutoObservable(this);
   }
 }

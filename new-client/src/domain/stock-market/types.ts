@@ -169,3 +169,27 @@ export interface StockMarketProfitDetailViewModel {
   summary: StockMarketProfitSummaryView;
   dailyRows: StockMarketProfitDailyView[];
 }
+
+export type PendingOrderSide = 'buy' | 'sell';
+export type PendingOrderStatus = 'active' | 'filled' | 'cancelled' | 'expired';
+export type PendingOrderTriggerMode = 'normal' | 'premium';
+
+export interface PendingOrderView {
+  id: number;
+  stockId: string;
+  stockName: string;
+  stockCode: string;
+  side: PendingOrderSide;
+  sideText: string;
+  sideTone: StockMarketTone;
+  status: PendingOrderStatus;
+  statusText: string;
+  quantity: number;
+  quantityText: string;
+  limitPriceSpiritStones: number;
+  limitPriceText: string;
+  triggerMode: PendingOrderTriggerMode;
+  triggerModeText: string;
+  createdAt: number;
+  createdAtText: string;
+}

@@ -54,6 +54,16 @@ export type StockMarketRankDto = {
   totalPnlSpiritStones: number;
 };
 
+export type ShopRentRankDto = {
+  rank: number;
+  characterId: number;
+  name: string;
+  title: string;
+  monthCardActive: boolean;
+  totalRentCollected: number;
+  shopCount: number;
+};
+
 interface RankApiResponse<TData> {
   success: boolean;
   message?: string;
@@ -81,4 +91,13 @@ export const getStockMarketRanks = (
   const params: Record<string, unknown> = { metric };
   if (limit) params.limit = limit;
   return api.get('/api/rank/stock-market', { params, ...requestConfig });
+};
+
+export const getShopRentRanks = (
+  limit?: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<RankApiResponse<ShopRentRankDto[]>> => {
+  const params: Record<string, unknown> = {};
+  if (limit) params.limit = limit;
+  return api.get('/api/rank/shop-rent', { params, ...requestConfig });
 };

@@ -5,7 +5,9 @@
  */
 import type { AxiosRequestConfig } from 'axios';
 import api from './core';
-import { withRequestParams } from './requestConfig';
+import { SILENT_API_REQUEST_CONFIG, withRequestParams } from './requestConfig';
+
+export { SILENT_API_REQUEST_CONFIG };
 
 export type StockMarketTradeSide = 'buy' | 'sell';
 
@@ -67,17 +69,18 @@ export interface StockMarketOverviewDto {
   nextRefreshAt: number;
 }
 
+/**
+ * 历史走势单条 K 线数据（字段名使用单字母缩写以压缩报文体积）。
+ * o=开盘, h=最高, l=最低, c=收盘, cb=涨跌幅bp, r=原因, t=时间戳秒。
+ */
 export interface StockMarketHistoryPointDto {
-  stockId: string;
-  priceSpiritStones: number;
-  openPriceSpiritStones: number;
-  highPriceSpiritStones: number;
-  lowPriceSpiritStones: number;
-  closePriceSpiritStones: number;
-  changeBps: number;
-  direction: string;
-  reason: string | null;
-  createdAt: number;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  cb: number;
+  r: string;
+  t: number;
 }
 
 export interface StockMarketTradeRecordDto {
@@ -126,7 +129,7 @@ interface StockMarketApiResponse<TData> {
 }
 
 export type StockMarketOverviewResponse = StockMarketApiResponse<StockMarketOverviewDto>;
-export type StockMarketHistoryResponse = StockMarketApiResponse<{ points: StockMarketHistoryPointDto[] }>;
+export type StockMarketHistoryResponse = StockMarketApiResponse<{ stockId: string; points: StockMarketHistoryPointDto[] }>;
 export type StockMarketTradesResponse = StockMarketApiResponse<{
   records: StockMarketTradeRecordDto[];
   total: number;
@@ -181,4 +184,124 @@ export const clearStockMarketPosition = (
   requestConfig?: AxiosRequestConfig,
 ): Promise<StockMarketTradeResponse> => {
   return api.post('/api/stock-market/clear', body, requestConfig);
+};
+
+// ---- 新闻事件查看器 (DEV) ----
+
+export interface NewsEventImpactDto {
+  stockId: string;
+  stockName: string;
+  changeBps: number;
+  direction: string;
+  reason: string | null;
+}
+
+export interface NewsEventChainTickDto {
+  tickId: string;
+  tickHour: number;
+  headline: string;
+  summary: string;
+  status: string;
+  impacts: NewsEventImpactDto[];
+}
+
+export interface NewsEventDto {
+  id: string;
+  status: string;
+  theme: string;
+  headline: string;
+  summary: string;
+  stage: string;
+  affectedStockIds: string[];
+  startedTickId: string | null;
+  lastTickId: string | null;
+  continuationCount: number;
+  lastContinuedAt: number | null;
+}
+
+export interface NewsEventChainDto {
+  event: {
+    id: string;
+    status: string;
+    theme: string;
+    headline: string;
+    summary: string;
+    stage: string;
+    affectedStockIds: string[];
+    startedTickId: string | null;
+    lastTickId: string | null;
+  };
+  ticks: NewsEventChainTickDto[];
+}
+
+export type NewsEventListResponse = { success: boolean; data: NewsEventDto[]; message?: string };
+export type NewsEventChainResponse = { success: boolean; data: NewsEventChainDto | null; message?: string };
+
+export const getNewsEventList = (
+  requestConfig?: AxiosRequestConfig,
+): Promise<NewsEventListResponse> => {
+  return api.get('/api/stock-market/news-events', requestConfig);
+};
+
+export const getNewsEventChain = (
+  eventId: string,
+  requestConfig?: AxiosRequestConfig,
+): Promise<NewsEventChainResponse> => {
+  return api.get(`/api/stock-market/news-events/${eventId}/chain`, requestConfig);
+};
+
+// ---- 挂单 ----
+
+export type PendingOrderSide = 'buy' | 'sell';
+export type PendingOrderStatus = 'active' | 'filled' | 'cancelled' | 'expired';
+export type PendingOrderTriggerMode = 'normal' | 'premium';
+
+export interface PendingOrderDto {
+  id: number;
+  stockId: string;
+  stockName: string;
+  stockCode: string;
+  side: PendingOrderSide;
+  status: PendingOrderStatus;
+  quantity: number;
+  limitPriceSpiritStones: number;
+  triggerMode: PendingOrderTriggerMode;
+  createdAt: number;
+}
+
+interface CreatePendingOrderResponse {
+  success: boolean;
+  message?: string;
+  orderId?: number;
+}
+
+interface PendingOrdersListResponse {
+  success: boolean;
+  data: { orders: PendingOrderDto[] };
+}
+
+export const createPendingOrder = (
+  body: {
+    stockId: string;
+    side: PendingOrderSide;
+    quantity: number;
+    limitPrice: number;
+    triggerMode?: PendingOrderTriggerMode;
+  },
+  requestConfig?: AxiosRequestConfig,
+): Promise<CreatePendingOrderResponse> => {
+  return api.post('/api/stock-market/pending-orders', body, requestConfig);
+};
+
+export const cancelPendingOrder = (
+  orderId: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<CreatePendingOrderResponse> => {
+  return api.delete(`/api/stock-market/pending-orders/${orderId}`, requestConfig);
+};
+
+export const getPendingOrders = (
+  requestConfig?: AxiosRequestConfig,
+): Promise<PendingOrdersListResponse> => {
+  return api.get('/api/stock-market/pending-orders', requestConfig);
 };

@@ -146,3 +146,27 @@ body {
   position: absolute;
   inset: 0;
 }
+
+/* 股市新闻卡片：移动端上下布局，PC 端左右对齐 */
+.stock-market-news-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+@media (min-width: 768px) {
+  .stock-market-news-content {
+    flex-direction: row;
+    align-items: flex-start;
+  }
+
+  .stock-market-news-body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .stock-market-news-impacts {
+    flex-shrink: 0;
+    min-width: 160px;
+  }
+}

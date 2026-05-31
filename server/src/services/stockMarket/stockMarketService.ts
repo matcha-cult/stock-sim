@@ -35,13 +35,19 @@ import {
 } from './stockMarketDefinitions.js';
 import {
   generateStockMarketAiNewsDraft,
+  STOCK_MARKET_TREND_LOOKBACK_TICKS,
+  STOCK_MARKET_TREND_SIGNIFICANT_BPS_THRESHOLD,
   type StockMarketValidatedEvent,
   type StockMarketValidatedImpact,
+  type StockMarketPriceTrendInfo,
+  type StockMarketTrendDirection,
 } from './stockMarketAi.js';
 import {
   STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT,
   STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS,
   STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS,
+  STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION,
+  STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION,
   type StockMarketNewsEventPromptContext,
   type StockMarketNewsEventStatus,
 } from './stockMarketNewsEventContext.js';
@@ -57,6 +63,7 @@ import {
   calculateReleasedStockHoldingCost,
   calculateStockMarketGrossAmount,
   calculateStockMarketTradeFee,
+  calculateStockMarketPressureChangeBps,
   generateStockMarketNoiseChangeBps,
   stockMarketPriceToStorageUnits,
   stockMarketPriceUnitsToSpiritStones,
@@ -65,6 +72,7 @@ import {
   floorStockMarketTickTime,
   getNextStockMarketRefreshAt,
 } from './stockMarketTime.js';
+import { pendingOrderService } from './pendingOrderService.js';
 import { STOCK_MARKET_SCENARIO_RECENT_TICK_LIMIT } from './stockMarketScenarioSelector.js';
 
 type StockMarketQuoteRow = {
@@ -77,6 +85,7 @@ type StockMarketQuoteRow = {
 type StockMarketHoldingRow = {
   stock_id: string;
   quantity: string | number;
+  frozen_quantity: string | number;
   total_cost_spirit_stones: string | number | bigint;
 };
 
@@ -86,6 +95,7 @@ type StockMarketNewsRow = {
   headline: string | null;
   summary: string | null;
   created_at: Date | string;
+  status: string | null;
   stock_id: string | null;
   change_bps: string | number | null;
   direction: string | null;
@@ -135,6 +145,12 @@ type StockMarketTickRow = {
   status: string;
 };
 
+type StockMarketRecentTrendRow = {
+  stock_id: string;
+  tick_hour: Date | string;
+  change_bps: string | number | null;
+};
+
 type StockMarketRecentImpactRow = {
   stock_id: string;
 };
@@ -147,10 +163,55 @@ type StockMarketNewsEventRow = {
   summary: string;
   stage: string;
   affected_stock_ids: string[] | string;
+  started_tick_id: string | number | bigint | null;
+  last_tick_id: string | number | bigint | null;
+  continuation_count: number | string | null;
 };
 
 type StockMarketNewsEventInsertRow = {
   id: string | number | bigint;
+};
+
+export type StockMarketNewsEventListItemDto = {
+  id: string;
+  status: string;
+  theme: string;
+  headline: string;
+  summary: string;
+  stage: string;
+  affectedStockIds: string[];
+  startedTickId: string | null;
+  lastTickId: string | null;
+  continuationCount: number;
+  lastContinuedAt: number | null;
+};
+
+export type StockMarketNewsEventChainDto = {
+  event: {
+    id: string;
+    status: string;
+    theme: string;
+    headline: string;
+    summary: string;
+    stage: string;
+    affectedStockIds: string[];
+    startedTickId: string | null;
+    lastTickId: string | null;
+  };
+  ticks: Array<{
+    tickId: string;
+    tickHour: number;
+    headline: string;
+    summary: string;
+    status: string;
+    impacts: Array<{
+      stockId: string;
+      stockName: string;
+      changeBps: number;
+      direction: string;
+      reason: string | null;
+    }>;
+  }>;
 };
 
 type StockMarketSellExecutionPlan = {
@@ -213,17 +274,18 @@ export type StockMarketOverviewDto = {
   nextRefreshAt: number;
 };
 
+/**
+ * 历史走势单条 K 线数据。
+ * 字段名使用单字母缩写以压缩报文体积：o(开盘)、h(最高)、l(最低)、c(收盘)、cb(涨跌幅bp)、r(原因)、t(时间戳秒)。
+ */
 export type StockMarketHistoryPointDto = {
-  stockId: string;
-  priceSpiritStones: number;
-  openPriceSpiritStones: number;
-  highPriceSpiritStones: number;
-  lowPriceSpiritStones: number;
-  closePriceSpiritStones: number;
-  changeBps: number;
-  direction: string;
-  reason: string | null;
-  createdAt: number;
+  o: number;
+  h: number;
+  l: number;
+  c: number;
+  cb: number;
+  r: string;
+  t: number;
 };
 
 export type StockMarketTradeRecordDto = {
@@ -271,6 +333,7 @@ type StockMarketStockBuildInput = {
   lastChangeBps: number;
   updatedAt: Date | string;
   quantity: number;
+  frozenQuantity: number;
   holdingCost: bigint;
   marketValue: bigint;
 };
@@ -307,6 +370,7 @@ const STOCK_MARKET_PROFIT_DETAIL_DAY_LIMIT = 30;
 const STOCK_MARKET_PRICE_SCALE_SQL = STOCK_MARKET_PRICE_SCALE.toString();
 const STOCK_MARKET_PRICE_SCALE_OFFSET_SQL = (STOCK_MARKET_PRICE_SCALE - 1n).toString();
 const STOCK_MARKET_NOISE_REASON = '市场正常起伏';
+const STOCK_MARKET_PRESSURE_REASON = '买卖压力';
 
 const normalizeTradeQuantity = (quantity: number): number | null => {
   if (!Number.isInteger(quantity) || quantity <= 0) return null;
@@ -426,6 +490,73 @@ class StockMarketService {
     return new Map(result.rows.map((row) => [row.stock_id, row] as const));
   }
 
+  /**
+   * 批量查询最近 N 个 tick 内各股票的买卖量。
+   *
+   * 输入：股票 ID 列表、参考 tick ID、窗口大小（默认 10）
+   * 输出：Map<stockId, { buyQty: number, sellQty: number }>
+   *
+   * 数据流：先查最早那个 tick 的 tick_hour，再用时间窗聚合交易量。
+   */
+  private async getTradePressureMap(
+    stockIds: readonly string[],
+    referenceTickId: bigint,
+    windowSize: number = 10,
+  ): Promise<Map<string, { buyQty: number; sellQty: number }>> {
+    if (stockIds.length === 0) return new Map();
+
+    // 取窗口内最早那个 tick 的 tick_hour 作为时间窗起点
+    const earliestTickResult = await query<{ tick_hour: Date }>(
+      `
+        SELECT tick_hour
+        FROM stock_market_tick
+        WHERE id < $1
+        ORDER BY id DESC
+        LIMIT 1 OFFSET $2
+      `,
+      [referenceTickId.toString(), windowSize - 1],
+    );
+
+    // tick 不足 10 条时，取最早一条；完全没有历史则回退到空 Map
+    let earliestTickHour: Date;
+    if (earliestTickResult.rows.length > 0) {
+      earliestTickHour = earliestTickResult.rows[0].tick_hour instanceof Date
+        ? earliestTickResult.rows[0].tick_hour
+        : new Date(earliestTickResult.rows[0].tick_hour);
+    } else {
+      // 系统刚启动，还没有 tick 历史
+      return new Map();
+    }
+
+    const tradeResult = await query<{
+      stock_id: string;
+      side: string;
+      total_qty: string;
+    }>(
+      `
+        SELECT stock_id, side, SUM(quantity) as total_qty
+        FROM stock_market_trade_record
+        WHERE stock_id = ANY($1::text[])
+          AND created_at >= $2
+        GROUP BY stock_id, side
+      `,
+      [stockIds, earliestTickHour],
+    );
+
+    const result = new Map<string, { buyQty: number; sellQty: number }>();
+    for (const stockId of stockIds) {
+      result.set(stockId, { buyQty: 0, sellQty: 0 });
+    }
+    for (const row of tradeResult.rows) {
+      const entry = result.get(row.stock_id);
+      if (!entry) continue;
+      const qty = parseInt(row.total_qty, 10);
+      if (row.side === 'buy') entry.buyQty = qty;
+      else if (row.side === 'sell') entry.sellQty = qty;
+    }
+    return result;
+  }
+
   async getOverview(characterId: number): Promise<StockMarketOverviewDto> {
     await this.ensureInitialQuotes();
 
@@ -441,7 +572,7 @@ class StockMarketService {
       ),
       query<StockMarketHoldingRow>(
         `
-          SELECT stock_id, quantity, total_cost_spirit_stones
+          SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones
           FROM character_stock_holding
           WHERE character_id = $1
         `,
@@ -490,6 +621,7 @@ class StockMarketService {
         quote?.current_price_spirit_stones ?? stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones),
       );
       const quantity = toIntValue(holding?.quantity ?? 0);
+      const frozenQuantity = toIntValue(holding?.frozen_quantity ?? 0);
       const holdingCost = toBigIntValue(holding?.total_cost_spirit_stones ?? 0);
       const marketValue = calculateStockMarketMarketValue(price, quantity);
       totalHoldingQty += quantity;
@@ -501,6 +633,7 @@ class StockMarketService {
         lastChangeBps: toIntValue(quote?.last_change_bps ?? 0),
         updatedAt: quote?.updated_at ?? new Date(),
         quantity,
+        frozenQuantity,
         holdingCost,
         marketValue,
       });
@@ -526,7 +659,7 @@ class StockMarketService {
   async getHistory(stockId: string): Promise<{
     success: boolean;
     message: string;
-    data?: { points: StockMarketHistoryPointDto[] };
+    data?: { stockId: string; points: StockMarketHistoryPointDto[] };
   }> {
     const definition = getEnabledStockDefinitionById(stockId);
     if (!definition) return { success: false, message: '股票不存在' };
@@ -583,7 +716,8 @@ class StockMarketService {
       success: true,
       message: 'ok',
       data: {
-        points: this.buildHistoryPointDtos(definition.id, result.rows),
+        stockId: definition.id,
+        points: this.buildHistoryPointDtos(result.rows),
       },
     };
   }
@@ -874,8 +1008,9 @@ class StockMarketService {
     const holding = await this.loadHoldingForUpdate(params.characterId, definition.id);
     if (!holding) return { success: false, message: '未持有该股票' };
     const holdingQuantity = toIntValue(holding.quantity);
-    const maxSellQuantity = calculateStockMarketMaxSellQuantity(holdingQuantity);
-    if (quantity > maxSellQuantity) return { success: false, message: '持仓数量不足' };
+    const frozenQuantity = toIntValue(holding.frozen_quantity ?? 0);
+    const availableQty = calculateStockMarketMaxSellQuantity(holdingQuantity - frozenQuantity);
+    if (quantity > availableQty) return { success: false, message: '可卖持仓数量不足' };
 
     const price = toBigIntValue(quote.current_price_spirit_stones);
     const executionResult = await this.executeSellPlans(params.characterId, [
@@ -925,13 +1060,14 @@ class StockMarketService {
       if (!quote) return { success: false, message: '股票报价不存在' };
 
       const holdingQuantity = toIntValue(holding.quantity);
-      const quantity = calculateStockMarketMaxSellQuantity(holdingQuantity);
-      if (quantity <= 0) continue;
+      const frozenQuantity = toIntValue(holding.frozen_quantity ?? 0);
+      const availableQty = calculateStockMarketMaxSellQuantity(holdingQuantity - frozenQuantity);
+      if (availableQty <= 0) continue;
       plans.push(this.buildSellExecutionPlan({
         stockId: definition.id,
         holding,
         price: toBigIntValue(quote.current_price_spirit_stones),
-        quantity,
+        quantity: availableQty,
       }));
     }
 
@@ -1084,6 +1220,7 @@ class StockMarketService {
       [definitions.map((definition) => definition.id)],
     );
     const recentImpactStockIds = await this.loadRecentImpactStockIds();
+    const recentTrends = await this.loadRecentPriceTrend(STOCK_MARKET_TREND_LOOKBACK_TICKS);
     await this.coolInactiveNewsEvents(tickId);
     const activeEvents = await this.loadActiveNewsEvents();
     const newsResult = await generateStockMarketAiNewsDraft({
@@ -1093,6 +1230,7 @@ class StockMarketService {
         currentPriceUnits: toBigIntValue(row.current_price_spirit_stones),
       })),
       recentImpactStockIds,
+      recentTrends,
       activeEvents,
       tickHour,
     });
@@ -1122,6 +1260,7 @@ class StockMarketService {
     lastChangeBps: number;
     updatedAt: Date | string;
     quantity: number;
+    frozenQuantity: number;
     holdingCost: bigint;
     marketValue: bigint;
   }): StockMarketStockDto {
@@ -1139,7 +1278,7 @@ class StockMarketService {
       holdingCostSpiritStones: toDtoNumber(params.holdingCost),
       holdingMarketValueSpiritStones: toDtoNumber(params.marketValue),
       unrealizedPnlSpiritStones: toDtoNumber(params.marketValue - params.holdingCost),
-      maxSellQty: calculateStockMarketMaxSellQuantity(params.quantity),
+      maxSellQty: calculateStockMarketMaxSellQuantity(params.quantity - params.frozenQuantity),
     };
   }
 
@@ -1195,8 +1334,12 @@ class StockMarketService {
     return records;
   }
 
+  /**
+   * 将 SQL 结果行转换为精简 K 线 DTO。
+   * 字段使用单字母缩写（o/h/l/c/cb/r/t）以压缩报文体积，
+   * stockId 已在 getHistory 返回外层单独下发，此处不再重复。
+   */
   private buildHistoryPointDtos(
-    stockId: string,
     rows: readonly StockMarketHistoryRow[],
   ): StockMarketHistoryPointDto[] {
     const points: StockMarketHistoryPointDto[] = [];
@@ -1210,16 +1353,13 @@ class StockMarketService {
       const ohlc = buildStockMarketHistoryOhlc(openPrice, price);
 
       points.push({
-        stockId,
-        priceSpiritStones: toDtoStockMarketPrice(price),
-        openPriceSpiritStones: toDtoStockMarketPrice(ohlc.openPriceUnits),
-        highPriceSpiritStones: toDtoStockMarketPrice(ohlc.highPriceUnits),
-        lowPriceSpiritStones: toDtoStockMarketPrice(ohlc.lowPriceUnits),
-        closePriceSpiritStones: toDtoStockMarketPrice(ohlc.closePriceUnits),
-        changeBps,
-        direction: changed ? row.direction ?? buildStockMarketDirection(changeBps) : 'flat',
-        reason: changed ? row.reason : null,
-        createdAt: toTimestamp(row.tick_hour),
+        o: toDtoStockMarketPrice(ohlc.openPriceUnits),
+        h: toDtoStockMarketPrice(ohlc.highPriceUnits),
+        l: toDtoStockMarketPrice(ohlc.lowPriceUnits),
+        c: toDtoStockMarketPrice(ohlc.closePriceUnits),
+        cb: changeBps,
+        r: changed ? row.reason ?? '' : '',
+        t: toTimestamp(row.tick_hour),
       });
 
       lastPrice = price;
@@ -1299,7 +1439,7 @@ class StockMarketService {
   ): Promise<StockMarketHoldingRow | null> {
     const result = await query<StockMarketHoldingRow>(
       `
-        SELECT stock_id, quantity, total_cost_spirit_stones
+        SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones
         FROM character_stock_holding
         WHERE character_id = $1 AND stock_id = $2
         FOR UPDATE
@@ -1316,7 +1456,7 @@ class StockMarketService {
     if (stockIds.length <= 0) return [];
     const result = await query<StockMarketHoldingRow>(
       `
-        SELECT stock_id, quantity, total_cost_spirit_stones
+        SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones
         FROM character_stock_holding
         WHERE character_id = $1
           AND stock_id = ANY($2::text[])
@@ -1349,6 +1489,74 @@ class StockMarketService {
     return result.rows.map((row) => row.stock_id);
   }
 
+  /** 查询近 N 个 tick 的价格走势，按股票聚合最近一次 changeBps。 */
+  private async loadRecentPriceTrend(lookbackTicks: number): Promise<StockMarketPriceTrendInfo[]> {
+    const result = await query<StockMarketRecentTrendRow>(
+      `
+        WITH recent_ticks AS (
+          SELECT id, tick_hour
+          FROM stock_market_tick
+          WHERE status = 'generated'
+          ORDER BY tick_hour DESC
+          LIMIT $1
+        ),
+        latest_changes AS (
+          SELECT DISTINCT ON (h.stock_id)
+            h.stock_id,
+            rt.tick_hour,
+            h.change_bps
+          FROM recent_ticks rt
+          JOIN stock_market_price_history h ON h.tick_id = rt.id
+          ORDER BY h.stock_id ASC, rt.tick_hour DESC, h.id DESC
+        )
+        SELECT stock_id, tick_hour, change_bps
+        FROM latest_changes
+        ORDER BY stock_id ASC
+      `,
+      [lookbackTicks],
+    );
+
+    const trendByStock = new Map<string, { lastTickHour: Date; lastChangeBps: number; tickCount: number; netChangeBps: number }>();
+
+    for (const row of result.rows) {
+      const stockId = row.stock_id;
+      const changeBps = row.change_bps !== null ? Number(row.change_bps) : 0;
+      const tickHour = new Date(row.tick_hour);
+      const existing = trendByStock.get(stockId);
+      if (!existing) {
+        trendByStock.set(stockId, {
+          lastTickHour: tickHour,
+          lastChangeBps: changeBps,
+          tickCount: 1,
+          netChangeBps: changeBps,
+        });
+      } else {
+        existing.tickCount += 1;
+        existing.netChangeBps += changeBps;
+      }
+    }
+
+    const trends: StockMarketPriceTrendInfo[] = [];
+    for (const [stockId, info] of trendByStock) {
+      const direction: StockMarketTrendDirection =
+        info.netChangeBps < -STOCK_MARKET_TREND_SIGNIFICANT_BPS_THRESHOLD
+          ? 'bearish'
+          : info.netChangeBps > STOCK_MARKET_TREND_SIGNIFICANT_BPS_THRESHOLD
+            ? 'bullish'
+            : 'neutral';
+      trends.push({
+        stockId,
+        direction,
+        lastChangeBps: info.lastChangeBps,
+        netChangeBps: Math.round(info.netChangeBps),
+        tickCount: info.tickCount,
+        lastTickHour: info.lastTickHour,
+      });
+    }
+
+    return trends;
+  }
+
   private async coolInactiveNewsEvents(currentTickId: bigint): Promise<void> {
     await query(
       `
@@ -1377,7 +1585,7 @@ class StockMarketService {
   private async loadActiveNewsEvents(): Promise<StockMarketNewsEventPromptContext[]> {
     const result = await query<StockMarketNewsEventRow>(
       `
-        SELECT id, status, theme, headline, summary, stage, affected_stock_ids
+        SELECT id, status, theme, headline, summary, stage, affected_stock_ids, continuation_count
         FROM stock_market_news_event
         WHERE status IN ('active', 'cooling')
         ORDER BY updated_at DESC, id DESC
@@ -1402,6 +1610,7 @@ class StockMarketService {
         summary: row.summary,
         stage: row.stage,
         affectedStockIds,
+        continuationCount: row.continuation_count != null ? Number(row.continuation_count) : 0,
       });
     }
 
@@ -1464,9 +1673,9 @@ class StockMarketService {
         `
           INSERT INTO stock_market_news_event (
             status, theme, headline, summary, stage, affected_stock_ids,
-            started_tick_id, last_tick_id, updated_at
+            started_tick_id, last_tick_id, continuation_count, updated_at
           )
-          VALUES ('active', $1, $2, $3, $4, $5::text[], $6, $6, NOW())
+          VALUES ('active', $1, $2, $3, $4, $5::text[], $6, $6, 0, NOW())
           RETURNING id
         `,
         [
@@ -1490,6 +1699,7 @@ class StockMarketService {
     }
 
     const nextStatus = params.event.action === 'resolve' ? 'resolved' : 'active';
+    const shouldIncrementCount = params.event.action === 'continue' || params.event.action === 'escalate';
     const updateResult = await query<StockMarketNewsEventInsertRow>(
       `
         UPDATE stock_market_news_event
@@ -1500,6 +1710,7 @@ class StockMarketService {
             stage = $6,
             affected_stock_ids = $7::text[],
             last_tick_id = $8,
+            continuation_count = continuation_count + $9,
             updated_at = NOW()
         WHERE id = $1
           AND status IN ('active', 'cooling')
@@ -1514,6 +1725,7 @@ class StockMarketService {
         params.event.stage,
         params.event.affectedStockIds,
         params.tickId.toString(),
+        shouldIncrementCount ? 1 : 0,
       ],
     );
     const updatedEventId = updateResult.rows[0]?.id;
@@ -1623,21 +1835,48 @@ class StockMarketService {
         );
       }
 
-      // 未受 AI 影响的股票追加随机噪音波动
-      // 写入 history 以在 K 线中展示，但新闻查询会按 reason 过滤掉
+      // 未受 AI 影响的股票根据最近 10 tick 的买卖压力决定涨跌
+      // 写入 history 以在 K 线中展示，新闻查询会按 reason 过滤
       const impactedStockIdSet = new Set(impactedStockIds);
       const unimpactedStockIds = params.allStockIds.filter((id) => !impactedStockIdSet.has(id));
       if (unimpactedStockIds.length > 0) {
         const unimpactedQuotes = await this.loadQuoteRowsForUpdate(unimpactedStockIds);
+        const pressureMap = await this.getTradePressureMap(
+          unimpactedStockIds,
+          params.tickId,
+          10,
+        );
+        const tickIdNum = Number(params.tickId);
+
         for (const stockId of unimpactedStockIds) {
           const quote = unimpactedQuotes.get(stockId);
           if (!quote) continue;
           const currentPrice = toBigIntValue(quote.current_price_spirit_stones);
-          const changeBps = generateStockMarketNoiseChangeBps(
-            Number(params.tickId),
-            stockId,
-            params.tickHour,
-          );
+
+          const pressure = pressureMap.get(stockId);
+          const totalVolume = pressure ? pressure.buyQty + pressure.sellQty : 0;
+
+          let changeBps: number;
+          let reason: string;
+
+          if (totalVolume === 0) {
+            // 无交易回退到随机噪声
+            changeBps = generateStockMarketNoiseChangeBps(
+              tickIdNum,
+              stockId,
+              params.tickHour,
+            );
+            reason = STOCK_MARKET_NOISE_REASON;
+          } else {
+            changeBps = calculateStockMarketPressureChangeBps(
+              pressure!.buyQty,
+              pressure!.sellQty,
+              stockId,
+              tickIdNum,
+            );
+            reason = STOCK_MARKET_PRESSURE_REASON;
+          }
+
           const nextPrice = applyStockMarketPriceChange(currentPrice, changeBps);
           const direction = buildStockMarketDirection(changeBps);
           await query(
@@ -1664,13 +1903,172 @@ class StockMarketService {
               nextPrice.toString(),
               changeBps,
               direction,
-              STOCK_MARKET_NOISE_REASON,
+              reason,
               params.tickHour,
             ],
           );
         }
       }
+
+      // 所有股票价格更新后，撮合活跃挂单
+      console.log('[PendingOrder] 开始撮合挂单...');
+      await pendingOrderService.processAllActiveOrders();
+      console.log('[PendingOrder] 撮合完成');
     });
+  }
+
+  async getNewsEventList(): Promise<StockMarketNewsEventListItemDto[]> {
+    const eventResult = await query<StockMarketNewsEventRow>(
+      `
+        SELECT id, status, theme, headline, summary, stage, affected_stock_ids,
+               started_tick_id, last_tick_id, continuation_count
+        FROM stock_market_news_event
+        ORDER BY updated_at DESC, id DESC
+      `,
+    );
+
+    // lastContinuedAt 仍需从 tick 表获取最近一次 tick 的时间戳
+    const tickHourResult = await query<{ event_id: string; max_tick_hour: Date | string }>(
+      `
+        SELECT event_id, MAX(tick_hour) AS max_tick_hour
+        FROM stock_market_tick
+        WHERE event_id IS NOT NULL
+        GROUP BY event_id
+      `,
+    );
+    const lastTickHourByEventId = new Map(
+      tickHourResult.rows.map((row) => [
+        String(row.event_id),
+        row.max_tick_hour,
+      ]),
+    );
+
+    return eventResult.rows.map((row) => {
+      const lastTickHour = lastTickHourByEventId.get(toBigIntValue(row.id).toString());
+      return {
+        id: toBigIntValue(row.id).toString(),
+        status: row.status,
+        theme: row.theme,
+        headline: row.headline,
+        summary: row.summary,
+        stage: row.stage,
+        affectedStockIds: parseStockMarketEventStockIds(row.affected_stock_ids),
+        startedTickId: row.started_tick_id !== null && row.started_tick_id !== undefined
+          ? toBigIntValue(row.started_tick_id).toString()
+          : null,
+        lastTickId: row.last_tick_id !== null && row.last_tick_id !== undefined
+          ? toBigIntValue(row.last_tick_id).toString()
+          : null,
+        continuationCount: row.continuation_count != null ? Number(row.continuation_count) : 0,
+        lastContinuedAt: lastTickHour !== undefined && lastTickHour !== null
+          ? toTimestamp(lastTickHour)
+          : null,
+      };
+    });
+  }
+
+  async getNewsEventChain(eventId: string): Promise<StockMarketNewsEventChainDto | null> {
+    const eventResult = await query<StockMarketNewsEventRow>(
+      `
+        SELECT id, status, theme, headline, summary, stage, affected_stock_ids,
+               started_tick_id, last_tick_id
+        FROM stock_market_news_event
+        WHERE id = $1
+      `,
+      [eventId],
+    );
+    const eventRow = eventResult.rows[0];
+    if (!eventRow) return null;
+
+    const tickResult = await query<StockMarketNewsRow>(
+      `
+        SELECT
+          t.id,
+          t.tick_hour,
+          t.headline,
+          t.summary,
+          t.status,
+          h.stock_id,
+          h.change_bps,
+          h.direction,
+          h.reason
+        FROM stock_market_tick t
+        LEFT JOIN stock_market_price_history h ON h.tick_id = t.id
+          AND h.reason != $1
+        WHERE t.event_id = $2
+        ORDER BY t.tick_hour ASC, h.id ASC
+      `,
+      [STOCK_MARKET_NOISE_REASON, eventId],
+    );
+
+    const impactsByTickId = new Map<string, StockMarketNewsEventChainDto['ticks'][number]['impacts']>();
+    const tickInfos: Array<{ tickId: string; tickHour: Date; headline: string; summary: string; status: string }> = [];
+    const seenTickIds = new Set<string>();
+    const definitionMap = new Map(getEnabledStockDefinitions().map((d) => [d.id, d] as const));
+
+    for (const row of tickResult.rows) {
+      const tickId = String(row.id);
+      if (!seenTickIds.has(tickId)) {
+        seenTickIds.add(tickId);
+        tickInfos.push({
+          tickId,
+          tickHour: row.tick_hour instanceof Date ? row.tick_hour : new Date(row.tick_hour),
+          headline: row.headline ?? '',
+          summary: row.summary ?? '',
+          status: row.status ?? 'unknown',
+        });
+      }
+      if (row.stock_id) {
+        const stockName = definitionMap.get(row.stock_id)?.name ?? row.stock_id;
+        const impacts = impactsByTickId.get(tickId);
+        if (impacts) {
+          impacts.push({
+            stockId: row.stock_id,
+            stockName,
+            changeBps: toIntValue(row.change_bps ?? 0),
+            direction: row.direction ?? 'flat',
+            reason: row.reason,
+          });
+        } else {
+          impactsByTickId.set(tickId, [{
+            stockId: row.stock_id,
+            stockName,
+            changeBps: toIntValue(row.change_bps ?? 0),
+            direction: row.direction ?? 'flat',
+            reason: row.reason,
+          }]);
+        }
+      }
+    }
+
+    const ticks: StockMarketNewsEventChainDto['ticks'] = tickInfos.map((info) => ({
+      tickId: info.tickId,
+      tickHour: info.tickHour.getTime(),
+      headline: info.headline,
+      summary: info.summary,
+      status: info.status,
+      impacts: impactsByTickId.get(info.tickId) ?? [],
+    }));
+
+    const affectedStockIds = parseStockMarketEventStockIds(eventRow.affected_stock_ids);
+    return {
+      event: {
+        id: toBigIntValue(eventRow.id).toString(),
+        status: eventRow.status,
+        theme: eventRow.theme,
+        headline: eventRow.headline,
+        summary: eventRow.summary,
+        stage: eventRow.stage,
+        affectedStockIds,
+        startedTickId: eventRow.started_tick_id !== null && eventRow.started_tick_id !== undefined
+          ? toBigIntValue(eventRow.started_tick_id).toString()
+          : null,
+        lastTickId: eventRow.last_tick_id !== null && eventRow.last_tick_id !== undefined
+          ? toBigIntValue(eventRow.last_tick_id).toString()
+          : null,
+      },
+      ticks,
+    };
   }
 }
 

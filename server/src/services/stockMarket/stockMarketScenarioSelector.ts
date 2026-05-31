@@ -54,13 +54,13 @@ export const STOCK_MARKET_SCENARIO_GUIDES: readonly StockMarketScenarioGuide[] =
     id: 'alchemy-supply',
     title: '丹药与灵植供需轮动',
     focusStockIds: ['stock-qingyun-danfang', 'stock-yunmeng-herb', 'stock-xinghe-auction'],
-    guide: '围绕丹药需求、药材收成、拍卖流转写作，至少一只受益、一只承压，不要重复写丹方突破大涨。',
+    guide: '围绕丹药需求、药材收成、拍卖流转写作，至少一只受益、一只承压。受益方和承压方应当轮换，不要重复写丹方突破大涨，也不要让云梦药畦总是承压方。',
   },
   {
     id: 'mining-armory',
     title: '矿材与炼器成本博弈',
-    focusStockIds: ['stock-xuantie-mining', 'stock-tiangong-armory', 'stock-beizhou-treasure'],
-    guide: '围绕矿脉产量、矿价、炼器订单和商贸囤货写作，矿材与炼器或商贸之间形成多空对冲。',
+    focusStockIds: ['stock-xuantie-mining', 'stock-tiangong-armory', 'stock-beizhou-treasure', 'stock-wuerdaha-trade'],
+    guide: '围绕矿脉产量、矿价、炼器订单和商贸囤货写作，矿材与炼器或商贸之间形成多空对冲。乌尔达哈商会作为商贸流转标的，应参与矿材运输或跨区域套利题材。',
   },
   {
     id: 'transport-array',
@@ -71,26 +71,26 @@ export const STOCK_MARKET_SCENARIO_GUIDES: readonly StockMarketScenarioGuide[] =
   {
     id: 'academy-sect',
     title: '功法与宗门声望变化',
-    focusStockIds: ['stock-wanjuan-academy', 'stock-chixiao-sword', 'stock-xinghe-auction'],
-    guide: '围绕秘卷、论剑、讲经会和宗门委托写作，让功法、宗门、拍卖之间有正负分化。',
+    focusStockIds: ['stock-wanjuan-academy', 'stock-chixiao-sword', 'stock-jianqi-wall', 'stock-xinghe-auction'],
+    guide: '围绕秘卷、论剑、讲经会和宗门委托写作，让功法、宗门、拍卖之间有正负分化。剑气长城作为宗门标的，应参与论剑或战功相关题材。',
   },
   {
     id: 'auction-commerce',
     title: '拍卖与商贸资金分流',
-    focusStockIds: ['stock-xinghe-auction', 'stock-beizhou-treasure', 'stock-wanjuan-academy'],
-    guide: '围绕压轴拍品、宝楼交易、人气分流写作，拍卖热度和商贸成交之间形成平衡。',
+    focusStockIds: ['stock-xinghe-auction', 'stock-beizhou-treasure', 'stock-wuerdaha-trade', 'stock-wanjuan-academy'],
+    guide: '围绕压轴拍品、宝楼交易、商会汇兑和人气分流写作，拍卖热度、商贸成交与资金流转之间形成平衡。',
   },
   {
     id: 'sect-defense',
     title: '边境战事与防务委托',
-    focusStockIds: ['stock-chixiao-sword', 'stock-tiangong-armory', 'stock-qiankun-array', 'stock-lingzhou-shipyard'],
+    focusStockIds: ['stock-chixiao-sword', 'stock-jianqi-wall', 'stock-tiangong-armory', 'stock-qiankun-array', 'stock-lingzhou-shipyard'],
     guide: '围绕边境战事、护宗委托、法器与阵法需求写作，至少包含一个受益方和一个成本或风险承压方。',
   },
   {
     id: 'weather-harvest',
     title: '节气收成与材料价格',
     focusStockIds: ['stock-yunmeng-herb', 'stock-qingyun-danfang', 'stock-xuantie-mining', 'stock-tiangong-armory'],
-    guide: '围绕节气、虫害、灵草收成和材料价格写作，供应端与加工端涨跌互相抵消。',
+    guide: '围绕节气、虫害、灵草收成和材料价格写作，供应端与加工端涨跌互相抵消。灵草需求旺盛或丰收时云梦药畦可领涨，虫害或歉收时则承压，题材不要固定为利空。',
   },
   {
     id: 'market-rotation',
@@ -100,8 +100,9 @@ export const STOCK_MARKET_SCENARIO_GUIDES: readonly StockMarketScenarioGuide[] =
       'stock-wanjuan-academy',
       'stock-xinghe-auction',
       'stock-beizhou-treasure',
+      'stock-wuerdaha-trade',
     ],
-    guide: '围绕修士资金在消耗品、功法、拍卖和商贸之间切换写作，不要让同一行业连续独占利好。',
+    guide: '围绕修士资金在消耗品、功法、拍卖、商贸和贸易汇兑之间切换写作，不要让同一行业连续独占利好。',
   },
 ];
 

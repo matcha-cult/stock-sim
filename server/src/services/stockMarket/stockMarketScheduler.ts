@@ -3,7 +3,7 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：在后台调度角色中按 30 分钟边界触发股市 AI 新闻与行情 tick。
- * 2. 不做什么：不实现 AI prompt、不拼交易 SQL、不接入 cleanupWorker。
+ * 2. 不做什么：不参与收租调度（收租由独立的 shopRentScheduler 负责）。
  *
  * 输入 / 输出：
  * - 输入：启动流水线调用的 initialize/stop。
@@ -52,8 +52,9 @@ const runScheduledStockMarketTick = async (): Promise<void> => {
 
   inFlight = true;
   try {
+    const now = new Date();
     console.log('[StockMarketScheduler] 开始生成股市新闻与行情');
-    const result = await stockMarketService.runScheduledTick(new Date());
+    const result = await stockMarketService.runScheduledTick(now);
     console.log(`[StockMarketScheduler] ${result.message}`);
   } catch (error) {
     console.error('[StockMarketScheduler] 股市行情执行失败:', error);

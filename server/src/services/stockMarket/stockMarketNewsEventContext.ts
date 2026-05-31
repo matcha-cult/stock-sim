@@ -32,6 +32,7 @@ export type StockMarketNewsEventPromptContext = {
   summary: string;
   stage: string;
   affectedStockIds: readonly string[];
+  continuationCount: number;
 };
 
 export type StockMarketNewsEventSelectionWeight = {
@@ -50,10 +51,16 @@ export type StockMarketNewsEventSelectionResult = {
 export const STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT = 6;
 
 /** active 事件超过 N 个 tick 未续写，自动转为 cooling。 */
-export const STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS = 12;
+export const STOCK_MARKET_NEWS_EVENT_ACTIVE_TO_COOLING_TICKS = 144;
 
 /** cooling 事件超过 N 个 tick 未续写，自动转为 resolved。 */
-export const STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS = 24;
+export const STOCK_MARKET_NEWS_EVENT_COOLING_TO_RESOLVED_TICKS = 288;
+
+/** 事件最少续写次数，低于此次数 AI 不允许 resolve。 */
+export const STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION = 3;
+
+/** 事件最多续写次数，达到此次数后强制 resolve。 */
+export const STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION = 10;
 
 const STOCK_MARKET_NEWS_EVENT_BASE_WEIGHT = 72;
 const STOCK_MARKET_NEWS_EVENT_ACTIVE_BONUS = 28;
@@ -135,6 +142,7 @@ export const buildStockMarketNewsEventSelectionWeights = (params: {
   const heatByStockId = buildRecentStockHeatMap(params.recentStockIds, params.enabledStockIdSet);
   const candidateEvents = params.events
     .filter((event) => event.status !== 'resolved')
+    .filter((event) => event.continuationCount < STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION)
     .slice(0, STOCK_MARKET_NEWS_EVENT_CONTEXT_LIMIT);
 
   const weights: StockMarketNewsEventSelectionWeight[] = [];

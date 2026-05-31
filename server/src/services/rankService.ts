@@ -85,6 +85,16 @@ export type StockMarketRankRow = {
   totalPnlSpiritStones: number;
 };
 
+export type ShopRentRankRow = {
+  rank: number;
+  characterId: number;
+  name: string;
+  title: string;
+  monthCardActive: boolean;
+  totalRentCollected: number;
+  shopCount: number;
+};
+
 type WealthRankQueryRow = {
   rank: number | string;
   character_id: number | string;
@@ -105,6 +115,15 @@ type StockMarketRankQueryRow = {
   unrealizedPnlSpiritStones: number | string;
   realizedPnlSpiritStones: number | string;
   totalPnlSpiritStones: number | string;
+};
+
+type ShopRentRankQueryRow = {
+  rank: number | string;
+  character_id: number | string;
+  name: string;
+  title: string | null;
+  totalRentCollected: number | string;
+  shopCount: number | string;
 };
 
 const STOCK_MARKET_RANK_ORDER_SQL: Record<StockMarketRankMetric, string> = {
@@ -248,6 +267,54 @@ const loadStockMarketRanks = async (
 };
 
 // ============================================
+// 收租排行 loader
+// ============================================
+
+const loadShopRentRanks = async (limit: number): Promise<ShopRentRankRow[]> => {
+  const res = await query(
+    `
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY total_collected DESC, character_id ASC)::int AS rank,
+        character_id,
+        name,
+        title,
+        total_collected AS "totalRentCollected",
+        shop_count AS "shopCount"
+      FROM (
+        SELECT
+          c.id AS character_id,
+          c.nickname AS name,
+          c.title,
+          SUM(s.total_rent_collected)::bigint / 100 AS total_collected,
+          COUNT(*)::int AS shop_count
+        FROM shop_detail s
+        JOIN characters c ON c.id = s.character_id
+        WHERE c.nickname IS NOT NULL AND c.nickname <> ''
+        GROUP BY c.id, c.nickname, c.title
+      ) sub
+      ORDER BY rank
+      LIMIT $1
+    `,
+    [limit],
+  );
+
+  const rows = res.rows as ShopRentRankQueryRow[];
+  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(
+    rows.map((row) => Number(row.character_id)),
+  );
+
+  return rows.map((row) => ({
+    rank: Number(row.rank),
+    characterId: Number(row.character_id),
+    name: String(row.name),
+    title: typeof row.title === 'string' ? row.title : '',
+    monthCardActive: monthCardActiveMap.get(Number(row.character_id)) ?? false,
+    totalRentCollected: Number(row.totalRentCollected),
+    shopCount: Number(row.shopCount),
+  }));
+};
+
+// ============================================
 // 缓存实例
 // ============================================
 
@@ -272,6 +339,13 @@ const stockMarketRankCaches: Record<StockMarketRankMetric, ReturnType<typeof cre
   profit: createStockMarketRankCache('profit'),
 };
 
+const shopRentRankCache = createCacheLayer<number, ShopRentRankRow[]>({
+  keyPrefix: 'rank:shop-rent:',
+  redisTtlSec: RANK_CACHE_REDIS_TTL_SEC,
+  memoryTtlMs: RANK_CACHE_MEMORY_TTL_MS,
+  loader: loadShopRentRanks,
+});
+
 // ============================================
 // 导出函数
 // ============================================
@@ -295,5 +369,13 @@ export const getStockMarketRanks = async (
 
   const l = clampLimit(limit, 50);
   const data = (await stockMarketRankCaches[metric].get(l)) ?? [];
+  return { success: true, message: 'ok', data };
+};
+
+export const getShopRentRanks = async (
+  limit?: number,
+): Promise<{ success: boolean; message: string; data?: ShopRentRankRow[] }> => {
+  const l = clampLimit(limit, 50);
+  const data = (await shopRentRankCache.get(l)) ?? [];
   return { success: true, message: 'ok', data };
 };

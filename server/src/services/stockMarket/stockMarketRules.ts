@@ -40,10 +40,18 @@ export const STOCK_MARKET_PRICE_SCALE = 100n;
 export const STOCK_MARKET_PRICE_SCALE_NUMBER = 100;
 export const STOCK_MARKET_MIN_PRICE_SPIRIT_STONES = 1n;
 export const STOCK_MARKET_MIN_PRICE_UNITS = STOCK_MARKET_MIN_PRICE_SPIRIT_STONES * STOCK_MARKET_PRICE_SCALE;
-export const STOCK_MARKET_HISTORY_LIMIT = 48;
+export const STOCK_MARKET_HISTORY_LIMIT = 200;
 export const STOCK_MARKET_TRADE_RECORD_PAGE_SIZE = 20;
 
 export const STOCK_MARKET_MAX_ABS_CHANGE_BPS = 800;
+
+/** 买卖压力驱动的最大涨跌基点，默认 ±50，可通过 STOCK_MARKET_PRESSURE_MAX_BPS 覆盖。 */
+const STOCK_MARKET_PRESSURE_MAX_BPS_ENV = parseInt(process.env.STOCK_MARKET_PRESSURE_MAX_BPS ?? '50', 10);
+export const STOCK_MARKET_PRESSURE_MAX_BPS = Number.isFinite(STOCK_MARKET_PRESSURE_MAX_BPS_ENV)
+  && STOCK_MARKET_PRESSURE_MAX_BPS_ENV > 0
+  && STOCK_MARKET_PRESSURE_MAX_BPS_ENV <= STOCK_MARKET_MAX_ABS_CHANGE_BPS
+  ? STOCK_MARKET_PRESSURE_MAX_BPS_ENV
+  : 50;
 
 /** 随机噪音波动下限（百分比），默认 0.1%，可通过 STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT 覆盖。 */
 const STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT_ENV = parseFloat(process.env.STOCK_MARKET_NOISE_MIN_CHANGE_PERCENT ?? '0.1');
@@ -118,6 +126,39 @@ export const generateStockMarketNoiseChangeBps = (
   const noiseBps = Math.round(minBps + fractional * (maxBps - minBps));
 
   return isPositive ? noiseBps : -noiseBps;
+};
+
+/**
+ * 根据最近 N 个 tick 的买卖量计算压力驱动涨跌基点。
+ *
+ * 纯函数：同一 buyQty + sellQty + stockId + tickId 调用结果一致。
+ *
+ * @returns 涨跌基点，范围 [-MAX_PRESSURE_BPS, MAX_PRESSURE_BPS]。
+ *          买卖平衡时（pressureRatio=0）返回 ±1 bps 微量波动。
+ */
+export const calculateStockMarketPressureChangeBps = (
+  buyQty: number,
+  sellQty: number,
+  stockId: string,
+  tickId: number,
+): number => {
+  const totalQty = buyQty + sellQty;
+  if (totalQty === 0) return 0;
+
+  const pressureRatio = (buyQty - sellQty) / totalQty;
+  const maxBps = STOCK_MARKET_PRESSURE_MAX_BPS;
+  let changeBps = Math.round(pressureRatio * maxBps);
+
+  // 买卖完全平衡时给 ±1 bps 微量波动，方向由确定性 hash 决定
+  if (changeBps === 0) {
+    const hashHex = createHash('md5')
+      .update(`${tickId}:${stockId}`)
+      .digest('hex');
+    const hashInt = parseInt(hashHex.slice(0, 8), 16) >>> 0;
+    changeBps = (hashInt & 1) === 1 ? 1 : -1;
+  }
+
+  return changeBps;
 };
 
 export const applyStockMarketPriceChange = (

@@ -21,6 +21,7 @@
  * 2. 昵称不能为空且长度有限制（最长50字符）。
  */
 import { query } from '../config/database.js';
+import { shopService } from './shop/shopService.js';
 
 export interface Character {
   id: number;
@@ -133,6 +134,11 @@ export const createCharacter = async (
 
   const result = await query(insertSQL, [userId, nicknameValidation.nickname, gender]);
   const row = result.rows[0];
+
+  const characterId = Number(row.id);
+
+  // 为新角色创建初始店铺（黄级·书籍）— 临时屏蔽
+  // await shopService.createInitialShopForCharacter(characterId);
 
   return {
     success: true,

@@ -41,9 +41,28 @@ import {
 } from './stockMarketScenarioSelector.js';
 import {
   selectStockMarketNewsEventContext,
+  STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION,
+  STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION,
   type StockMarketNewsEventPromptContext,
   type StockMarketNewsEventSelectionWeight,
 } from './stockMarketNewsEventContext.js';
+
+/** AI 新闻生成中近 N 个 tick 的回顾窗口。 */
+export const STOCK_MARKET_TREND_LOOKBACK_TICKS = 32;
+
+/** 净变化超过此阈值（基基点）才视为有明确趋势方向。 */
+export const STOCK_MARKET_TREND_SIGNIFICANT_BPS_THRESHOLD = 100;
+
+export type StockMarketTrendDirection = 'bullish' | 'bearish' | 'neutral';
+
+export type StockMarketPriceTrendInfo = {
+  stockId: string;
+  direction: StockMarketTrendDirection;
+  lastChangeBps: number;
+  netChangeBps: number;
+  tickCount: number;
+  lastTickHour: Date;
+};
 
 export type StockMarketAiQuoteInput = {
   stockId: string;
@@ -296,6 +315,7 @@ export const validateStockMarketAiNewsPayload = (
   enabledStockIdSet: ReadonlySet<string>,
   options?: {
     selectedEventId?: string | null;
+    selectedEventContinuationCount?: number;
   },
 ): StockMarketAiNewsDraftResult => {
   const headline = readTrimmedText(payload, 'headline', 40);
@@ -308,6 +328,21 @@ export const validateStockMarketAiNewsPayload = (
   if (!event) {
     return { success: false, reason: 'AI 新闻事件上下文无效' };
   }
+
+  // 最小续写次数校验：低于最小次数时不允许 resolve
+  if (event.action === 'resolve'
+    && options?.selectedEventId != null
+    && (options.selectedEventContinuationCount ?? 0) < STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION) {
+    return { success: false, reason: `事件续写次数不足最低 ${STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION} 次，不能结束` };
+  }
+
+  // 最大续写次数校验：达到最大次数时只能 resolve
+  if (event.action !== 'resolve'
+    && options?.selectedEventId != null
+    && (options.selectedEventContinuationCount ?? 0) >= STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION) {
+    return { success: false, reason: `事件已达最大续写次数 ${STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION} 次，必须结束` };
+  }
+
   if (!Array.isArray(rawImpacts) || rawImpacts.length <= 0) {
     return { success: false, reason: 'AI 新闻影响列表无效' };
   }
@@ -349,6 +384,12 @@ const buildStockMarketSystemMessage = (): string => {
     '必须只输出合法 JSON 对象，JSON 字段必须严格符合 response_format schema。',
     'impacts 可包含所有受新闻明确影响的股票，stockId 必须来自用户提供的股票列表，禁止虚构股票，changePercent 必须在 -8 到 8 之间且最多两位小数。',
     '同一条 impacts 内每个 stockId 只能出现一次，stockId 必须逐字复制用户 stocks 列表中的 stockId。',
+    '避免让同一只股票在连续多个周期中反复作为受损方或承压方；新闻中的受损方应当轮换，不要总是同一只股票。',
+    '如果某只股票近期已连续下跌，后续新闻应适当给予其修复或利好题材，避免单边持续走低的观感。',
+    '用户会提供 recentTrends 展示每只股票近 N 个 tick 的价格走势方向（bullish/bearish/neutral）和累计变化。',
+    '若某只股票方向为 bearish 且已连续多个 tick 下跌，请优先为其设计利好新闻或在对冲题材中给予修复，防止持续阴跌。',
+    '若某只股票方向为 bullish 且已连续多个 tick 上涨，请适度给予利空或回调压力，防止持续暴涨脱离基本面。',
+    'neutral 方向的股票不需要刻意干预，按新闻题材自然决定即可。',
   ].join('\n');
 };
 
@@ -362,6 +403,7 @@ const buildStockMarketUserMessage = (params: {
   scenarioSeed: number;
   recentImpactStockIds: readonly string[];
   activeEvents: readonly StockMarketNewsEventPromptContext[];
+  recentTrends: readonly StockMarketPriceTrendInfo[];
 }): string => {
   const quoteByStockId = new Map(
     params.quotes.map((quote) => [
@@ -407,6 +449,8 @@ const buildStockMarketUserMessage = (params: {
       selectedEvent,
       eventDirective: eventSelection.directive,
       weights: eventWeights,
+      minContination: STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION,
+      maxContination: STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION,
     },
     stocks: params.definitions.map((definition) => ({
       stockId: definition.id,
@@ -415,6 +459,12 @@ const buildStockMarketUserMessage = (params: {
       sector: definition.sector,
       currentPriceSpiritStones: quoteByStockId.get(definition.id) ?? definition.initial_price_spirit_stones.toFixed(2),
       description: definition.description ?? '',
+    })),
+    recentTrends: params.recentTrends.map((trend) => ({
+      stockId: trend.stockId,
+      direction: trend.direction,
+      netChangeBps: trend.netChangeBps,
+      tickCount: trend.tickCount,
     })),
     outputRules: [
       '必须只输出合法 JSON 对象，不要输出 Markdown、解释文字或代码块',
@@ -427,9 +477,12 @@ const buildStockMarketUserMessage = (params: {
       '本轮新闻题材必须优先围绕 marketScenario，impacts 优先从 marketScenario.focusStockIds 中选择',
       'eventContext.selectedEvent 非空时，本轮必须续写该事件，event.action 只能是 continue、escalate 或 resolve',
       'eventContext.selectedEvent 为空时，本轮必须开启新事件，event.action 必须是 new',
+      `事件续写次数低于 ${STOCK_MARKET_NEWS_EVENT_MIN_CONTINUATION} 次时，event.action 不能是 resolve，必须继续或升级`,
+      `事件续写次数达到 ${STOCK_MARKET_NEWS_EVENT_MAX_CONTINUATION} 次时，event.action 必须是 resolve，不得继续或升级`,
       'event.theme、event.headline、event.summary、event.stage 用于内部事件池，不会直接展示给玩家，但必须概括本轮新闻脉络',
       'event.affectedStockIds 只能填写本事件明确关联股票，必须来自 stocks，不能重复',
       'recentImpactStockIds 表示近期已频繁波动的股票，用于降低重复题材；它不是禁用名单，确有强关联时可以少量复用',
+      'recentTrends 展示每只股票近期的累计走势方向（bullish=持续涨、bearish=持续跌、neutral=平稳），bearish 股票应优先给予利好对冲，bullish 股票应适度给予利空回调',
       '优先让近期较少出现的 focusStockIds 获得明确影响，避免同一批股票连续多轮占据 impacts',
       '不要连续使用丹方突破、筑基丹热销、青云丹坊大利好作为默认新闻题材',
       '同一个 stockId 只能出现一次，禁止用股票名称、code 或 shortName 代替 stockId',
@@ -447,6 +500,7 @@ export const generateStockMarketAiNewsDraft = async (params: {
   tickHour: Date;
   recentImpactStockIds: readonly string[];
   activeEvents: readonly StockMarketNewsEventPromptContext[];
+  recentTrends: readonly StockMarketPriceTrendInfo[];
 }): Promise<StockMarketAiNewsDraftResult> => {
   let previousFailureReason: string | null = null;
   const enabledStockIdSet = new Set(params.definitions.map((definition) => definition.id));
@@ -465,6 +519,7 @@ export const generateStockMarketAiNewsDraft = async (params: {
         attempt,
         previousFailureReason,
         recentImpactStockIds: params.recentImpactStockIds,
+        recentTrends: params.recentTrends,
         scenarioSeed: seed,
         promptNoiseHash: buildTextModelPromptNoiseHash(`stock-market-news:${attempt}`, seed),
       });
@@ -499,6 +554,7 @@ export const generateStockMarketAiNewsDraft = async (params: {
       enabledStockIdSet,
       {
         selectedEventId: eventSelection.selectedEvent?.eventId ?? null,
+        selectedEventContinuationCount: eventSelection.selectedEvent?.continuationCount ?? undefined,
       },
     );
     if (!validated.success) {

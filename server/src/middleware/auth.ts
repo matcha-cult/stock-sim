@@ -98,3 +98,37 @@ export const getOptionalUserId = (req: Request): number | undefined => {
   const userId = parseUserIdFromToken(token);
   return userId ?? undefined;
 };
+
+/**
+ * 鉴权 + GM 权限校验中间件。
+ * 验证 JWT Token 且 permissions 包含 'GM'，否则返回 403。
+ * 成功时在 req 上写入 userId。
+ */
+export const requireGm = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  const token = readBearerToken(req);
+  if (!token) {
+    res.status(401).json({ success: false, message: AUTH_INVALID_MESSAGE });
+    return;
+  }
+
+  const { valid, decoded } = verifyToken(token);
+  if (!valid || !decoded) {
+    res.status(401).json({ success: false, message: AUTH_INVALID_MESSAGE });
+    return;
+  }
+
+  const userId = Number(decoded.id);
+  if (!Number.isFinite(userId) || userId <= 0) {
+    res.status(401).json({ success: false, message: AUTH_INVALID_MESSAGE });
+    return;
+  }
+
+  const permissions = Array.isArray(decoded.permissions) ? decoded.permissions : [];
+  if (!permissions.includes('GM')) {
+    res.status(403).json({ success: false, message: '需要 GM 权限才能访问此接口' });
+    return;
+  }
+
+  req.userId = userId;
+  next();
+};
