@@ -43,6 +43,8 @@ import { getShopRentRanks } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import ShopPanel from './ShopPanel';
 import GmNewsViewer from './GmNewsViewer/GmNewsViewer';
+import LedgerTab from './LedgerTab';
+import GmLedgerViewer from './GmLedgerViewer/GmLedgerViewer';
 import {
   buildStockMarketOverviewViewModel,
   buildStockMarketTradePreview,
@@ -62,7 +64,7 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'gm-news-viewer';
+type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'ledger' | 'gm-news-viewer' | 'gm-ledger';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
@@ -306,7 +308,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'gm-news-viewer') {
+    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'gm-news-viewer' || key === 'gm-ledger') {
       setActiveTab(key);
     }
   }, []);
@@ -500,12 +502,24 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                 />
               ),
             },
+            {
+              key: 'ledger',
+              label: '灵石流水',
+              children: <LedgerTab />,
+            },
             ...(authStore.user?.permissions.includes('GM')
-              ? [{
-                key: 'gm-news-viewer' as const,
-                label: 'GM新闻事件查看器',
-                children: <GmNewsViewer definitionMap={new Map(overview.stocks.map((s) => [s.stockId, s.name] as const))} />,
-              }]
+              ? [
+                {
+                  key: 'gm-news-viewer' as const,
+                  label: 'GM新闻事件查看器',
+                  children: <GmNewsViewer definitionMap={new Map(overview.stocks.map((s) => [s.stockId, s.name] as const))} />,
+                },
+                {
+                  key: 'gm-ledger' as const,
+                  label: 'GM流水账',
+                  children: <GmLedgerViewer />,
+                },
+              ]
               : []),
           ]}
         />

@@ -957,7 +957,10 @@ class StockMarketService {
 
     const grossAmount = calculateStockMarketGrossAmount(price, quantity, 'buy');
     const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
-    const consumeResult = await consumeSpiritStones(params.characterId, grossAmount + fee);
+    const consumeResult = await consumeSpiritStones(params.characterId, grossAmount + fee, {
+      bizType: 'stock_buy',
+      memo: `买入 ${definition.id} x${quantity}`,
+    });
     if (!consumeResult.success) return { success: false, message: consumeResult.message };
 
     await query(
@@ -1132,7 +1135,10 @@ class StockMarketService {
     }
 
     if (netAmount > 0n) {
-      const addResult = await addSpiritStones(characterId, netAmount);
+      const addResult = await addSpiritStones(characterId, netAmount, {
+        bizType: 'stock_sell',
+        memo: `卖出股票`,
+      });
       if (!addResult.success) {
         return {
           success: false,

@@ -22,6 +22,10 @@
  */
 import { query } from '../config/database.js';
 import { shopService } from './shop/shopService.js';
+import {
+  recordSpiritStones,
+  type SpiritStonesLedgerBizType,
+} from './ledgerService.js';
 
 export interface Character {
   id: number;
@@ -167,12 +171,20 @@ export const getCharacter = async (userId: number): Promise<CharacterResult> => 
   return checkCharacter(userId);
 };
 
+type LedgerMeta = {
+  bizType: SpiritStonesLedgerBizType;
+  bizId?: string;
+  counterparty?: number;
+  memo?: string;
+};
+
 /**
  * 更新角色灵石余额（供股市服务调用）。
  */
 export const updateCharacterSpiritStones = async (
   characterId: number,
   delta: bigint,
+  ledgerMeta?: LedgerMeta,
 ): Promise<{ success: boolean; message: string; newBalance?: bigint }> => {
   const result = await query(
     `
@@ -189,9 +201,22 @@ export const updateCharacterSpiritStones = async (
     return { success: false, message: '灵石不足或角色不存在' };
   }
 
+  const newBalance = BigInt(result.rows[0].spirit_stones);
+  if (ledgerMeta) {
+    await recordSpiritStones({
+      characterId,
+      amount: delta,
+      balanceAfter: newBalance,
+      bizType: ledgerMeta.bizType,
+      bizId: ledgerMeta.bizId,
+      counterparty: ledgerMeta.counterparty,
+      memo: ledgerMeta.memo,
+    });
+  }
+
   return {
     success: true,
     message: '灵石更新成功',
-    newBalance: BigInt(result.rows[0].spirit_stones),
+    newBalance,
   };
 };

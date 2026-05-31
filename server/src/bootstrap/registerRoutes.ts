@@ -15,6 +15,7 @@ import characterRoutes from '../routes/characterRoutes.js';
 import stockMarketRoutes from '../routes/stockMarketRoutes.js';
 import rankRoutes from '../routes/rankRoutes.js';
 import shopRoutes from '../routes/shopRoutes.js';
+import ledgerRoutes from '../routes/ledgerRoutes.js';
 
 export function registerRoutes(app: express.Application): void {
   // 认证路由
@@ -31,4 +32,7 @@ export function registerRoutes(app: express.Application): void {
 
   // 店铺路由
   app.use('/api/shop', shopRoutes);
+
+  // 灵石流水账路由
+  app.use('/api/ledger', ledgerRoutes);
 }
