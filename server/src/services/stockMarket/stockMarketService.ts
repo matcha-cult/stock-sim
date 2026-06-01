@@ -65,6 +65,7 @@ import {
   calculateStockMarketTradeFee,
   calculateStockMarketPressureChangeBps,
   generateStockMarketNoiseChangeBps,
+  isStockMarketNoiseEnabled,
   stockMarketPriceToStorageUnits,
   stockMarketPriceUnitsToSpiritStones,
 } from './stockMarketRules.js';
@@ -1866,12 +1867,10 @@ class StockMarketService {
           let reason: string;
 
           if (totalVolume === 0) {
-            // 无交易回退到随机噪声
-            changeBps = generateStockMarketNoiseChangeBps(
-              tickIdNum,
-              stockId,
-              params.tickHour,
-            );
+            // 无交易回退到随机噪声（可通过 STOCK_MARKET_NOISE_ENABLED 关闭）
+            changeBps = isStockMarketNoiseEnabled()
+              ? generateStockMarketNoiseChangeBps(tickIdNum, stockId, params.tickHour)
+              : 0;
             reason = STOCK_MARKET_NOISE_REASON;
           } else {
             changeBps = calculateStockMarketPressureChangeBps(

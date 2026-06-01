@@ -34,6 +34,7 @@ import type { StockMarketDefinition } from './stockMarketDefinitions.js';
 import {
   normalizeStockMarketAiChangeBps,
   stockMarketPriceUnitsToSpiritStones,
+  STOCK_MARKET_MAX_ABS_CHANGE_BPS,
 } from './stockMarketRules.js';
 import {
   selectStockMarketScenarioGuide,
@@ -174,7 +175,7 @@ const buildStockMarketNewsResponseSchema = (
     },
     impacts: {
       type: 'array',
-      minItems: 1,
+      minItems: 5,
       items: {
         type: 'object',
         additionalProperties: false,
@@ -186,8 +187,8 @@ const buildStockMarketNewsResponseSchema = (
           },
           changePercent: {
             type: 'number',
-            minimum: -8,
-            maximum: 8,
+            minimum: -(STOCK_MARKET_MAX_ABS_CHANGE_BPS / 100),
+            maximum: STOCK_MARKET_MAX_ABS_CHANGE_BPS / 100,
           },
           reason: {
             type: 'string',
@@ -219,10 +220,20 @@ const readTrimmedText = (
   return normalized;
 };
 
-const readChangeBps = (source: TechniqueModelJsonObject): number | null => {
+const STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT = 2;
+
+const readChangeBps = (source: TechniqueModelJsonObject, stockId: string): number | null => {
   const value = source.changePercent;
   if (typeof value !== 'number') return null;
-  return normalizeStockMarketAiChangeBps(value);
+  console.log(`[StockMarketAI] ${stockId} AI 原始涨跌:`, value, '%');
+  // 绝对值小于 2% 时，抬升到 2% + 原小数位（保持符号）
+  const absValue = Math.abs(value);
+  const clampedAbs = absValue < STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT
+    ? STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT + (absValue - Math.floor(absValue))
+    : absValue;
+  const result = normalizeStockMarketAiChangeBps(Math.sign(value) * clampedAbs);
+  console.log(`[StockMarketAI] ${stockId} clamp 后涨跌:`, (Math.sign(value) * clampedAbs).toFixed(4), '%, bps:', result);
+  return result;
 };
 
 const readJsonObject = (
@@ -273,8 +284,8 @@ const readEventEntry = (
 
   const action = readEventAction(rawEvent);
   const theme = readTrimmedText(rawEvent, 'theme', 32);
-  const headline = readTrimmedText(rawEvent, 'headline', 40);
-  const summary = readTrimmedText(rawEvent, 'summary', 120);
+  const headline = readTrimmedText(rawEvent, 'headline', 60);
+  const summary = readTrimmedText(rawEvent, 'summary', 200);
   const stage = readTrimmedText(rawEvent, 'stage', 24);
   const affectedStockIds = readAffectedStockIds(rawEvent, enabledStockIdSet);
   if (!action || !theme || !headline || !summary || !stage || !affectedStockIds) return null;
@@ -297,10 +308,10 @@ const readImpactEntry = (
   enabledStockIdSet: ReadonlySet<string>,
 ): StockMarketValidatedImpact | null => {
   const stockId = readTrimmedText(source, 'stockId', 96);
-  const changeBps = readChangeBps(source);
-  const reason = readTrimmedText(source, 'reason', 80);
   if (!stockId || !enabledStockIdSet.has(stockId)) return null;
+  const changeBps = readChangeBps(source, stockId);
   if (changeBps === null) return null;
+  const reason = readTrimmedText(source, 'reason', 80);
   if (!reason) return null;
 
   return {
@@ -318,14 +329,16 @@ export const validateStockMarketAiNewsPayload = (
     selectedEventContinuationCount?: number;
   },
 ): StockMarketAiNewsDraftResult => {
-  const headline = readTrimmedText(payload, 'headline', 40);
-  const summary = readTrimmedText(payload, 'summary', 160);
+  const headline = readTrimmedText(payload, 'headline', 60);
+  const summary = readTrimmedText(payload, 'summary', 260);
   const event = readEventEntry(payload, enabledStockIdSet, options?.selectedEventId ?? null);
   const rawImpacts = payload.impacts;
   if (!headline || !summary) {
+    console.log(`[StockMarketAI] `, 'AI 新闻标题或摘要无效', { headline, summary, payload });
     return { success: false, reason: 'AI 新闻标题或摘要无效' };
   }
   if (!event) {
+    console.log(`[StockMarketAI] `, 'AI 新闻事件上下文无效', { event, payload });
     return { success: false, reason: 'AI 新闻事件上下文无效' };
   }
 
@@ -375,14 +388,15 @@ export const validateStockMarketAiNewsPayload = (
 };
 
 const buildStockMarketSystemMessage = (): string => {
+  const maxChangePercent = STOCK_MARKET_MAX_ABS_CHANGE_BPS / 100;
   return [
     '你是九州修仙录世界中的坊间财经新闻撰稿人。',
     '每次只生成一条中文股市新闻，新闻必须贴合修仙商业、宗门、丹药、炼器、阵法、拍卖等题材。',
-    '你需要判断新闻对股票的具体涨跌百分比，不输出价格、投资建议或现实金融内容。',
-    '大盘目标是长期基本横盘：单条新闻应体现多空平衡，不要持续生成单边利好或单边利空。',
+    '你需要判断新闻对股票的具体涨跌百分比，禁止输出价格、投资建议或现实金融内容。',
+    '大盘目标是长期基本横盘：单条新闻应不强制多空平衡，不要持续生成单边利好或单边利空。',
     '同一条新闻内若有明显受益股票，应尽量给出同事件中受损或承压的股票进行对冲；若只有单只股票受影响，涨跌幅应保持温和。',
     '必须只输出合法 JSON 对象，JSON 字段必须严格符合 response_format schema。',
-    'impacts 可包含所有受新闻明确影响的股票，stockId 必须来自用户提供的股票列表，禁止虚构股票，changePercent 必须在 -8 到 8 之间且最多两位小数。',
+    `impacts 可包含所有受新闻明确影响的股票，stockId 必须来自用户提供的股票列表，禁止虚构股票，changePercent 必须在 ${-maxChangePercent} 到 ${maxChangePercent} 之间且最多两位小数。`,
     '同一条 impacts 内每个 stockId 只能出现一次，stockId 必须逐字复制用户 stocks 列表中的 stockId。',
     '避免让同一只股票在连续多个周期中反复作为受损方或承压方；新闻中的受损方应当轮换，不要总是同一只股票。',
     '如果某只股票近期已连续下跌，后续新闻应适当给予其修复或利好题材，避免单边持续走低的观感。',
@@ -405,6 +419,7 @@ const buildStockMarketUserMessage = (params: {
   activeEvents: readonly StockMarketNewsEventPromptContext[];
   recentTrends: readonly StockMarketPriceTrendInfo[];
 }): string => {
+  const maxChangePercent = STOCK_MARKET_MAX_ABS_CHANGE_BPS / 100;
   const quoteByStockId = new Map(
     params.quotes.map((quote) => [
       quote.stockId,
@@ -468,12 +483,12 @@ const buildStockMarketUserMessage = (params: {
     })),
     outputRules: [
       '必须只输出合法 JSON 对象，不要输出 Markdown、解释文字或代码块',
-      'headline 使用 4 到 40 个中文字符',
-      'summary 使用 12 到 160 个中文字符',
-      'changePercent 表示本次涨跌百分比，正数上涨、负数下跌，范围 -8 到 8，最多两位小数，不能为 0',
-      '单轮 impacts 的 changePercent 简单合计应尽量接近 0，目标区间为 -1.00 到 1.00',
-      '常规单股波动优先控制在 -3.00 到 3.00；超过 4.00 或低于 -4.00 只用于重大突发事件',
-      '优先输出 2 到 4 个相互关联的受影响股票，形成一涨一跌或多空配对',
+      'headline 使用 4 到 40 个中文字符，且必须输出',
+      'summary 使用 12 到 160 个中文字符，且必须输出',
+      `changePercent 表示本次涨跌百分比，正数上涨、负数下跌，范围 ${-maxChangePercent} 到 ${maxChangePercent}，最多两位小数，不能为 0`,
+      '单轮 impacts 的 changePercent 简单合计应尽量接近 0，目标区间为 -3.00 到 3.00',
+      '常规单股波动优先控制在 -8.00 到 8.00；超过 10.00 或低于 -10.00 只用于重大突发事件',
+      '优先输出 2 到 4 个相互关联的受影响股票，形成一涨一跌或多空配对，不强制多空平衡但要避免单边持续',
       '本轮新闻题材必须优先围绕 marketScenario，impacts 优先从 marketScenario.focusStockIds 中选择',
       'eventContext.selectedEvent 非空时，本轮必须续写该事件，event.action 只能是 continue、escalate 或 resolve',
       'eventContext.selectedEvent 为空时，本轮必须开启新事件，event.action 必须是 new',
@@ -505,6 +520,9 @@ export const generateStockMarketAiNewsDraft = async (params: {
   let previousFailureReason: string | null = null;
   const enabledStockIdSet = new Set(params.definitions.map((definition) => definition.id));
   for (let attempt = 1; attempt <= STOCK_MARKET_AI_MAX_ATTEMPTS; attempt += 1) {
+    if (previousFailureReason) {
+      console.log(`[StockMarketAI] 第 ${attempt} 次重试，原因:`, previousFailureReason);
+    }
     const seed = generateTechniqueTextModelSeed();
     const eventSelection = selectStockMarketNewsEventContext({
       seed,
