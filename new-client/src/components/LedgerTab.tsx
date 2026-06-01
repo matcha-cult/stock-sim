@@ -140,6 +140,7 @@ const LedgerTab: React.FC = () => {
             size="small"
             locale={locale}
             pagination={false}
+            scroll={{ x: 'max-content' }}
           />
 
           {total > pageSize && (

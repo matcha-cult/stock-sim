@@ -960,7 +960,7 @@ class StockMarketService {
     const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
     const consumeResult = await consumeSpiritStones(params.characterId, grossAmount + fee, {
       bizType: 'stock_buy',
-      memo: `买入 ${definition.id} x${quantity}`,
+      memo: `买入 ${definition.name} x${quantity}`,
     });
     if (!consumeResult.success) return { success: false, message: consumeResult.message };
 
