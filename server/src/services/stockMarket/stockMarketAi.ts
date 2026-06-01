@@ -145,22 +145,22 @@ const buildStockMarketNewsResponseSchema = (
         theme: {
           type: 'string',
           minLength: 2,
-          maxLength: 32,
+          maxLength: 80,
         },
         headline: {
           type: 'string',
           minLength: 4,
-          maxLength: 40,
+          maxLength: 80,
         },
         summary: {
           type: 'string',
           minLength: 12,
-          maxLength: 120,
+          maxLength: 300,
         },
         stage: {
           type: 'string',
           minLength: 2,
-          maxLength: 40,
+          maxLength: 80,
         },
         affectedStockIds: {
           type: 'array',
@@ -283,10 +283,10 @@ const readEventEntry = (
   if (!rawEvent) return null;
 
   const action = readEventAction(rawEvent);
-  const theme = readTrimmedText(rawEvent, 'theme', 32);
-  const headline = readTrimmedText(rawEvent, 'headline', 60);
-  const summary = readTrimmedText(rawEvent, 'summary', 200);
-  const stage = readTrimmedText(rawEvent, 'stage', 40);
+  const theme = readTrimmedText(rawEvent, 'theme', 80);
+  const headline = readTrimmedText(rawEvent, 'headline', 80);
+  const summary = readTrimmedText(rawEvent, 'summary', 300);
+  const stage = readTrimmedText(rawEvent, 'stage', 80);
   const affectedStockIds = readAffectedStockIds(rawEvent, enabledStockIdSet);
   if (!action || !theme || !headline || !summary || !stage || !affectedStockIds) return null;
   if (selectedEventId === null && action !== 'new') return null;
