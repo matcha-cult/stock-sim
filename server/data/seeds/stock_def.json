@@ -61,7 +61,7 @@
       "name": "云梦药畦",
       "short_name": "云梦畦",
       "sector": "灵植",
-      "description": "培育灵草、灵果和药田阵法，行情随节气、虫害与炼丹需求变化。",
+      "description": "培育灵草、灵果和药田阵法，行情随节气、虫害、药材需求与炼丹需求变化。",
       "initial_price_spirit_stones": 88,
       "sort_weight": 60,
       "enabled": true
@@ -116,7 +116,7 @@
       "name": "乌尔达哈商会",
       "short_name": "乌商",
       "sector": "商贸",
-      "description": "跨州跨国贸易枢纽，经营灵石汇兑、商队护送与珍奇物资流转，行情受商路安全和各地物价差影响。",
+      "description": "跨州跨国贸易枢纽，经营灵石汇兑、珍奇物资交易，行情受商路安全和各地物价差影响。",
       "initial_price_spirit_stones": 156,
       "sort_weight": 110,
       "enabled": true
