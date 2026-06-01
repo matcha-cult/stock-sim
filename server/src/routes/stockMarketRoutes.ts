@@ -259,4 +259,70 @@ router.get('/pending-orders', requireCharacter, stockMarketListPendingOrdersQpsL
   sendSuccess(res, { orders });
 }));
 
+// ---- GM 持仓查看与强制操作 ----
+
+const gmHoldingsQpsLimit = createStockMarketQpsLimit('gm-holdings', STOCK_MARKET_QUERY_QPS_LIMIT);
+const gmSellQpsLimit = createStockMarketQpsLimit('gm-sell', STOCK_MARKET_MUTATION_QPS_LIMIT);
+
+router.get('/gm/holdings', requireGm, gmHoldingsQpsLimit, asyncHandler(async (req, res) => {
+  const page = parseFiniteNumber(getSingleQueryValue(req.query.page));
+  const pageSize = parseFiniteNumber(getSingleQueryValue(req.query.pageSize));
+  const nickname = parseNonEmptyText(getSingleQueryValue(req.query.nickname));
+  const cid = parseFiniteNumber(getSingleQueryValue(req.query.characterId));
+
+  const data = await stockMarketService.gmGetAllHoldings({
+    page: page ?? 1,
+    pageSize: pageSize ?? 20,
+    nickname: nickname ?? undefined,
+    characterId: cid != null && Number.isFinite(cid) ? cid : undefined,
+  });
+  sendSuccess(res, data);
+}));
+
+router.get('/gm/holdings/:characterId', requireGm, gmHoldingsQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = parseFiniteNumber(typeof req.params.characterId === 'string' ? req.params.characterId : undefined);
+  if (characterId === undefined) {
+    sendResult(res, { success: false, message: 'characterId 参数无效' });
+    return;
+  }
+
+  const data = await stockMarketService.gmGetCharacterHoldings(characterId);
+  if (!data) {
+    sendResult(res, { success: false, message: '角色不存在' });
+    return;
+  }
+  sendSuccess(res, data);
+}));
+
+type GmForceSellBody = {
+  stockId?: string | null;
+  quantity?: string | number | null;
+};
+
+router.post('/gm/sell/:characterId', requireGm, gmSellQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = parseFiniteNumber(typeof req.params.characterId === 'string' ? req.params.characterId : undefined);
+  if (characterId === undefined) {
+    sendResult(res, { success: false, message: 'characterId 参数无效' });
+    return;
+  }
+
+  const body = req.body as GmForceSellBody;
+  const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
+  if (!stockId) {
+    sendResult(res, { success: false, message: 'stockId 参数无效' });
+    return;
+  }
+
+  const quantity = parseFiniteNumber(body.quantity ?? undefined);
+  const result = await stockMarketService.gmForceSellStock({
+    characterId,
+    stockId,
+    quantity: quantity != null ? Math.max(1, Math.trunc(quantity)) : undefined,
+  });
+  if (result.success) {
+    await safePushCharacterUpdate(req.userId!);
+  }
+  sendResult(res, result);
+}));
+
 export default router;

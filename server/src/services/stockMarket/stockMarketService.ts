@@ -401,6 +401,68 @@ const parseStockMarketEventStockIds = (value: string[] | string): string[] => {
     .filter((stockId) => stockId.length > 0);
 };
 
+// ---- GM 持仓查看与强制操作 DTO ----
+
+export type GmPlayerHoldingSummaryDto = {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  totalHoldingQty: number;
+  totalMarketValueSpiritStones: number;
+  totalCostSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  realizedPnlSpiritStones: number;
+  totalPnlSpiritStones: number;
+  stockCount: number;
+};
+
+export type GmCharacterHoldingDto = {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  holdings: Array<{
+    stockId: string;
+    code: string;
+    name: string;
+    sector: string;
+    quantity: number;
+    frozenQuantity: number;
+    availableQty: number;
+    costSpiritStones: number;
+    currentPriceSpiritStones: number;
+    marketValueSpiritStones: number;
+    unrealizedPnlSpiritStones: number;
+    unrealizedPnlPercent: number;
+  }>;
+  portfolio: {
+    totalHoldingQty: number;
+    totalCostSpiritStones: number;
+    totalMarketValueSpiritStones: number;
+    totalUnrealizedPnlSpiritStones: number;
+  };
+};
+
+export type GmForceSellResultDto = {
+  success: boolean;
+  message: string;
+  soldStockCount: number;
+  soldQuantity: number;
+  netAmountSpiritStones: number;
+};
+
+type GmPlayerHoldingRow = {
+  character_id: string | number;
+  nickname: string;
+  title: string | null;
+  total_holding_qty: string | number | bigint;
+  total_market_value_spirit_stones: string | number | bigint;
+  total_cost_spirit_stones: string | number | bigint;
+  unrealized_pnl_spirit_stones: string | number | bigint;
+  realized_pnl_spirit_stones: string | number | bigint;
+  total_pnl_spirit_stones: string | number | bigint;
+  stock_count: string | number;
+};
+
 class StockMarketService {
   async ensureInitialQuotes(): Promise<void> {
     const definitions = getEnabledStockDefinitions();
@@ -1920,6 +1982,297 @@ class StockMarketService {
       await pendingOrderService.processAllActiveOrders();
       console.log('[PendingOrder] 撮合完成');
     });
+  }
+
+
+  // ---- GM 持仓查看与强制操作 ----
+
+  /**
+   * GM 查询所有玩家的持仓汇总。
+   * 支持分页，按总盈亏降序排列。
+   */
+  async gmGetAllHoldings(params: {
+    page: number;
+    pageSize: number;
+    nickname?: string;
+    characterId?: number;
+  }): Promise<{
+    records: GmPlayerHoldingSummaryDto[];
+    total: number;
+    page: number;
+    pageSize: number;
+  }> {
+    await this.ensureInitialQuotes();
+
+    const safePage = Number.isInteger(params.page) && params.page > 0 ? params.page : 1;
+    const safePageSize = Number.isInteger(params.pageSize) && params.pageSize > 0 ? params.pageSize : 20;
+    const offset = (safePage - 1) * safePageSize;
+
+    const whereParts: string[] = [];
+    const values: Array<string | number> = [];
+    let paramIndex = 1;
+
+    if (params.nickname?.trim()) {
+      whereParts.push(`c.nickname LIKE $${paramIndex}`);
+      values.push(`%${params.nickname.trim()}%`);
+      paramIndex++;
+    }
+    if (params.characterId != null && Number.isFinite(params.characterId) && params.characterId > 0) {
+      whereParts.push(`c.id = $${paramIndex}`);
+      values.push(params.characterId);
+      paramIndex++;
+    }
+
+    const whereClause = whereParts.length > 0 ? `WHERE ${whereParts.join(' AND ')}` : '';
+
+    const countSql = `
+      SELECT COUNT(DISTINCT c.id)::int AS total
+      FROM characters c
+      INNER JOIN character_stock_holding csh ON csh.character_id = c.id
+      ${whereClause}
+      AND csh.quantity > 0
+    `;
+    const totalResult = await query<{ total: string | number }>(countSql, values);
+    const total = toIntValue(totalResult.rows[0]?.total ?? 0);
+
+    if (total === 0) {
+      return { records: [], total: 0, page: safePage, pageSize: safePageSize };
+    }
+
+    const dataSql = `
+      WITH holding_agg AS (
+        SELECT
+          csh.character_id,
+          COUNT(DISTINCT csh.stock_id)::int AS stock_count,
+          SUM(csh.quantity)::bigint AS total_holding_qty,
+          SUM(csh.total_cost_spirit_stones)::bigint AS total_cost_spirit_stones
+        FROM character_stock_holding csh
+        WHERE csh.quantity > 0
+        GROUP BY csh.character_id
+      ),
+      market_value_agg AS (
+        SELECT
+          ha.character_id,
+          SUM(
+            (ha.quantity::bigint * smq.current_price_spirit_stones + ${STOCK_MARKET_PRICE_SCALE_OFFSET_SQL})
+            / ${STOCK_MARKET_PRICE_SCALE_SQL}
+          )::bigint AS total_market_value_spirit_stones
+        FROM (
+          SELECT csh.character_id, csh.stock_id, csh.quantity
+          FROM character_stock_holding csh
+          WHERE csh.quantity > 0
+        ) ha
+        JOIN stock_market_quote smq ON smq.stock_id = ha.stock_id
+        GROUP BY ha.character_id
+      ),
+      realized_agg AS (
+        SELECT
+          character_id,
+          SUM(COALESCE(realized_pnl_spirit_stones, 0))::bigint AS realized_pnl_spirit_stones
+        FROM stock_market_trade_record
+        GROUP BY character_id
+      )
+      SELECT
+        c.id AS character_id,
+        c.nickname,
+        c.title,
+        COALESCE(ha.total_holding_qty, 0)::bigint AS total_holding_qty,
+        COALESCE(mv.total_market_value_spirit_stones, 0)::bigint AS total_market_value_spirit_stones,
+        COALESCE(ha.total_cost_spirit_stones, 0)::bigint AS total_cost_spirit_stones,
+        (
+          COALESCE(mv.total_market_value_spirit_stones, 0)::bigint
+          - COALESCE(ha.total_cost_spirit_stones, 0)::bigint
+        )::bigint AS unrealized_pnl_spirit_stones,
+        COALESCE(r.realized_pnl_spirit_stones, 0)::bigint AS realized_pnl_spirit_stones,
+        (
+          COALESCE(mv.total_market_value_spirit_stones, 0)::bigint
+          - COALESCE(ha.total_cost_spirit_stones, 0)::bigint
+          + COALESCE(r.realized_pnl_spirit_stones, 0)::bigint
+        )::bigint AS total_pnl_spirit_stones,
+        COALESCE(ha.stock_count, 0)::int AS stock_count
+      FROM characters c
+      INNER JOIN holding_agg ha ON ha.character_id = c.id
+      LEFT JOIN market_value_agg mv ON mv.character_id = c.id
+      LEFT JOIN realized_agg r ON r.character_id = c.id
+      ${whereClause}
+      ORDER BY total_pnl_spirit_stones DESC, character_id ASC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+
+    const dataValues = [...values, safePageSize, offset];
+    const dataResult = await query<GmPlayerHoldingRow>(dataSql, dataValues);
+
+    const records = dataResult.rows.map((row) => ({
+      characterId: Number(row.character_id),
+      nickname: row.nickname ?? `修士${row.character_id}`,
+      title: row.title ?? null,
+      totalHoldingQty: Number(row.total_holding_qty),
+      totalMarketValueSpiritStones: toDtoNumber(toBigIntValue(row.total_market_value_spirit_stones)),
+      totalCostSpiritStones: toDtoNumber(toBigIntValue(row.total_cost_spirit_stones)),
+      unrealizedPnlSpiritStones: toDtoNumber(toBigIntValue(row.unrealized_pnl_spirit_stones)),
+      realizedPnlSpiritStones: toDtoNumber(toBigIntValue(row.realized_pnl_spirit_stones)),
+      totalPnlSpiritStones: toDtoNumber(toBigIntValue(row.total_pnl_spirit_stones)),
+      stockCount: toIntValue(row.stock_count),
+    }));
+
+    return { records, total, page: safePage, pageSize: safePageSize };
+  }
+
+  /**
+   * GM 查询指定角色的详细持仓。
+   */
+  async gmGetCharacterHoldings(characterId: number): Promise<GmCharacterHoldingDto | null> {
+    await this.ensureInitialQuotes();
+
+    const charResult = await query<{ id: string | number; nickname: string; title: string | null }>(
+      `SELECT id, nickname, title FROM characters WHERE id = $1 LIMIT 1`,
+      [characterId],
+    );
+    if (charResult.rows.length === 0) return null;
+
+    const char = charResult.rows[0];
+    const holdingResult = await query<StockMarketHoldingRow>(
+      `
+        SELECT stock_id, quantity, frozen_quantity, total_cost_spirit_stones
+        FROM character_stock_holding
+        WHERE character_id = $1 AND quantity > 0
+        ORDER BY stock_id ASC
+      `,
+      [characterId],
+    );
+
+    const quoteResult = await query<StockMarketQuoteRow>(
+      `
+        SELECT stock_id, current_price_spirit_stones, last_change_bps, updated_at
+        FROM stock_market_quote
+        WHERE stock_id = ANY($1::text[])
+      `,
+      [holdingResult.rows.map((r) => r.stock_id)],
+    );
+    const quoteByStockId = new Map(quoteResult.rows.map((row) => [row.stock_id, row] as const));
+    const definitionMap = new Map(getEnabledStockDefinitions().map((d) => [d.id, d] as const));
+
+    let totalHoldingQty = 0;
+    let totalCost = 0n;
+    let totalMarketValue = 0n;
+
+    const holdings = holdingResult.rows.map((h) => {
+      const def = definitionMap.get(h.stock_id);
+      const quote = quoteByStockId.get(h.stock_id);
+      const price = toBigIntValue(
+        quote?.current_price_spirit_stones
+          ?? (def ? stockMarketPriceToStorageUnits(def.initial_price_spirit_stones) : 0n),
+      );
+      const quantity = toIntValue(h.quantity);
+      const frozenQuantity = toIntValue(h.frozen_quantity ?? 0);
+      const availableQty = calculateStockMarketMaxSellQuantity(quantity - frozenQuantity);
+      const cost = toBigIntValue(h.total_cost_spirit_stones);
+      const marketValue = calculateStockMarketMarketValue(price, quantity);
+      const unrealizedPnl = marketValue - cost;
+      const unrealizedPnlPercent = cost > 0n ? Number(unrealizedPnl) / Number(cost) * 100 : 0;
+
+      totalHoldingQty += quantity;
+      totalCost += cost;
+      totalMarketValue += marketValue;
+
+      return {
+        stockId: h.stock_id,
+        code: def?.code ?? h.stock_id,
+        name: def?.name ?? h.stock_id,
+        sector: def?.sector ?? '',
+        quantity,
+        frozenQuantity,
+        availableQty,
+        costSpiritStones: toDtoNumber(cost),
+        currentPriceSpiritStones: toDtoStockMarketPrice(price),
+        marketValueSpiritStones: toDtoNumber(marketValue),
+        unrealizedPnlSpiritStones: toDtoNumber(unrealizedPnl),
+        unrealizedPnlPercent: Math.round(unrealizedPnlPercent * 100) / 100,
+      };
+    });
+
+    return {
+      characterId: Number(char.id),
+      nickname: char.nickname ?? `修士${char.id}`,
+      title: char.title ?? null,
+      holdings,
+      portfolio: {
+        totalHoldingQty,
+        totalCostSpiritStones: toDtoNumber(totalCost),
+        totalMarketValueSpiritStones: toDtoNumber(totalMarketValue),
+        totalUnrealizedPnlSpiritStones: toDtoNumber(totalMarketValue - totalCost),
+      },
+    };
+  }
+
+  /**
+   * GM 强制卖出指定角色的股票。
+   */
+  @Transactional
+  async gmForceSellStock(params: {
+    characterId: number;
+    stockId: string;
+    quantity?: number; // 不传则清仓
+  }): Promise<GmForceSellResultDto> {
+    const definition = getEnabledStockDefinitionById(params.stockId);
+    if (!definition) {
+      return { success: false, message: '股票不存在', soldStockCount: 0, soldQuantity: 0, netAmountSpiritStones: 0 };
+    }
+
+    await this.ensureInitialQuotes();
+
+    const holding = await this.loadHoldingForUpdate(params.characterId, definition.id);
+    if (!holding) {
+      return { success: false, message: '该角色未持有该股票', soldStockCount: 0, soldQuantity: 0, netAmountSpiritStones: 0 };
+    }
+
+    const holdingQuantity = toIntValue(holding.quantity);
+    const frozenQuantity = toIntValue(holding.frozen_quantity ?? 0);
+    const availableQty = calculateStockMarketMaxSellQuantity(holdingQuantity - frozenQuantity);
+    if (availableQty <= 0) {
+      return { success: false, message: '无可卖持仓（可能被挂单冻结）', soldStockCount: 0, soldQuantity: 0, netAmountSpiritStones: 0 };
+    }
+
+    const quantity = params.quantity != null
+      ? Math.min(params.quantity, availableQty)
+      : availableQty;
+
+    if (quantity <= 0) {
+      return { success: false, message: '可卖数量不足', soldStockCount: 0, soldQuantity: 0, netAmountSpiritStones: 0 };
+    }
+
+    const quoteByStockId = await this.loadQuoteRowsForUpdate([definition.id]);
+    const quote = quoteByStockId.get(definition.id);
+    if (!quote) {
+      return { success: false, message: '股票报价不存在', soldStockCount: 0, soldQuantity: 0, netAmountSpiritStones: 0 };
+    }
+
+    const price = toBigIntValue(quote.current_price_spirit_stones);
+    const plan = this.buildSellExecutionPlan({
+      stockId: definition.id,
+      holding,
+      price,
+      quantity,
+    });
+
+    const executionResult = await this.executeSellPlans(params.characterId, [plan]);
+    if (!executionResult.success) {
+      return {
+        success: false,
+        message: executionResult.message,
+        soldStockCount: 0,
+        soldQuantity: 0,
+        netAmountSpiritStones: 0,
+      };
+    }
+
+    return {
+      success: true,
+      message: executionResult.message,
+      soldStockCount: executionResult.soldStockCount,
+      soldQuantity: executionResult.soldQuantity,
+      netAmountSpiritStones: toDtoNumber(executionResult.netAmount),
+    };
   }
 
   async getNewsEventList(): Promise<StockMarketNewsEventListItemDto[]> {

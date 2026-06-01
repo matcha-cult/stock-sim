@@ -306,3 +306,103 @@ export const getPendingOrders = (
 ): Promise<PendingOrdersListResponse> => {
   return api.get('/api/stock-market/pending-orders', requestConfig);
 };
+
+// ---- GM 股市查看器 ----
+
+export interface GmPlayerHoldingSummaryDto {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  totalHoldingQty: number;
+  totalMarketValueSpiritStones: number;
+  totalCostSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  realizedPnlSpiritStones: number;
+  totalPnlSpiritStones: number;
+  stockCount: number;
+}
+
+export interface GmCharacterHoldingItemDto {
+  stockId: string;
+  code: string;
+  name: string;
+  sector: string;
+  quantity: number;
+  frozenQuantity: number;
+  availableQty: number;
+  costSpiritStones: number;
+  currentPriceSpiritStones: number;
+  marketValueSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  unrealizedPnlPercent: number;
+}
+
+export interface GmCharacterHoldingDto {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  holdings: GmCharacterHoldingItemDto[];
+  portfolio: {
+    totalHoldingQty: number;
+    totalCostSpiritStones: number;
+    totalMarketValueSpiritStones: number;
+    totalUnrealizedPnlSpiritStones: number;
+  };
+}
+
+export type GmHoldingsListResponse = {
+  success: boolean;
+  message?: string;
+  data: {
+    records: GmPlayerHoldingSummaryDto[];
+    total: number;
+    page: number;
+    pageSize: number;
+  };
+};
+
+export type GmCharacterHoldingResponse = {
+  success: boolean;
+  message?: string;
+  data: GmCharacterHoldingDto;
+};
+
+export type GmForceSellResponse = {
+  success: boolean;
+  message?: string;
+  soldStockCount?: number;
+  soldQuantity?: number;
+  netAmountSpiritStones?: number;
+};
+
+export const gmGetHoldingsList = (
+  params?: {
+    page?: number;
+    pageSize?: number;
+    nickname?: string;
+    characterId?: number;
+  },
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmHoldingsListResponse> => {
+  return api.get('/api/stock-market/gm/holdings', withRequestParams(requestConfig, {
+    page: params?.page,
+    pageSize: params?.pageSize,
+    nickname: params?.nickname,
+    characterId: params?.characterId,
+  }));
+};
+
+export const gmGetCharacterHoldings = (
+  characterId: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmCharacterHoldingResponse> => {
+  return api.get(`/api/stock-market/gm/holdings/${characterId}`, requestConfig);
+};
+
+export const gmForceSellStock = (
+  characterId: number,
+  body: { stockId: string; quantity?: number },
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmForceSellResponse> => {
+  return api.post(`/api/stock-market/gm/sell/${characterId}`, body, requestConfig);
+};
