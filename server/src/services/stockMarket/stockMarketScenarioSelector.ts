@@ -84,7 +84,7 @@ export const STOCK_MARKET_SCENARIO_GUIDES: readonly StockMarketScenarioGuide[] =
     id: 'sect-defense',
     title: '边境战事与防务委托',
     focusStockIds: ['stock-chixiao-sword', 'stock-jianqi-wall', 'stock-tiangong-armory', 'stock-qiankun-array', 'stock-lingzhou-shipyard', 'stock-yunmeng-herb'],
-    guide: '围绕边境战事、护宗委托、药材需求、法器与阵法需求写作，至少包含一个受益方和一个成本或风险承压方。',
+    guide: '围绕边境战事、护宗委托、药材需求、矿物需求、法器与阵法需求写作。边境战事会导致药材、兵器、法器、护甲需求增加。至少包含一个受益方和一个成本或风险承压方。',
   },
   {
     id: 'weather-harvest',

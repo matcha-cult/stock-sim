@@ -17,7 +17,7 @@
       "name": "星钛矿业",
       "short_name": "星钛矿",
       "sector": "矿材",
-      "description": "掌控北岭玄铁矿脉，价格随矿脉产量、宗门炼器需求和运输风险波动。",
+      "description": "北大陆最大矿业联盟，价格随矿脉产量、矿物需求和运输风险波动。",
       "initial_price_spirit_stones": 96,
       "sort_weight": 20,
       "enabled": true
@@ -39,7 +39,7 @@
       "name": "天罡器阁",
       "short_name": "天罡阁",
       "sector": "炼器",
-      "description": "炼制法器、护甲与机关傀儡，行情与炼器大会、稀有矿材价格高度相关。",
+      "description": "炼制兵器、法器、护甲与机关傀儡，行情与兵器护甲的需求、炼器大会成绩、稀有矿材价格高度相关。",
       "initial_price_spirit_stones": 212,
       "sort_weight": 40,
       "enabled": true
