@@ -76,7 +76,7 @@ export default function AppHeader(): React.ReactNode {
             <div id="header-inner" data-element="header-content" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '100%' }}>
               <div id="header-brand" data-element="brand">
                 <Typography.Title level={4} style={{ margin: 0, color: 'var(--text-primary)' }}>
-                  修仙股市
+                  抹茶修仙
                 </Typography.Title>
               </div>
               {user && (
