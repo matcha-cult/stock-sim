@@ -537,6 +537,11 @@ class PendingOrderService {
       await this.markOrderFailed(orderId, '冻结持仓不足');
       return;
     }
+    // 二次校验：防止数据不一致导致持仓被卖成负数（如 frozenQty > holdingQty 的异常状态）
+    if (quantity > holdingQty) {
+      await this.markOrderFailed(orderId, '实际持仓不足，订单数据异常');
+      return;
+    }
 
     const grossAmount = calculateStockMarketGrossAmount(priceUnits, quantity, 'sell');
     const fee = calculateStockMarketTradeFee(grossAmount, 'sell');
