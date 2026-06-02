@@ -329,13 +329,41 @@ export const validateStockMarketAiNewsPayload = (
     selectedEventContinuationCount?: number;
   },
 ): StockMarketAiNewsDraftResult => {
-  const headline = readTrimmedText(payload, 'headline', 60);
-  const summary = readTrimmedText(payload, 'summary', 260);
+  // 优先读取顶层 headline / summary（schema required 字段）。
+  // 部分 OpenAI 兼容提供器不严格保证 required 字段，AI 可能只把 headline/summary
+  // 写在 event 内部而遗漏顶层，此时从 event 回退提取并截断到合法长度，
+  // 确保新闻生成不会因提供器不遵循 strict 模式而整条失败。
+  let headline = readTrimmedText(payload, 'headline', 60);
+  let summary = readTrimmedText(payload, 'summary', 260);
+  let fellBackFromEvent = false;
+  if (!headline || !summary) {
+    const rawEvent = readJsonObject(payload, 'event');
+    if (rawEvent) {
+      if (!headline) {
+        const eventHeadline = readTrimmedText(rawEvent, 'headline', 80);
+        if (eventHeadline) {
+          headline = eventHeadline.length > 60 ? eventHeadline.slice(0, 60) : eventHeadline;
+          fellBackFromEvent = true;
+        }
+      }
+      if (!summary) {
+        const eventSummary = readTrimmedText(rawEvent, 'summary', 300);
+        if (eventSummary) {
+          summary = eventSummary.length > 260 ? eventSummary.slice(0, 260) : eventSummary;
+          fellBackFromEvent = true;
+        }
+      }
+    }
+  }
+
   const event = readEventEntry(payload, enabledStockIdSet, options?.selectedEventId ?? null);
   const rawImpacts = payload.impacts;
   if (!headline || !summary) {
     console.log(`[StockMarketAI] `, 'AI 新闻标题或摘要无效', { headline, summary, payload });
     return { success: false, reason: 'AI 新闻标题或摘要无效' };
+  }
+  if (fellBackFromEvent) {
+    console.log(`[StockMarketAI] `, '顶层 headline/summary 缺失，已从 event 回退提取', { headline, summary });
   }
   if (!event) {
     console.log(`[StockMarketAI] `, 'AI 新闻事件上下文无效', { event, payload });
@@ -483,8 +511,8 @@ const buildStockMarketUserMessage = (params: {
     })),
     outputRules: [
       '必须只输出合法 JSON 对象，不要输出 Markdown、解释文字或代码块',
-      'headline 使用 4 到 40 个中文字符，且必须输出',
-      'summary 使用 12 到 160 个中文字符，且必须输出',
+      'headline 使用 4 到 40 个中文字符，且必须输出，作为 JSON 顶层字段，不要写在 event 内部',
+      'summary 使用 12 到 160 个中文字符，且必须输出，作为 JSON 顶层字段，不要写在 event 内部',
       `changePercent 表示本次涨跌百分比，正数上涨、负数下跌，范围 ${-maxChangePercent} 到 ${maxChangePercent}，最多两位小数，不能为 0`,
       '单轮 impacts 的 changePercent 简单合计应尽量接近 0，目标区间为 -3.00 到 3.00',
       '常规单股波动优先控制在 -8.00 到 8.00；超过 10.00 或低于 -10.00 只用于重大突发事件',

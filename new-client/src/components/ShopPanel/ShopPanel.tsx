@@ -248,6 +248,7 @@ const DecorationModalContent = observer(({
     decorationTierLabel: string;
     area: number;
     isDecorating: boolean;
+    rentPerTick: number;
   };
   config: {
     decorationTiers: Record<string, {
@@ -310,6 +311,17 @@ const DecorationModalContent = observer(({
   const isUpgrade = selectedTierConfig && selectedIdx > currentIdx;
   const isDowngrade = selectedTierConfig && selectedIdx < currentIdx;
 
+  // 计算升级/降价后的租金
+  const currentRentPerTick = shop.rentPerTick;
+  const targetRentPerTick = (() => {
+    if (!selectedTierConfig || !currentTierConfig) return null;
+    // rentPerTick = initialRent × rentMultiplier × spaceBonus × upgradeBonus
+    // 其中只有 rentMultiplier 因装修等级变化，其他不变
+    const currentMultiplier = currentTierConfig.rentMultiplier;
+    const targetMultiplier = selectedTierConfig.rentMultiplier;
+    return (currentRentPerTick / currentMultiplier) * targetMultiplier;
+  })();
+
   let costDetail: JSX.Element | null = null;
   if (isUpgrade && selectedTierConfig && currentTierConfig) {
     const diff = selectedTierConfig.pricePerSqm - currentTierConfig.pricePerSqm;
@@ -342,6 +354,23 @@ const DecorationModalContent = observer(({
     );
   }
 
+  // 租金预览
+  const rentPreview = targetRentPerTick !== null ? (
+    <Flex vertical gap={4}>
+      <Text type="secondary" style={{ fontSize: 12 }}>租金变化：</Text>
+      <Flex justify="space-between" align="center">
+        <Text type="secondary">每次产出</Text>
+        <Flex gap={8} align="center">
+          <Text style={{ fontSize: 12 }}>{formatSpiritStones(Math.round(currentRentPerTick))} 灵石</Text>
+          <Text type="secondary">→</Text>
+          <Text strong style={{ fontSize: 12, color: targetRentPerTick >= currentRentPerTick ? 'var(--colorSuccess)' : 'var(--colorError)' }}>
+            {formatSpiritStones(Math.round(targetRentPerTick))} 灵石
+          </Text>
+        </Flex>
+      </Flex>
+    </Flex>
+  ) : null;
+
   return (
     <Flex vertical gap={12}>
       <Text>当前装修：<Tag color={TIER_COLORS[shop.decorationTier]}>{shop.decorationTierLabel}</Tag></Text>
@@ -363,6 +392,7 @@ const DecorationModalContent = observer(({
         placeholder="请选择"
       />
       {costDetail}
+      {rentPreview}
       <Button
         type="primary"
         block
