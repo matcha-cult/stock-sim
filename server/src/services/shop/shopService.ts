@@ -260,10 +260,12 @@ class ShopService {
     constants: {
       spaceExpansionAreaIncrement: number;
       spaceExpansionBaseCost: number;
+      spaceExpansionMaxCount: number;
       maxPendingRentTicks: number;
       decorationRefundRate: number;
       upgradeLevelBonusRate: number;
       upgradeTicksBase: number;
+      upgradeMaxLevel: number;
       rentTickIntervalMinutes: number;
     };
   } {
@@ -291,10 +293,12 @@ class ShopService {
       constants: {
         spaceExpansionAreaIncrement: SPACE_EXPANSION_AREA_INCREMENT,
         spaceExpansionBaseCost: SPACE_EXPANSION_BASE_COST,
+        spaceExpansionMaxCount: SPACE_EXPANSION_MAX_COUNT,
         maxPendingRentTicks: MAX_PENDING_RENT_TICKS,
         decorationRefundRate: DECORATION_REFUND_RATE,
         upgradeLevelBonusRate: UPGRADE_LEVEL_BONUS_RATE,
         upgradeTicksBase: UPGRADE_TICKS_BASE,
+        upgradeMaxLevel: UPGRADE_MAX_LEVEL,
         rentTickIntervalMinutes: SHOP_RENT_TICK_INTERVAL_MINUTES,
       },
     };

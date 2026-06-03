@@ -406,3 +406,50 @@ export const gmForceSellStock = (
 ): Promise<GmForceSellResponse> => {
   return api.post(`/api/stock-market/gm/sell/${characterId}`, body, requestConfig);
 };
+
+// ---- GM 挂单管理 ----
+
+export interface GmPendingOrderDto extends PendingOrderDto {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  currentPriceSpiritStones: number;
+}
+
+export type GmPendingOrderListResponse = {
+  success: boolean;
+  message?: string;
+  data: {
+    records: GmPendingOrderDto[];
+    total: number;
+    page: number;
+  };
+};
+
+export const gmGetAllPendingOrders = (
+  params?: {
+    page?: number;
+    pageSize?: number;
+    nickname?: string;
+    characterId?: number;
+    stockId?: string;
+    side?: PendingOrderSide;
+  },
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmPendingOrderListResponse> => {
+  return api.get('/api/stock-market/gm/pending-orders', withRequestParams(requestConfig, {
+    page: params?.page,
+    pageSize: params?.pageSize,
+    nickname: params?.nickname,
+    characterId: params?.characterId,
+    stockId: params?.stockId,
+    side: params?.side,
+  }));
+};
+
+export const gmCancelPendingOrder = (
+  orderId: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<{ success: boolean; message?: string }> => {
+  return api.delete(`/api/stock-market/gm/pending-orders/${orderId}`, requestConfig);
+};

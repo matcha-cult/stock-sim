@@ -43,6 +43,10 @@ import {
   resolveStockMarketTone,
   getStockMarketToneClassName,
 } from '../../domain/stock-market/viewTransform';
+import { RequestDedup } from '../../stores/RequestDedup';
+
+// 组件级请求去重（TTL 5s）
+const dedup = new RequestDedup(5_000);
 
 const formatSpiritStones = (value: number): string => {
   if (Math.abs(value) >= 1_0000_0000) {
@@ -69,33 +73,41 @@ const GmStockViewer: React.FC = () => {
   const [searchNickname, setSearchNickname] = useState('');
 
   const fetchHoldingsList = useCallback(async (p: number) => {
-    setLoading(true);
-    try {
-      const params: { page: number; pageSize: number; nickname?: string; characterId?: number } = {
-        page: p,
-        pageSize,
-      };
-      const cid = Number(searchCharacterId);
-      if (Number.isFinite(cid) && cid > 0) {
-        params.characterId = cid;
-      }
-      if (searchNickname.trim()) {
-        params.nickname = searchNickname.trim();
-      }
+    const key = `list:${p}:${searchCharacterId}:${searchNickname}`;
+    if (!dedup.enter(key)) return;
 
-      const result = await gmGetHoldingsList(params);
-      if (result.success && result.data) {
-        setRecords(result.data.records);
-        setTotal(result.data.total);
-        setPage(result.data.page);
-      } else {
-        message.error(result.message ?? '查询持仓汇总失败');
+    setLoading(true);
+    const promise = (async () => {
+      try {
+        const params: { page: number; pageSize: number; nickname?: string; characterId?: number } = {
+          page: p,
+          pageSize,
+        };
+        const cid = Number(searchCharacterId);
+        if (Number.isFinite(cid) && cid > 0) {
+          params.characterId = cid;
+        }
+        if (searchNickname.trim()) {
+          params.nickname = searchNickname.trim();
+        }
+
+        const result = await gmGetHoldingsList(params);
+        if (result.success && result.data) {
+          setRecords(result.data.records);
+          setTotal(result.data.total);
+          setPage(result.data.page);
+        } else {
+          message.error(result.message ?? '查询持仓汇总失败');
+        }
+      } catch {
+        message.error('查询持仓汇总失败');
+      } finally {
+        setLoading(false);
+        dedup.complete(key);
       }
-    } catch {
-      message.error('查询持仓汇总失败');
-    } finally {
-      setLoading(false);
-    }
+    })();
+    dedup.start(key, promise);
+    return promise;
   }, [searchCharacterId, searchNickname, message]);
 
   const handleSearch = () => {
@@ -118,21 +130,29 @@ const GmStockViewer: React.FC = () => {
   const [characterLoading, setCharacterLoading] = useState(false);
 
   const fetchCharacterHoldings = useCallback(async (characterId: number) => {
+    const key = `char:${characterId}`;
+    if (!dedup.enter(key)) return;
+
     setCharacterLoading(true);
-    try {
-      const result = await gmGetCharacterHoldings(characterId);
-      if (result.success && result.data) {
-        setCharacterHoldings(result.data);
-      } else {
-        message.error(result.message ?? '查询玩家持仓失败');
+    const promise = (async () => {
+      try {
+        const result = await gmGetCharacterHoldings(characterId);
+        if (result.success && result.data) {
+          setCharacterHoldings(result.data);
+        } else {
+          message.error(result.message ?? '查询玩家持仓失败');
+          setCharacterHoldings(null);
+        }
+      } catch {
+        message.error('查询玩家持仓失败');
         setCharacterHoldings(null);
+      } finally {
+        setCharacterLoading(false);
+        dedup.complete(key);
       }
-    } catch {
-      message.error('查询玩家持仓失败');
-      setCharacterHoldings(null);
-    } finally {
-      setCharacterLoading(false);
-    }
+    })();
+    dedup.start(key, promise);
+    return promise;
   }, [message]);
 
   const handleSelectCharacter = useCallback((characterId: number) => {

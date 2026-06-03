@@ -24,6 +24,10 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { gmQueryLedger, LEDGER_BIZ_TYPE_LABELS, type LedgerRecordDto } from '../../services/api/ledger';
+import { RequestDedup } from '../../stores/RequestDedup';
+
+// 组件级请求去重（TTL 5s）
+const dedup = new RequestDedup(5_000);
 
 const BIZ_TYPE_OPTIONS = Object.entries(LEDGER_BIZ_TYPE_LABELS).map(([value, label]) => ({
   value,
@@ -45,33 +49,41 @@ const GmLedgerViewer: React.FC = () => {
   const [bizType, setBizType] = useState<string | undefined>(undefined);
 
   const fetchLedger = useCallback(async (p: number) => {
-    setLoading(true);
-    try {
-      const params: { characterId?: number; nickname?: string; bizType?: string; page: number } = { page: p };
-      const cid = Number(characterId);
-      if (Number.isFinite(cid) && cid > 0) {
-        params.characterId = cid;
-      }
-      if (nickname.trim()) {
-        params.nickname = nickname.trim();
-      }
-      if (bizType) {
-        params.bizType = bizType;
-      }
+    const key = `ledger:${p}:${characterId}:${nickname}:${bizType}`;
+    if (!dedup.enter(key)) return;
 
-      const result = await gmQueryLedger(params);
-      if (result.success && result.data) {
-        setRecords(result.data.records);
-        setTotal(result.data.total);
-        setPage(result.data.page);
-      } else {
-        message.error(result.message ?? '查询流水失败');
+    setLoading(true);
+    const promise = (async () => {
+      try {
+        const params: { characterId?: number; nickname?: string; bizType?: string; page: number } = { page: p };
+        const cid = Number(characterId);
+        if (Number.isFinite(cid) && cid > 0) {
+          params.characterId = cid;
+        }
+        if (nickname.trim()) {
+          params.nickname = nickname.trim();
+        }
+        if (bizType) {
+          params.bizType = bizType;
+        }
+
+        const result = await gmQueryLedger(params);
+        if (result.success && result.data) {
+          setRecords(result.data.records);
+          setTotal(result.data.total);
+          setPage(result.data.page);
+        } else {
+          message.error(result.message ?? '查询流水失败');
+        }
+      } catch {
+        message.error('查询流水失败');
+      } finally {
+        setLoading(false);
+        dedup.complete(key);
       }
-    } catch {
-      message.error('查询流水失败');
-    } finally {
-      setLoading(false);
-    }
+    })();
+    dedup.start(key, promise);
+    return promise;
   }, [characterId, nickname, bizType, message]);
 
   const handleSearch = () => {

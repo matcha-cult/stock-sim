@@ -1198,9 +1198,12 @@ class StockMarketService {
     }
 
     if (netAmount > 0n) {
+      const sellTarget = plans.length === 1
+        ? (getEnabledStockDefinitionById(plans[0]?.stockId ?? '')?.name ?? plans[0]?.stockId)
+        : `${plans.length} 支股票`;
       const addResult = await addSpiritStones(characterId, netAmount, {
         bizType: 'stock_sell',
-        memo: `卖出股票`,
+        memo: `卖出 ${sellTarget}`,
       });
       if (!addResult.success) {
         return {

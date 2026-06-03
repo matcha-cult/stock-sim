@@ -22,6 +22,10 @@ import { App, Button, Card, Empty, Flex, Pagination, Spin, Table, Tag } from 'an
 import type { ColumnsType } from 'antd/es/table';
 import { ReloadOutlined } from '@ant-design/icons';
 import { getMyLedger, LEDGER_BIZ_TYPE_LABELS, type LedgerRecordDto } from '../services/api/ledger';
+import { RequestDedup } from '../stores/RequestDedup';
+
+// 组件级请求去重（TTL 5s）
+const dedup = new RequestDedup(5_000);
 
 const LedgerTab: React.FC = () => {
   const { message } = App.useApp();
@@ -33,21 +37,29 @@ const LedgerTab: React.FC = () => {
   const pageSize = 20;
 
   const fetchLedger = useCallback(async (p: number) => {
+    const key = `ledger:${p}`;
+    if (!dedup.enter(key)) return;
+
     setLoading(true);
-    try {
-      const result = await getMyLedger({ page: p });
-      if (result.success && result.data) {
-        setRecords(result.data.records);
-        setTotal(result.data.total);
-        setPage(result.data.page);
-      } else {
-        message.error(result.message ?? '查询流水失败');
+    const promise = (async () => {
+      try {
+        const result = await getMyLedger({ page: p });
+        if (result.success && result.data) {
+          setRecords(result.data.records);
+          setTotal(result.data.total);
+          setPage(result.data.page);
+        } else {
+          message.error(result.message ?? '查询流水失败');
+        }
+      } catch {
+        message.error('查询流水失败');
+      } finally {
+        setLoading(false);
+        dedup.complete(key);
       }
-    } catch {
-      message.error('查询流水失败');
-    } finally {
-      setLoading(false);
-    }
+    })();
+    dedup.start(key, promise);
+    return promise;
   }, [message]);
 
   useEffect(() => {

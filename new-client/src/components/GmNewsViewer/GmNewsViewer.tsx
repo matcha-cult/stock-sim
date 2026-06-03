@@ -40,6 +40,10 @@ import {
   getStockMarketToneClassName,
   formatStockMarketTime,
 } from '../../domain/stock-market/viewTransform';
+import { RequestDedup } from '../../stores/RequestDedup';
+
+// 组件级请求去重（TTL 5s）
+const dedup = new RequestDedup(5_000);
 
 const statusColorMap: Record<string, string> = {
   active: 'processing',
@@ -61,37 +65,52 @@ const GmNewsViewer: React.FC<GmNewsViewerProps> = ({ definitionMap }) => {
   const [chainLoading, setChainLoading] = useState(false);
 
   const fetchEvents = useCallback(async () => {
+    if (!dedup.enter('newsEvents')) return;
+
     setLoading(true);
-    try {
-      const response = await getNewsEventList(SILENT_API_REQUEST_CONFIG);
-      if (response.success) {
-        setEvents(response.data ?? []);
-      } else {
-        message.error(response.message ?? '加载事件列表失败');
+    const promise = (async () => {
+      try {
+        const response = await getNewsEventList(SILENT_API_REQUEST_CONFIG);
+        if (response.success) {
+          setEvents(response.data ?? []);
+        } else {
+          message.error(response.message ?? '加载事件列表失败');
+        }
+      } catch {
+        message.error('加载事件列表失败');
+      } finally {
+        setLoading(false);
+        dedup.complete('newsEvents');
       }
-    } catch {
-      message.error('加载事件列表失败');
-    } finally {
-      setLoading(false);
-    }
+    })();
+    dedup.start('newsEvents', promise);
+    return promise;
   }, [message]);
 
   const fetchChain = useCallback(async (eventId: string) => {
+    const key = `chain:${eventId}`;
+    if (!dedup.enter(key)) return;
+
     setChainLoading(true);
-    try {
-      const response = await getNewsEventChain(eventId, SILENT_API_REQUEST_CONFIG);
-      if (response.success) {
-        setChainData(response.data ?? null);
-      } else {
-        message.error(response.message ?? '加载续写链失败');
+    const promise = (async () => {
+      try {
+        const response = await getNewsEventChain(eventId, SILENT_API_REQUEST_CONFIG);
+        if (response.success) {
+          setChainData(response.data ?? null);
+        } else {
+          message.error(response.message ?? '加载续写链失败');
+          setChainData(null);
+        }
+      } catch {
+        message.error('加载续写链失败');
         setChainData(null);
+      } finally {
+        setChainLoading(false);
+        dedup.complete(key);
       }
-    } catch {
-      message.error('加载续写链失败');
-      setChainData(null);
-    } finally {
-      setChainLoading(false);
-    }
+    })();
+    dedup.start(key, promise);
+    return promise;
   }, [message]);
 
   const handleSelectEvent = useCallback((eventId: string) => {

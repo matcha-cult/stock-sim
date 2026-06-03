@@ -66,6 +66,8 @@ const stockMarketNewsEventChainQpsLimit = createStockMarketQpsLimit('news-event-
 const stockMarketCreatePendingOrderQpsLimit = createStockMarketQpsLimit('create-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketCancelPendingOrderQpsLimit = createStockMarketQpsLimit('cancel-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketListPendingOrdersQpsLimit = createStockMarketQpsLimit('list-pending-orders', STOCK_MARKET_QUERY_QPS_LIMIT);
+const stockMarketGmPendingOrdersQpsLimit = createStockMarketQpsLimit('gm-pending-orders', STOCK_MARKET_QUERY_QPS_LIMIT);
+const stockMarketGmCancelPendingOrderQpsLimit = createStockMarketQpsLimit('gm-cancel-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
 
 const parseTradeBody = (body: StockMarketTradeBody): { stockId: string; quantity: number } | null => {
   const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
@@ -322,6 +324,44 @@ router.post('/gm/sell/:characterId', requireGm, gmSellQpsLimit, asyncHandler(asy
   if (result.success) {
     await safePushCharacterUpdate(req.userId!);
   }
+  sendResult(res, result);
+}));
+
+// ---- GM 挂单管理 ----
+
+router.get('/gm/pending-orders', requireGm, stockMarketGmPendingOrdersQpsLimit, asyncHandler(async (req, res) => {
+  const page = parseFiniteNumber(getSingleQueryValue(req.query.page));
+  const pageSize = parseFiniteNumber(getSingleQueryValue(req.query.pageSize));
+  const nickname = parseNonEmptyText(getSingleQueryValue(req.query.nickname));
+  const cid = parseFiniteNumber(getSingleQueryValue(req.query.characterId));
+  const stockId = parseNonEmptyText(getSingleQueryValue(req.query.stockId));
+  const sideRaw = getSingleQueryValue(req.query.side);
+  const side = sideRaw === '' ? undefined : (sideRaw as 'buy' | 'sell');
+
+  if (side !== undefined && side !== 'buy' && side !== 'sell') {
+    sendResult(res, { success: false, message: 'side 参数无效' });
+    return;
+  }
+
+  const data = await pendingOrderService.gmGetAllPendingOrders({
+    page: page ?? 1,
+    pageSize: pageSize ?? 20,
+    nickname: nickname ?? undefined,
+    characterId: cid != null && Number.isFinite(cid) ? cid : undefined,
+    stockId: stockId ?? undefined,
+    side,
+  });
+  sendSuccess(res, data);
+}));
+
+router.delete('/gm/pending-orders/:orderId', requireGm, stockMarketGmCancelPendingOrderQpsLimit, asyncHandler(async (req, res) => {
+  const orderId = parseFiniteNumber(typeof req.params.orderId === 'string' ? req.params.orderId : undefined);
+  if (orderId === undefined) {
+    sendResult(res, { success: false, message: '订单ID参数无效' });
+    return;
+  }
+
+  const result = await pendingOrderService.gmCancelOrder(orderId);
   sendResult(res, result);
 }));
 

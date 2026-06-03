@@ -106,8 +106,11 @@ export const SPACE_EXPANSION_BASE_COST = 200;
 /** 空间阵法扩展费用指数底数 */
 export const SPACE_EXPANSION_EXPONENT_BASE = 2;
 
-/** 空间阵法扩展最大次数（默认 10 次） */
-export const SPACE_EXPANSION_MAX_COUNT = 10;
+/** 空间阵法扩展最大次数（默认 20 次，可通过 SPACE_EXPANSION_MAX_COUNT 环境变量配置） */
+const SPACE_EXPANSION_MAX_COUNT_ENV = parseInt(process.env.SPACE_EXPANSION_MAX_COUNT ?? '20', 10);
+export const SPACE_EXPANSION_MAX_COUNT = Number.isFinite(SPACE_EXPANSION_MAX_COUNT_ENV) && SPACE_EXPANSION_MAX_COUNT_ENV > 0
+  ? SPACE_EXPANSION_MAX_COUNT_ENV
+  : 20;
 
 /** 各装修等级的空间阵法扩展费用系数 */
 export const DECORATION_TIER_EXPANSION_MULTIPLIER: Record<DecorationTier, number> = {
@@ -136,8 +139,11 @@ export const UPGRADE_LEVEL_BONUS_RATE = 0.1;
 /** 升级所需收租次数基数（每级 × 10） */
 export const UPGRADE_TICKS_BASE = 10;
 
-/** 店铺最大升级等级（默认 10 级） */
-export const UPGRADE_MAX_LEVEL = 10;
+/** 店铺最大升级等级（默认 50 级，可通过 UPGRADE_MAX_LEVEL 环境变量配置） */
+const UPGRADE_MAX_LEVEL_ENV = parseInt(process.env.UPGRADE_MAX_LEVEL ?? '50', 10);
+export const UPGRADE_MAX_LEVEL = Number.isFinite(UPGRADE_MAX_LEVEL_ENV) && UPGRADE_MAX_LEVEL_ENV > 0
+  ? UPGRADE_MAX_LEVEL_ENV
+  : 50;
 
 /** 初始店铺类型（角色创建时赠送） */
 export const INITIAL_SHOP_TYPE = SHOP_TYPES.BOOK;

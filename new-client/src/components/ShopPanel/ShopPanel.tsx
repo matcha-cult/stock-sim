@@ -61,8 +61,6 @@ const SPACE_EXPANSION_BASE_COST = 200;
 const SPACE_EXPANSION_EXPONENT_BASE = 2;
 /** 每次扩展增加面积 */
 const SPACE_EXPANSION_AREA_INCREMENT = 10;
-/** 最大扩展次数 */
-const SPACE_EXPANSION_MAX_COUNT = 10;
 
 /** 装修等级配置（与后端 types.ts 对齐） */
 const TIER_CONFIG: Record<string, {
@@ -115,9 +113,9 @@ interface ExpansionCostRow {
 }
 
 /** 为指定店铺类型+装修等级生成全部扩展费用行 */
-const buildExpansionCostRows = (shopTypeKey: string, tierKey: string): ExpansionCostRow[] => {
+const buildExpansionCostRows = (shopTypeKey: string, tierKey: string, maxExpansion: number): ExpansionCostRow[] => {
   const rows: ExpansionCostRow[] = [];
-  for (let i = 0; i < SPACE_EXPANSION_MAX_COUNT; i++) {
+  for (let i = 0; i < maxExpansion; i++) {
     rows.push({
       expansionIndex: i,
       tierKey,
@@ -897,6 +895,8 @@ const ShopPanel = observer(() => {
             {(() => {
               const tier = TIER_CONFIG[selectedTier];
               const shopCfg = SHOP_TYPE_CONFIG[selectedShopType];
+              const maxExpansion = shopStore.config?.constants.spaceExpansionMaxCount ?? 20;
+              const maxUpgradeLevel = shopStore.config?.constants.upgradeMaxLevel ?? 50;
 
               // 每次租金 = 初始租金 × 装修租金系数 × 空间加成 × 升级加成
               const calcRentPerTick = (expansion: number): number => {
@@ -1001,15 +1001,16 @@ const ShopPanel = observer(() => {
                 );
               };
 
-              // 计算 0→20 的全累计
+              // 计算全累计
               let grandTotal = 0;
-              for (let i = 0; i < 20; i++) {
+              for (let i = 0; i < maxExpansion; i++) {
                 grandTotal += calcSingleExpansionCost(i, selectedTier);
               }
 
               // 第一表不需要 baseCumulative，第二表需要第一表的累计
+              const midPoint = Math.floor(maxExpansion / 2);
               let firstTableCumulative = 0;
-              for (let i = 0; i < 10; i++) {
+              for (let i = 0; i < midPoint; i++) {
                 firstTableCumulative += calcSingleExpansionCost(i, selectedTier);
               }
 
@@ -1047,22 +1048,23 @@ const ShopPanel = observer(() => {
                       <Text style={{ fontSize: 12 }}>店铺等级</Text>
                       <Slider
                         min={0}
-                        max={50}
+                        max={maxUpgradeLevel}
                         value={upgradeLevel}
                         onChange={setUpgradeLevel}
                         style={{ flex: 1 }}
                         tooltip={{ formatter: (v) => `Lv.${v ?? 0}` }}
-                        marks={{ 0: '0', 10: '10', 20: '20', 30: '30', 40: '40', 50: '50' }}
+                        marks={Object.fromEntries(
+                          [0, 10, 20, 30, 40, 50].filter(v => v <= maxUpgradeLevel).map(v => [v, String(v)])
+                        )}
                       />
                       <Text strong style={{ minWidth: 36, textAlign: 'center' }}>Lv.{upgradeLevel}</Text>
                     </Flex>
                   </Flex>
-                  <Divider style={{ margin: '6px 0' }}><Text strong style={{ fontSize: 13 }}>0 → 10 次</Text></Divider>
-                  {renderTable(0, 10, 0)}
-                  {renderTable(10, 20, firstTableCumulative)}
+                  {renderTable(0, midPoint, 0)}
+                  {renderTable(midPoint, maxExpansion, firstTableCumulative)}
                   <Divider style={{ margin: '6px 0' }} />
                   <Flex justify="flex-end">
-                    <Text type="secondary" style={{ fontSize: 12 }}>0→20 总费用：</Text>
+                    <Text type="secondary" style={{ fontSize: 12 }}>0→{maxExpansion} 总费用：</Text>
                     <Text strong style={{ color: 'var(--colorError)', marginLeft: 6 }}>
                       {grandTotal.toLocaleString()} 灵石
                     </Text>
