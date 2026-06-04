@@ -47,6 +47,7 @@ import LedgerTab from './LedgerTab';
 import GmLedgerViewer from './GmLedgerViewer/GmLedgerViewer';
 import GmStockViewer from './GmStockViewer/GmStockViewer';
 import GmPendingOrderViewer from './GmPendingOrderViewer/GmPendingOrderViewer';
+import GmSpiritStonesManager from './GmSpiritStonesManager/GmSpiritStonesManager';
 import {
   buildStockMarketOverviewViewModel,
   buildStockMarketTradePreview,
@@ -66,7 +67,7 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'ledger' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders';
+type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'ledger' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders' | 'gm-spirit-stones';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
@@ -310,7 +311,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'gm-news-viewer' || key === 'gm-ledger' || key === 'gm-stock-viewer' || key === 'gm-pending-orders') {
+    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'gm-news-viewer' || key === 'gm-ledger' || key === 'gm-stock-viewer' || key === 'gm-pending-orders' || key === 'gm-spirit-stones') {
       setActiveTab(key);
     }
   }, []);
@@ -530,6 +531,11 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   key: 'gm-pending-orders' as const,
                   label: 'GM挂单管理',
                   children: <GmPendingOrderViewer />,
+                },
+                {
+                  key: 'gm-spirit-stones' as const,
+                  label: 'GM灵石管理',
+                  children: <GmSpiritStonesManager />,
                 },
               ]
               : []),

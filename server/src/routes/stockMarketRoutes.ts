@@ -29,6 +29,11 @@ import { sendResult, sendSuccess } from '../middleware/response.js';
 import { parseFiniteNumber, parseNonEmptyText, getSingleQueryValue } from '../services/shared/httpParam.js';
 import { stockMarketService } from '../services/stockMarket/stockMarketService.js';
 import { pendingOrderService } from '../services/stockMarket/pendingOrderService.js';
+import {
+  adjustSpiritStones,
+  lookupCharacterInfo,
+  type GmAdjustBizType,
+} from '../services/inventory/gmSpiritStonesService.js';
 
 const router: RouterType = Router();
 
@@ -68,6 +73,8 @@ const stockMarketCancelPendingOrderQpsLimit = createStockMarketQpsLimit('cancel-
 const stockMarketListPendingOrdersQpsLimit = createStockMarketQpsLimit('list-pending-orders', STOCK_MARKET_QUERY_QPS_LIMIT);
 const stockMarketGmPendingOrdersQpsLimit = createStockMarketQpsLimit('gm-pending-orders', STOCK_MARKET_QUERY_QPS_LIMIT);
 const stockMarketGmCancelPendingOrderQpsLimit = createStockMarketQpsLimit('gm-cancel-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketGmSpiritStonesAdjustQpsLimit = createStockMarketQpsLimit('gm-spirit-stones-adjust', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketGmCharacterLookupQpsLimit = createStockMarketQpsLimit('gm-character-lookup', STOCK_MARKET_QUERY_QPS_LIMIT);
 
 const parseTradeBody = (body: StockMarketTradeBody): { stockId: string; quantity: number } | null => {
   const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
@@ -362,6 +369,75 @@ router.delete('/gm/pending-orders/:orderId', requireGm, stockMarketGmCancelPendi
   }
 
   const result = await pendingOrderService.gmCancelOrder(orderId);
+  sendResult(res, result);
+}));
+
+// ---- GM 灵石管理 ----
+
+/**
+ * GM 查询角色基本信息（昵称 + 当前余额）。
+ */
+router.get('/gm/character/:characterId', requireGm, stockMarketGmCharacterLookupQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = parseFiniteNumber(typeof req.params.characterId === 'string' ? req.params.characterId : undefined);
+  if (characterId === undefined) {
+    sendResult(res, { success: false, message: '角色ID参数无效' });
+    return;
+  }
+
+  const info = await lookupCharacterInfo(characterId);
+  if (!info) {
+    sendResult(res, { success: false, message: '角色不存在' });
+    return;
+  }
+  sendSuccess(res, info);
+}));
+
+/**
+ * GM 调整灵石余额（单人或全体）。
+ */
+router.post('/gm/spirit-stones/adjust', requireGm, stockMarketGmSpiritStonesAdjustQpsLimit, asyncHandler(async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+
+  const target = body.target;
+  if (target !== 'single' && target !== 'all') {
+    sendResult(res, { success: false, message: '调整目标必须为 single 或 all' });
+    return;
+  }
+
+  const operation = body.operation;
+  if (operation !== 'add' && operation !== 'reduce') {
+    sendResult(res, { success: false, message: '操作类型必须为 add 或 reduce' });
+    return;
+  }
+
+  const amount = parseFiniteNumber(body.amount);
+  if (amount === undefined || !Number.isInteger(amount) || amount <= 0) {
+    sendResult(res, { success: false, message: '调整数量必须为正整数' });
+    return;
+  }
+
+  const bizType = body.bizType;
+  if (bizType !== 'gm_compensation' && bizType !== 'gm_rebate') {
+    sendResult(res, { success: false, message: '业务类型必须为 gm_compensation 或 gm_rebate' });
+    return;
+  }
+
+  const characterId = parseFiniteNumber(body.characterId);
+  if (target === 'single' && (characterId === undefined || characterId <= 0)) {
+    sendResult(res, { success: false, message: '单人调整必须指定有效的角色ID' });
+    return;
+  }
+
+  const memo = typeof body.memo === 'string' ? body.memo.trim() : '';
+
+  const result = await adjustSpiritStones({
+    target: target as 'single' | 'all',
+    characterId: characterId ?? undefined,
+    operation: operation as 'add' | 'reduce',
+    amount,
+    bizType: bizType as GmAdjustBizType,
+    memo,
+  });
   sendResult(res, result);
 }));
 

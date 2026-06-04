@@ -36,6 +36,8 @@ export type SpiritStonesLedgerBizType =
   | 'player_trade'
   | 'system_grant'
   | 'system_deduct'
+  | 'gm_compensation'
+  | 'gm_rebate'
   | 'other';
 
 export interface RecordLedgerParams {
@@ -305,5 +307,7 @@ export const LEDGER_BIZ_TYPE_LABELS: Record<SpiritStonesLedgerBizType, string> =
   player_trade: '玩家交易',
   system_grant: '系统发放',
   system_deduct: '系统扣除',
+  gm_compensation: 'GM维护补偿',
+  gm_rebate: 'GM补涨',
   other: '其他',
 };

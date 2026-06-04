@@ -534,19 +534,19 @@ class PendingOrderService {
     );
     const holding = holdingResult.rows[0];
     if (!holding) {
-      await this.markOrderFailed(orderId, '未持有该股票');
+      await this.markOrderFailed(orderId, '未持有该股票', characterId, stockId, quantity);
       return;
     }
 
     const holdingQty = toIntValue(holding.quantity);
     const frozenQty = toIntValue(holding.frozen_quantity ?? 0);
     if (quantity > frozenQty) {
-      await this.markOrderFailed(orderId, '冻结持仓不足');
+      await this.markOrderFailed(orderId, '冻结持仓不足', characterId, stockId, quantity);
       return;
     }
     // 二次校验：防止数据不一致导致持仓被卖成负数（如 frozenQty > holdingQty 的异常状态）
     if (quantity > holdingQty) {
-      await this.markOrderFailed(orderId, '实际持仓不足，订单数据异常');
+      await this.markOrderFailed(orderId, '实际持仓不足，订单数据异常', characterId, stockId, quantity);
       return;
     }
 
@@ -611,8 +611,26 @@ class PendingOrderService {
     );
   }
 
-  private async markOrderFailed(orderId: bigint, reason: string): Promise<void> {
+  private async markOrderFailed(
+    orderId: bigint,
+    reason: string,
+    characterId?: number,
+    stockId?: string,
+    quantity?: number,
+  ): Promise<void> {
     console.log(`[PendingOrder] 挂单 ${orderId} 因 ${reason} 标记为取消`);
+    // 卖出挂单失败时，需要回滚创建时冻结的股票数量
+    if (characterId != null && stockId != null && quantity != null) {
+      await query(
+        `
+          UPDATE character_stock_holding
+          SET frozen_quantity = frozen_quantity - $3,
+              updated_at = NOW()
+          WHERE character_id = $1 AND stock_id = $2
+        `,
+        [characterId, stockId, quantity],
+      );
+    }
     await query(
       `UPDATE stock_market_pending_order SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
       [orderId.toString()],
