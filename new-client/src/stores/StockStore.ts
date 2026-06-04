@@ -59,7 +59,7 @@ const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export class StockStore {
   /** 请求去重实例（TTL 5s）。 */
-  private readonly dedup = new RequestDedup(5_000);
+  private readonly dedup = new RequestDedup();
 
   overview: StockMarketOverviewDto | null = null;
   selectedStockId: string = '';

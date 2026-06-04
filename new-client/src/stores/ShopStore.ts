@@ -44,8 +44,8 @@ import { RequestDedup } from './RequestDedup';
 
 export class ShopStore {
   private rootStore: RootStore;
-  /** 请求去重实例（TTL 5s）。 */
-  private readonly dedup = new RequestDedup(5_000);
+  /** 请求去重实例。仅靠 in-flight 守卫防重复，无 TTL。 */
+  private readonly dedup = new RequestDedup();
 
   shops: ShopDto[] = [];
   config: ShopConfigDto | null = null;

@@ -180,14 +180,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
 
   // 切换到收益 tab 时拉取
   useEffect(() => {
-    if (activeTab !== 'profit' || stockStore.profitDetail) return;
+    if (activeTab !== 'profit') return;
     void stockStore.refreshProfitDetail();
-  }, [activeTab, stockStore.profitDetail, stockStore]);
+  }, [activeTab, stockStore]);
 
   // 切换到排行 tab 时拉取
   useEffect(() => {
     if (activeTab !== 'ranking') return;
-    if (stockStore.wealthRanks.length > 0 && stockStore.stockMarketRanks.length > 0) return;
     void stockStore.refreshWealthRanks();
     void stockStore.refreshStockMarketRanks();
   }, [activeTab, stockStore]);

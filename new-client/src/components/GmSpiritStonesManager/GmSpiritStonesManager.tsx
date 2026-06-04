@@ -40,7 +40,7 @@ import {
 } from '../../services/api/spiritStones';
 import { RequestDedup } from '../../stores/RequestDedup';
 
-const dedup = new RequestDedup(5_000);
+const dedup = new RequestDedup();
 
 const QUICK_AMOUNTS = [2000, 5000, 10000, 30000, 50000] as const;
 

@@ -42,8 +42,8 @@ import {
 } from '../../domain/stock-market/viewTransform';
 import { RequestDedup } from '../../stores/RequestDedup';
 
-// 组件级请求去重（TTL 5s）
-const dedup = new RequestDedup(5_000);
+// 组件级请求去重（仅 in-flight 守卫）
+const dedup = new RequestDedup();
 
 const statusColorMap: Record<string, string> = {
   active: 'processing',

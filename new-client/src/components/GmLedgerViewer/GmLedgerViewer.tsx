@@ -26,8 +26,8 @@ import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import { gmQueryLedger, LEDGER_BIZ_TYPE_LABELS, type LedgerRecordDto } from '../../services/api/ledger';
 import { RequestDedup } from '../../stores/RequestDedup';
 
-// 组件级请求去重（TTL 5s）
-const dedup = new RequestDedup(5_000);
+// 组件级请求去重（仅 in-flight 守卫）
+const dedup = new RequestDedup();
 
 const BIZ_TYPE_OPTIONS = Object.entries(LEDGER_BIZ_TYPE_LABELS).map(([value, label]) => ({
   value,
