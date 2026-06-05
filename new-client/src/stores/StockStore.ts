@@ -51,6 +51,7 @@ import {
   getStockMarketRanks,
   type WealthRankDto,
   type StockMarketRankDto,
+  type StockMarketRankMetric,
 } from '../services/api/rank';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
 import { RequestDedup } from './RequestDedup';
@@ -216,14 +217,14 @@ export class StockStore {
     return promise;
   }
 
-  async refreshStockMarketRanks(background = false): Promise<void> {
+  async refreshStockMarketRanks(metric: StockMarketRankMetric = 'value', background = false): Promise<void> {
     if (!this.dedup.enter('stockMarketRanks', background)) return;
 
     if (!background) this.rankLoading = true;
     const promise = (async () => {
       try {
         const response = await getStockMarketRanks(
-          'value',
+          metric,
           50,
           background ? SILENT_API_REQUEST_CONFIG : undefined,
         );

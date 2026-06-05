@@ -136,7 +136,12 @@ export const login = async (
 
   // 查询角色
   const characterResult = await query(
-    'SELECT id, nickname, spirit_stones, silver FROM characters WHERE user_id = $1',
+    `SELECT c.id, c.nickname, c.spirit_stones, c.silver,
+            (EXISTS (
+              SELECT 1 FROM month_card_ownership m
+              WHERE m.character_id = c.id AND m.status = 'active' AND m.expires_at > NOW()
+            )) AS month_card_active
+     FROM characters c WHERE c.user_id = $1`,
     [user.id],
   );
 
@@ -146,6 +151,7 @@ export const login = async (
       nickname: String(characterResult.rows[0].nickname),
       spiritStones: Number(characterResult.rows[0].spirit_stones),
       silver: Number(characterResult.rows[0].silver ?? 0),
+      monthCardActive: Boolean(characterResult.rows[0].month_card_active),
     }
     : null;
 
@@ -182,7 +188,12 @@ export const bootstrap = async (
 
   // 查询角色
   const characterResult = await query(
-    'SELECT id, nickname, gender, title, spirit_stones, silver FROM characters WHERE user_id = $1',
+    `SELECT c.id, c.nickname, c.gender, c.title, c.spirit_stones, c.silver,
+            (EXISTS (
+              SELECT 1 FROM month_card_ownership m
+              WHERE m.character_id = c.id AND m.status = 'active' AND m.expires_at > NOW()
+            )) AS month_card_active
+     FROM characters c WHERE c.user_id = $1`,
     [userId],
   );
 
@@ -194,6 +205,7 @@ export const bootstrap = async (
       title: characterResult.rows[0].title ? String(characterResult.rows[0].title) : null,
       spiritStones: Number(characterResult.rows[0].spirit_stones),
       silver: Number(characterResult.rows[0].silver ?? 0),
+      monthCardActive: Boolean(characterResult.rows[0].month_card_active),
     }
     : null;
 

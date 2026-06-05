@@ -68,7 +68,12 @@ const validateNickname = (nickname: string): { success: boolean; nickname: strin
  */
 export const checkCharacter = async (userId: number): Promise<CharacterResult> => {
   const result = await query(
-    'SELECT id, user_id, nickname, gender, title, spirit_stones, silver, created_at, updated_at FROM characters WHERE user_id = $1',
+    `SELECT c.id, c.user_id, c.nickname, c.gender, c.title, c.spirit_stones, c.silver, c.created_at, c.updated_at,
+            (EXISTS (
+              SELECT 1 FROM month_card_ownership m
+              WHERE m.character_id = c.id AND m.status = 'active' AND m.expires_at > NOW()
+            )) AS month_card_active
+     FROM characters c WHERE c.user_id = $1`,
     [userId],
   );
 

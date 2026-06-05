@@ -25,7 +25,7 @@
 
 import { query } from '../config/database.js';
 import { createCacheLayer } from './shared/cacheLayer.js';
-import { getMonthCardActiveMapByCharacterIds } from './shared/monthCardBenefits.js';
+import { getMonthCardActiveMapByCharacterIds, getGmStatusMapByCharacterIds } from './shared/monthCardBenefits.js';
 import { STOCK_MARKET_PRICE_SCALE } from './stockMarket/stockMarketRules.js';
 
 // ============================================
@@ -42,7 +42,9 @@ const normalizeStockMarketRankMetric = (
 ): StockMarketRankMetric | null => {
   const normalized = typeof metric === 'string' ? metric.trim().toLowerCase() : '';
   if (normalized === 'value') return 'value';
-  if (normalized === 'profit') return 'profit';
+  if (normalized === 'unrealizedprofit') return 'unrealizedProfit';
+  if (normalized === 'totalprofit') return 'totalProfit';
+  if (normalized === 'totalloss') return 'totalLoss';
   return null;
 };
 
@@ -69,7 +71,7 @@ export type WealthRankRow = {
   silver: number;
 };
 
-export type StockMarketRankMetric = 'value' | 'profit';
+export type StockMarketRankMetric = 'value' | 'unrealizedProfit' | 'totalProfit' | 'totalLoss';
 
 export type StockMarketRankRow = {
   rank: number;
@@ -128,12 +130,16 @@ type ShopRentRankQueryRow = {
 
 const STOCK_MARKET_RANK_ORDER_SQL: Record<StockMarketRankMetric, string> = {
   value: '"totalMarketValueSpiritStones" DESC, "totalPnlSpiritStones" DESC, character_id ASC',
-  profit: '"totalPnlSpiritStones" DESC, "totalMarketValueSpiritStones" DESC, character_id ASC',
+  unrealizedProfit: '"unrealizedPnlSpiritStones" DESC, "totalMarketValueSpiritStones" DESC, character_id ASC',
+  totalProfit: '"totalPnlSpiritStones" DESC, "totalMarketValueSpiritStones" DESC, character_id ASC',
+  totalLoss: '"totalPnlSpiritStones" ASC, "totalMarketValueSpiritStones" DESC, character_id ASC',
 };
 
 const STOCK_MARKET_RANK_FILTER_SQL: Record<StockMarketRankMetric, string> = {
   value: 'COALESCE(h.total_market_value_spirit_stones, 0)::bigint > 0',
-  profit: '(COALESCE(h.total_market_value_spirit_stones, 0)::bigint > 0 OR r.character_id IS NOT NULL)',
+  unrealizedProfit: 'COALESCE(h.total_market_value_spirit_stones, 0)::bigint > 0',
+  totalProfit: '(COALESCE(h.total_market_value_spirit_stones, 0)::bigint - COALESCE(h.total_cost_spirit_stones, 0)::bigint + COALESCE(r.realized_pnl_spirit_stones, 0)::bigint) > 0',
+  totalLoss: '(COALESCE(h.total_market_value_spirit_stones, 0)::bigint - COALESCE(h.total_cost_spirit_stones, 0)::bigint + COALESCE(r.realized_pnl_spirit_stones, 0)::bigint) < 0',
 };
 
 // ============================================
@@ -159,9 +165,9 @@ const loadWealthRanks = async (limit: number): Promise<WealthRankRow[]> => {
   );
 
   const rows = res.rows as WealthRankQueryRow[];
-  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(
-    rows.map((row) => Number(row.character_id)),
-  );
+  const characterIds = rows.map((row) => Number(row.character_id));
+  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(characterIds);
+  const gmStatusMap = await getGmStatusMapByCharacterIds(characterIds);
 
   return rows.map((row) => ({
     rank: Number(row.rank),
@@ -169,6 +175,7 @@ const loadWealthRanks = async (limit: number): Promise<WealthRankRow[]> => {
     name: String(row.name),
     title: typeof row.title === 'string' ? row.title : '',
     monthCardActive: monthCardActiveMap.get(Number(row.character_id)) ?? false,
+    isGm: gmStatusMap.get(Number(row.character_id)) ?? false,
     spiritStones: Number(row.spiritStones),
     silver: Number(row.silver),
   }));
@@ -247,9 +254,9 @@ const loadStockMarketRanks = async (
   );
 
   const rows = res.rows as StockMarketRankQueryRow[];
-  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(
-    rows.map((row) => Number(row.character_id)),
-  );
+  const characterIds = rows.map((row) => Number(row.character_id));
+  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(characterIds);
+  const gmStatusMap = await getGmStatusMapByCharacterIds(characterIds);
 
   return rows.map((row) => ({
     rank: Number(row.rank),
@@ -257,6 +264,7 @@ const loadStockMarketRanks = async (
     name: String(row.name),
     title: typeof row.title === 'string' ? row.title : '',
     monthCardActive: monthCardActiveMap.get(Number(row.character_id)) ?? false,
+    isGm: gmStatusMap.get(Number(row.character_id)) ?? false,
     totalHoldingQty: Number(row.totalHoldingQty),
     totalMarketValueSpiritStones: Number(row.totalMarketValueSpiritStones),
     totalCostSpiritStones: Number(row.totalCostSpiritStones),
@@ -299,9 +307,9 @@ const loadShopRentRanks = async (limit: number): Promise<ShopRentRankRow[]> => {
   );
 
   const rows = res.rows as ShopRentRankQueryRow[];
-  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(
-    rows.map((row) => Number(row.character_id)),
-  );
+  const characterIds = rows.map((row) => Number(row.character_id));
+  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(characterIds);
+  const gmStatusMap = await getGmStatusMapByCharacterIds(characterIds);
 
   return rows.map((row) => ({
     rank: Number(row.rank),
@@ -309,6 +317,7 @@ const loadShopRentRanks = async (limit: number): Promise<ShopRentRankRow[]> => {
     name: String(row.name),
     title: typeof row.title === 'string' ? row.title : '',
     monthCardActive: monthCardActiveMap.get(Number(row.character_id)) ?? false,
+    isGm: gmStatusMap.get(Number(row.character_id)) ?? false,
     totalRentCollected: Number(row.totalRentCollected),
     shopCount: Number(row.shopCount),
   }));
@@ -336,7 +345,9 @@ const createStockMarketRankCache = (
 
 const stockMarketRankCaches: Record<StockMarketRankMetric, ReturnType<typeof createStockMarketRankCache>> = {
   value: createStockMarketRankCache('value'),
-  profit: createStockMarketRankCache('profit'),
+  unrealizedProfit: createStockMarketRankCache('unrealizedProfit'),
+  totalProfit: createStockMarketRankCache('totalProfit'),
+  totalLoss: createStockMarketRankCache('totalLoss'),
 };
 
 const shopRentRankCache = createCacheLayer<number, ShopRentRankRow[]>({

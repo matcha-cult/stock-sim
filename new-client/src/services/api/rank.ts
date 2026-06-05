@@ -28,7 +28,7 @@ import api from './core';
 // 类型定义
 // ============================================
 
-export type StockMarketRankMetric = 'value' | 'profit';
+export type StockMarketRankMetric = 'value' | 'unrealizedProfit' | 'totalProfit' | 'totalLoss';
 
 export type WealthRankDto = {
   rank: number;
@@ -36,6 +36,7 @@ export type WealthRankDto = {
   name: string;
   title: string;
   monthCardActive: boolean;
+  isGm: boolean;
   spiritStones: number;
   silver: number;
 };
@@ -46,6 +47,7 @@ export type StockMarketRankDto = {
   name: string;
   title: string;
   monthCardActive: boolean;
+  isGm: boolean;
   totalHoldingQty: number;
   totalMarketValueSpiritStones: number;
   totalCostSpiritStones: number;
@@ -60,6 +62,7 @@ export type ShopRentRankDto = {
   name: string;
   title: string;
   monthCardActive: boolean;
+  isGm: boolean;
   totalRentCollected: number;
   shopCount: number;
 };

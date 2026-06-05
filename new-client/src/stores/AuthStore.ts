@@ -43,6 +43,7 @@ export interface CharacterDto {
   title: string | null;
   spiritStones: number;
   silver: number;
+  monthCardActive: boolean;
 }
 
 // 服务端 /api/character/info 返回的实际结构
@@ -54,6 +55,7 @@ interface CharacterInfoResponse {
     title: string | null;
     spirit_stones: string;
     silver: string;
+    month_card_active: boolean;
     created_at: string;
     updated_at: string;
   };
@@ -80,6 +82,7 @@ interface AuthPayload {
     title: string | null;
     spiritStones: number;
     silver: number;
+    monthCardActive: boolean;
   } | null;
 }
 
@@ -97,6 +100,7 @@ interface BootstrapPayload {
     title: string | null;
     spiritStones: number;
     silver: number;
+    monthCardActive: boolean;
   } | null;
 }
 
@@ -168,7 +172,7 @@ export class AuthStore {
         runInAction(() => {
           this.user = { id: response.data.user.id, username: response.data.user.username, permissions: response.data.user.permissions };
           this.character = raw
-            ? { id: raw.id, nickname: raw.nickname, gender: raw.gender, title: raw.title, spiritStones: raw.spiritStones, silver: raw.silver }
+            ? { id: raw.id, nickname: raw.nickname, gender: raw.gender, title: raw.title, spiritStones: raw.spiritStones, silver: raw.silver, monthCardActive: raw.monthCardActive }
             : null;
         });
         return { success: true, message: '登录成功' };
@@ -213,6 +217,7 @@ export class AuthStore {
             title: c.title,
             spiritStones: Number(c.spirit_stones),
             silver: Number(c.silver ?? 0),
+            monthCardActive: c.month_card_active ?? false,
           };
         });
         return { success: true, message: '角色创建成功' };
@@ -245,6 +250,7 @@ export class AuthStore {
             title: c.title,
             spiritStones: Number(c.spirit_stones),
             silver: Number(c.silver ?? 0),
+            monthCardActive: c.month_card_active ?? false,
           };
         });
       }

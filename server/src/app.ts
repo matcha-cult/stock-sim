@@ -30,6 +30,7 @@ import { registerRoutes } from './bootstrap/registerRoutes.js';
 import { initStockDefinitions } from './services/staticConfigLoader.js';
 import { initializeStockMarketScheduler, stopStockMarketScheduler } from './services/stockMarket/stockMarketScheduler.js';
 import { initializeShopRentScheduler, stopShopRentScheduler } from './services/shop/shopRentScheduler.js';
+import { monthCardConfigCache } from './services/monthCard/monthCardConfigCache.js';
 import './types/express.d.ts';
 
 dotenv.config();
@@ -58,6 +59,10 @@ async function startServer() {
   // 启动收租调度器（独立 tick 间隔，不与股市行情混用）
   const shopRentActive = await initializeShopRentScheduler();
   logger.info(shopRentActive ? '店铺收租调度器已启动' : '店铺收租调度器已加载（tick 未启用）');
+
+  // 加载月卡配置（种子 UPSERT + 缓存加载）
+  await monthCardConfigCache.init();
+  logger.info('月卡配置缓存已加载（种子已同步）');
 
   // 测试 Redis 连接
   try {

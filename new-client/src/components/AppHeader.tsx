@@ -24,20 +24,23 @@
 import { useContext } from 'react';
 import { Observer } from 'mobx-react-lite';
 import { Button, Dropdown, Popover, Space, Typography, Layout, Tooltip } from 'antd';
-import { LogoutOutlined, UserOutlined, BulbOutlined, DollarOutlined, GoldOutlined } from '@ant-design/icons';
+import { LogoutOutlined, UserOutlined, BulbOutlined, DollarOutlined, GoldOutlined, GiftOutlined } from '@ant-design/icons';
 import type { MenuProps } from 'antd';
 import { RootStoreContext } from '../stores/RootStore';
+import { useState, useCallback } from 'react';
+import MonthCardModal from './MonthCardModal';
+import PlayerName from './PlayerName';
 
 const { Header } = Layout;
 
 const { Text } = Typography;
 
 /**
- * 格式化数值：超过 4 位则缩为 K/M 单位，不超过 4 位直接显示。
+ * 格式化数值：超过 4 位则缩为万/亿单位，不超过 4 位直接显示。
  */
 const formatCompact = (value: number): string => {
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
-  if (value >= 10_000) return `${(value / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  if (Math.abs(value) >= 1_0000_0000) return `${(value / 1_0000_0000).toFixed(2)}亿`;
+  if (Math.abs(value) >= 1_0000) return `${(value / 1_0000).toFixed(2)}万`;
   return value.toLocaleString();
 };
 
@@ -51,7 +54,7 @@ function CurrencyDisplay({ value, icon }: CurrencyDisplayProps): JSX.Element {
   const fullText = value.toLocaleString();
 
   const element = (
-    <span style={{ cursor: 'pointer', color: value >= 10_000 ? 'var(--color-success)' : 'inherit' }}>
+    <span style={{ cursor: 'pointer', color: Math.abs(value) >= 1_0000 ? 'var(--color-success)' : 'inherit' }}>
       <Tooltip title={fullText}>
         {icon} {compact}
       </Tooltip>
@@ -63,11 +66,17 @@ function CurrencyDisplay({ value, icon }: CurrencyDisplayProps): JSX.Element {
 
 export default function AppHeader(): React.ReactNode {
   const rootStore = useContext(RootStoreContext);
+  const [monthCardOpen, setMonthCardOpen] = useState(false);
   if (!rootStore) return null;
 
+  const handleOpenMonthCard = useCallback(() => {
+    setMonthCardOpen(true);
+  }, []);
+
   return (
-    <Observer>
-      {() => {
+    <>
+      <Observer>
+        {() => {
         const { authStore, themeStore } = rootStore;
         const { user, character, logout } = authStore;
 
@@ -95,6 +104,14 @@ export default function AppHeader(): React.ReactNode {
                   )}
                   <Dropdown menu={{
                     items: [
+                      ...(character
+                        ? [{
+                            key: 'monthcard',
+                            icon: <GiftOutlined />,
+                            label: '月卡',
+                            onClick: handleOpenMonthCard,
+                          }]
+                        : []),
                       {
                         key: 'theme',
                         icon: <BulbOutlined />,
@@ -110,9 +127,14 @@ export default function AppHeader(): React.ReactNode {
                       },
                     ] satisfies MenuProps['items'],
                   }} trigger={['click']} placement="bottomRight">
-                    <Text style={{ color: 'var(--text-primary)', cursor: 'pointer' }}>
-                      <UserOutlined /> {character?.nickname ?? user.username}
-                    </Text>
+                    <span>
+                      <PlayerName
+                        name={character?.nickname ?? user.username}
+                        monthCardActive={character?.monthCardActive}
+                        isGm={user?.permissions.includes('GM')}
+                        className="app-header-username"
+                      />
+                    </span>
                   </Dropdown>
                 </Space>
               )}
@@ -121,5 +143,7 @@ export default function AppHeader(): React.ReactNode {
         );
       }}
     </Observer>
+    <MonthCardModal open={monthCardOpen} onClose={() => setMonthCardOpen(false)} />
+  </>
   );
 }

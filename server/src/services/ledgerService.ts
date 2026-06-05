@@ -38,6 +38,9 @@ export type SpiritStonesLedgerBizType =
   | 'system_deduct'
   | 'gm_compensation'
   | 'gm_rebate'
+  | 'gm_grant_month_card'
+  | 'gm_revoke_month_card'
+  | 'month_card_daily'
   | 'other';
 
 export interface RecordLedgerParams {
@@ -309,5 +312,8 @@ export const LEDGER_BIZ_TYPE_LABELS: Record<SpiritStonesLedgerBizType, string> =
   system_deduct: '系统扣除',
   gm_compensation: 'GM维护补偿',
   gm_rebate: 'GM补涨',
+  gm_grant_month_card: 'GM 发放月卡',
+  gm_revoke_month_card: 'GM 回收月卡',
+  month_card_daily: '月卡每日领取',
   other: '其他',
 };

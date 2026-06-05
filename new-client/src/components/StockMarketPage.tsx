@@ -38,7 +38,7 @@ import {
 } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import { useIsMobile } from '../shared/responsive';
-import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto } from '../services/api/rank';
+import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto, StockMarketRankMetric } from '../services/api/rank';
 import { getShopRentRanks } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import ShopPanel from './ShopPanel';
@@ -48,6 +48,7 @@ import GmLedgerViewer from './GmLedgerViewer/GmLedgerViewer';
 import GmStockViewer from './GmStockViewer/GmStockViewer';
 import GmPendingOrderViewer from './GmPendingOrderViewer/GmPendingOrderViewer';
 import GmSpiritStonesManager from './GmSpiritStonesManager/GmSpiritStonesManager';
+import GmMonthCardManager from './GmMonthCardManager/GmMonthCardManager';
 import {
   buildStockMarketOverviewViewModel,
   buildStockMarketTradePreview,
@@ -62,14 +63,26 @@ import {
 import StockCandlestick from './StockCandlestick';
 import PendingOrderCard from './PendingOrderCard';
 import PendingOrderManagement from './PendingOrderManagement';
+// import ScratchCard from './ScratchCard'; // 刮刮乐已屏蔽
+import PlayerName from './PlayerName';
 
 const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'ledger' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders' | 'gm-spirit-stones';
+type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'gm-online-ops';
+type GmTabKey = 'gm-spirit-stones' | 'gm-month-card' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
+
+const GM_TABS: { key: GmTabKey; label: string }[] = [
+  { key: 'gm-spirit-stones', label: '灵石管理' },
+  { key: 'gm-month-card', label: '月卡管理' },
+  { key: 'gm-news-viewer', label: '新闻事件查看器' },
+  { key: 'gm-stock-viewer', label: '股市持仓查看器' },
+  { key: 'gm-ledger', label: '流水账' },
+  { key: 'gm-pending-orders', label: '挂单管理' },
+];
 
 const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const rootStore = useContext(RootStoreContext);
@@ -84,6 +97,8 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<ActionKey>('');
   const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket' | 'shopRent'>('wealth');
+  const [stockMarketRankMetric, setStockMarketRankMetric] = useState<StockMarketRankMetric>('value');
+  const [activeGmTab, setActiveGmTab] = useState<GmTabKey>('gm-spirit-stones');
 
   // 收租排行
   const [shopRentRanks, setShopRentRanks] = useState<ShopRentRankDto[]>([]);
@@ -194,8 +209,8 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   // 排行维度切换时重新拉取
   useEffect(() => {
     if (activeTab !== 'ranking') return;
-    void stockStore.refreshStockMarketRanks();
-  }, [activeTab, stockStore]);
+    void stockStore.refreshStockMarketRanks(stockMarketRankMetric);
+  }, [activeTab, stockMarketRankMetric, stockStore]);
 
   // 移动端关闭详情
   useEffect(() => {
@@ -310,8 +325,8 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'gm-news-viewer' || key === 'gm-ledger' || key === 'gm-stock-viewer' || key === 'gm-pending-orders' || key === 'gm-spirit-stones') {
-      setActiveTab(key);
+    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'gm-online-ops') {
+      setActiveTab(key as ActiveTab);
     }
   }, []);
 
@@ -495,12 +510,15 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   shopRentRanks={shopRentRanks}
                   rankLoading={stockStore.rankLoading}
                   onRefreshWealth={() => void stockStore.refreshWealthRanks()}
-                  onRefreshStockMarket={() => void stockStore.refreshStockMarketRanks()}
+                  onRefreshStockMarket={(metric?: StockMarketRankMetric) => void stockStore.refreshStockMarketRanks(metric ?? stockMarketRankMetric)}
                   onRefreshShopRent={fetchShopRentRanks}
                   onTabChange={(tab) => {
                     setActiveRankTab(tab);
                   }}
                   activeRankTab={activeRankTab}
+                  isMobile={isMobile}
+                  stockMarketRankMetric={stockMarketRankMetric}
+                  onStockMarketRankMetricChange={setStockMarketRankMetric}
                 />
               ),
             },
@@ -509,34 +527,41 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
               label: '灵石流水',
               children: <LedgerTab />,
             },
+            // 刮刮乐已屏蔽
+            // {
+            //   key: 'scratch',
+            //   label: '刮刮乐',
+            //   children: <ScratchCard />,
+            // },
             ...(authStore.user?.permissions.includes('GM')
-              ? [
-                {
-                  key: 'gm-news-viewer' as const,
-                  label: 'GM新闻事件查看器',
-                  children: <GmNewsViewer definitionMap={new Map(overview.stocks.map((s) => [s.stockId, s.name] as const))} />,
-                },
-                {
-                  key: 'gm-stock-viewer' as const,
-                  label: 'GM股市持仓查看器',
-                  children: <GmStockViewer />,
-                },
-                {
-                  key: 'gm-ledger' as const,
-                  label: 'GM流水账',
-                  children: <GmLedgerViewer />,
-                },
-                {
-                  key: 'gm-pending-orders' as const,
-                  label: 'GM挂单管理',
-                  children: <GmPendingOrderViewer />,
-                },
-                {
-                  key: 'gm-spirit-stones' as const,
-                  label: 'GM灵石管理',
-                  children: <GmSpiritStonesManager />,
-                },
-              ]
+              ? [{
+                key: 'gm-online-ops' as const,
+                label: 'GM在线运维',
+                children: (
+                  <Tabs
+                    activeKey={activeGmTab}
+                    onChange={(k) => setActiveGmTab(k as GmTabKey)}
+                    destroyInactiveTabPane
+                    type="card"
+                    size="small"
+                    items={GM_TABS.map((tab) => ({
+                      key: tab.key,
+                      label: tab.label,
+                      children: tab.key === 'gm-spirit-stones'
+                        ? <GmSpiritStonesManager />
+                        : tab.key === 'gm-month-card'
+                          ? <GmMonthCardManager />
+                          : tab.key === 'gm-news-viewer'
+                            ? <GmNewsViewer definitionMap={new Map(overview.stocks.map((s) => [s.stockId, s.name] as const))} />
+                            : tab.key === 'gm-stock-viewer'
+                              ? <GmStockViewer />
+                              : tab.key === 'gm-ledger'
+                                ? <GmLedgerViewer />
+                                : <GmPendingOrderViewer />,
+                    }))}
+                  />
+                ),
+              }]
               : []),
           ]}
         />
@@ -1342,10 +1367,13 @@ interface RankingTabProps {
   shopRentRanks: ShopRentRankDto[];
   rankLoading: boolean;
   onRefreshWealth: () => void;
-  onRefreshStockMarket: () => void;
+  onRefreshStockMarket: (metric?: StockMarketRankMetric) => void;
   onRefreshShopRent: () => void;
   onTabChange: (tab: 'wealth' | 'stockMarket' | 'shopRent') => void;
   activeRankTab: 'wealth' | 'stockMarket' | 'shopRent';
+  isMobile: boolean;
+  stockMarketRankMetric: StockMarketRankMetric;
+  onStockMarketRankMetricChange: (metric: StockMarketRankMetric) => void;
 }
 
 const formatSpiritStones = (value: number): string => {
@@ -1365,13 +1393,13 @@ const getRankBadgeColor = (rank: number): string => {
   return 'default';
 };
 
-const wealthRankColumns: ColumnsType<WealthRankDto> = [
+const getWealthRankColumns = (isMobile: boolean): ColumnsType<WealthRankDto> => [
   {
     title: '排名',
     dataIndex: 'rank',
     key: 'rank',
     width: 70,
-    fixed: 'left',
+    fixed: isMobile ? undefined : 'left',
     render: (rank: number) => {
       const color = getRankBadgeColor(rank);
       const icon = rank <= 3 ? <CrownOutlined /> : null;
@@ -1388,9 +1416,9 @@ const wealthRankColumns: ColumnsType<WealthRankDto> = [
     dataIndex: 'name',
     key: 'name',
     width: 120,
-    fixed: 'left',
+    fixed: isMobile ? undefined : 'left',
     render: (_: unknown, record: WealthRankDto) => (
-      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.name}</span>
+      <PlayerName name={record.name} monthCardActive={record.monthCardActive} isGm={record.isGm} />
     ),
   },
   {
@@ -1415,13 +1443,13 @@ const wealthRankColumns: ColumnsType<WealthRankDto> = [
   },
 ];
 
-const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
+const getStockMarketRankColumns = (isMobile: boolean): ColumnsType<StockMarketRankDto> => [
   {
     title: '排名',
     dataIndex: 'rank',
     key: 'rank',
     width: 70,
-    fixed: 'left',
+    fixed: isMobile ? undefined : 'left',
     render: (rank: number) => {
       const color = getRankBadgeColor(rank);
       const icon = rank <= 3 ? <CrownOutlined /> : null;
@@ -1438,9 +1466,9 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     dataIndex: 'name',
     key: 'name',
     width: 120,
-    fixed: 'left',
+    fixed: isMobile ? undefined : 'left',
     render: (_: unknown, record: StockMarketRankDto) => (
-      <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{record.name}</span>
+      <PlayerName name={record.name} monthCardActive={record.monthCardActive} isGm={record.isGm} />
     ),
   },
   {
@@ -1449,7 +1477,6 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'totalHoldingQty',
     width: 90,
     align: 'right',
-    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalHoldingQty - b.totalHoldingQty,
     render: (value: number) => value.toLocaleString(),
   },
   {
@@ -1458,8 +1485,6 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'totalMarketValueSpiritStones',
     width: 110,
     align: 'right',
-    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalMarketValueSpiritStones - b.totalMarketValueSpiritStones,
-    defaultSortOrder: 'descend',
     render: (value: number) => (
       <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
         {formatSpiritStones(value)}
@@ -1472,7 +1497,6 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'totalCostSpiritStones',
     width: 110,
     align: 'right',
-    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalCostSpiritStones - b.totalCostSpiritStones,
     render: (value: number) => formatSpiritStones(value),
   },
   {
@@ -1481,7 +1505,6 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'unrealizedPnlSpiritStones',
     width: 110,
     align: 'right',
-    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.unrealizedPnlSpiritStones - b.unrealizedPnlSpiritStones,
     render: (value: number) => {
       const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
       const sign = value > 0 ? '+' : '';
@@ -1494,7 +1517,6 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'realizedPnlSpiritStones',
     width: 110,
     align: 'right',
-    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.realizedPnlSpiritStones - b.realizedPnlSpiritStones,
     render: (value: number) => {
       const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
       const sign = value > 0 ? '+' : '';
@@ -1507,7 +1529,6 @@ const stockMarketRankColumns: ColumnsType<StockMarketRankDto> = [
     key: 'totalPnlSpiritStones',
     width: 110,
     align: 'right',
-    sorter: (a: StockMarketRankDto, b: StockMarketRankDto) => a.totalPnlSpiritStones - b.totalPnlSpiritStones,
     render: (value: number) => {
       const tone = value > 0 ? 'green' : value < 0 ? 'red' : 'default';
       const sign = value > 0 ? '+' : '';
@@ -1524,13 +1545,26 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
   const {
     wealthRanks, stockMarketRanks, shopRentRanks,
     rankLoading, onRefreshWealth, onRefreshStockMarket, onRefreshShopRent,
-    onTabChange, activeRankTab,
+    onTabChange, activeRankTab, isMobile,
+    stockMarketRankMetric, onStockMarketRankMetricChange,
   } = props;
+
+  const wealthColumns = useMemo(() => getWealthRankColumns(isMobile), [isMobile]);
+  const stockMarketColumns = useMemo(() => getStockMarketRankColumns(isMobile), [isMobile]);
+
+  const handleStockMarketMetricChange = useCallback((metric: StockMarketRankMetric) => {
+    onStockMarketRankMetricChange(metric);
+    onRefreshStockMarket(metric);
+  }, [onStockMarketRankMetricChange, onRefreshStockMarket]);
+
+  const handleStockMarketRefresh = useCallback(() => {
+    onRefreshStockMarket();
+  }, [onRefreshStockMarket]);
 
   const onRefresh = activeRankTab === 'wealth'
     ? onRefreshWealth
     : activeRankTab === 'stockMarket'
-      ? onRefreshStockMarket
+      ? handleStockMarketRefresh
       : onRefreshShopRent;
 
   if (rankLoading) {
@@ -1578,7 +1612,7 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
             <Empty description="暂无排行数据" />
           ) : (
             <Table<WealthRankDto>
-              columns={wealthRankColumns}
+              columns={wealthColumns}
               dataSource={wealthRanks}
               rowKey="characterId"
               size="small"
@@ -1589,12 +1623,27 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
           )}
         </Card>
       ) : activeRankTab === 'stockMarket' ? (
-        <Card size="small" style={{ overflow: 'hidden' }}>
+        <Card
+          size="small"
+          style={{ overflow: 'hidden' }}
+          extra={
+            <Segmented<StockMarketRankMetric>
+              value={stockMarketRankMetric}
+              onChange={handleStockMarketMetricChange}
+              options={[
+                { label: '市值', value: 'value' as const },
+                { label: '浮盈亏', value: 'unrealizedProfit' as const },
+                { label: '总盈利', value: 'totalProfit' as const },
+                { label: '总亏损', value: 'totalLoss' as const },
+              ]}
+            />
+          }
+        >
           {stockMarketRanks.length === 0 ? (
             <Empty description="暂无排行数据" />
           ) : (
             <Table<StockMarketRankDto>
-              columns={stockMarketRankColumns}
+              columns={stockMarketColumns}
               dataSource={stockMarketRanks}
               rowKey="characterId"
               size="small"
@@ -1625,7 +1674,9 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
                     return rank;
                   },
                 },
-                { title: '角色', dataIndex: 'name', key: 'name', ellipsis: true },
+                { title: '角色', dataIndex: 'name', key: 'name', ellipsis: true, render: (_: unknown, record: ShopRentRankDto) => (
+                  <PlayerName name={record.name} monthCardActive={record.monthCardActive} isGm={record.isGm} />
+                ) },
                 {
                   title: '已收租金',
                   dataIndex: 'totalRentCollected',
