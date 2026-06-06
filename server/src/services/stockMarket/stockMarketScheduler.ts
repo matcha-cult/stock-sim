@@ -61,7 +61,10 @@ const runScheduledStockMarketTick = async (): Promise<void> => {
   } finally {
     inFlight = false;
     if (initialized) {
-      scheduleNextRun(new Date());
+      // 基于触发时的 tickHour 计算下一次调度，
+      // 而非基于完成时间，避免 tick 耗时接近周期长度时
+      // 导致 delay 极小、同一 tickHour 被重复 INSERT。
+      scheduleNextRun();
     }
   }
 };

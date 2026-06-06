@@ -110,6 +110,24 @@ class StockMarketV3Service {
     // ① INSERT stock_market_v3_tick
     const tickHour = floorStockMarketTickTime(now);
     console.log('[StockMarketV3] ① 创建 tick, tickHour:', tickHour.toISOString());
+
+    // 先 SELECT 检查当前 tickHour 是否已有记录，
+    // 避免依赖 ON CONFLICT 做正常分支判断。
+    const existingResult = await query<{ id: string | number | bigint; status: string }>(
+      `SELECT id, status FROM stock_market_v3_tick WHERE tick_hour = $1`,
+      [tickHour],
+    );
+    const existingTick = existingResult.rows[0];
+    if (existingTick) {
+      if (existingTick.status === 'generated') {
+        return { status: 'skipped', message: `V3 tick ${tickHour.toISOString()} 已存在且已生成，跳过` };
+      }
+      if (existingTick.status === 'running') {
+        return { status: 'skipped', message: `V3 tick ${tickHour.toISOString()} 正在执行中，跳过` };
+      }
+      return { status: 'skipped', message: `V3 tick ${tickHour.toISOString()} 状态异常（${existingTick.status}），跳过` };
+    }
+
     const insertResult = await query<V3TickInsertRow>(
       `
         INSERT INTO stock_market_v3_tick (tick_hour, status, created_at)
@@ -121,7 +139,7 @@ class StockMarketV3Service {
     );
     const insertedTick = insertResult.rows[0];
     if (!insertedTick) {
-      return { status: 'skipped', message: '当前周期股市 tick 已存在' };
+      return { status: 'skipped', message: `V3 tick ${tickHour.toISOString()} 已被其他进程创建，跳过` };
     }
     const tickId = toBigIntValue(insertedTick.id);
     console.log('[StockMarketV3] ① tick 创建成功, tickId:', tickId.toString());
