@@ -1,0 +1,12 @@
+{
+  "configs": [
+    {
+      "configKey": "default",
+      "durationDays": 30,
+      "dailyRewardSpiritStones": 5000,
+      "scratchBonusBps": 0,
+      "shopRentBonusBps": 0,
+      "description": "标准月卡"
+    }
+  ]
+}

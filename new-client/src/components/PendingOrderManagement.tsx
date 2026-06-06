@@ -25,10 +25,12 @@
 import { useCallback, useMemo, useEffect, useState, useContext } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
-  App, Button, Card, Empty, Flex, Popconfirm, Table, Tag, Tooltip,
+  App, Button, Card, Empty, Flex, Popconfirm, Popover, Table, Tag, Tooltip,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { CloseCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import {
+  CloseCircleOutlined, QuestionCircleOutlined, ReloadOutlined,
+} from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import {
   formatStockMarketBps,
@@ -117,6 +119,31 @@ const PendingOrderManagement = observer(function PendingOrderManagement(): React
       width: 100,
       align: 'right',
       render: (price: number) => formatStockMarketPrice(price),
+    },
+    {
+      title: (
+        <span>
+          冻结
+          <Popover
+            placement="topLeft"
+            trigger="click"
+            title="冻结说明"
+            content={
+              <div style={{ maxWidth: 280, lineHeight: 1.6, fontSize: 13 }}>
+                <div style={{ marginBottom: 6 }}><b>买入单：</b>冻结灵石 = 限价金额 + 预估手续费（佣金 + 过户费），取消时全额返还，成交时按实际费用多退少补。</div>
+                <div><b>卖出单：</b>冻结对应股票数量，不预扣费用；成交时手续费从所得中扣除。</div>
+              </div>
+            }
+          >
+            <QuestionCircleOutlined style={{ marginLeft: 4, color: 'var(--text-tertiary)', cursor: 'pointer', fontSize: 12 }} />
+          </Popover>
+        </span>
+      ),
+      dataIndex: 'frozenSpiritStones',
+      key: 'frozenSpiritStones',
+      width: 110,
+      align: 'right',
+      render: (amount: number) => <span>{formatStockMarketPrice(amount)}</span>,
     },
     {
       title: '当前价',

@@ -260,10 +260,12 @@ class ShopService {
     constants: {
       spaceExpansionAreaIncrement: number;
       spaceExpansionBaseCost: number;
+      spaceExpansionMaxCount: number;
       maxPendingRentTicks: number;
       decorationRefundRate: number;
       upgradeLevelBonusRate: number;
       upgradeTicksBase: number;
+      upgradeMaxLevel: number;
       rentTickIntervalMinutes: number;
     };
   } {
@@ -291,10 +293,12 @@ class ShopService {
       constants: {
         spaceExpansionAreaIncrement: SPACE_EXPANSION_AREA_INCREMENT,
         spaceExpansionBaseCost: SPACE_EXPANSION_BASE_COST,
+        spaceExpansionMaxCount: SPACE_EXPANSION_MAX_COUNT,
         maxPendingRentTicks: MAX_PENDING_RENT_TICKS,
         decorationRefundRate: DECORATION_REFUND_RATE,
         upgradeLevelBonusRate: UPGRADE_LEVEL_BONUS_RATE,
         upgradeTicksBase: UPGRADE_TICKS_BASE,
+        upgradeMaxLevel: UPGRADE_MAX_LEVEL,
         rentTickIntervalMinutes: SHOP_RENT_TICK_INTERVAL_MINUTES,
       },
     };
@@ -324,7 +328,10 @@ class ShopService {
 
     // 转账到角色（pending_rent 以分为单位，characters.spirit_stones 以整灵石为单位）
     const stonesToAdd = pendingRent / 100n;
-    const addResult = await addSpiritStones(characterId, stonesToAdd);
+    const addResult = await addSpiritStones(characterId, stonesToAdd, {
+      bizType: 'shop_rent',
+      memo: `收取店铺租金`,
+    });
     if (!addResult.success) return { success: false, message: addResult.message };
 
     // 更新店铺状态（rent_tick_count 已在 tick 时累加，收取时直接使用当前值）
@@ -425,7 +432,10 @@ class ShopService {
 
     // 转账（pending_rent 以分为单位，characters.spirit_stones 以整灵石为单位）
     const stonesToAdd = totalRent / 100n;
-    const addResult = await addSpiritStones(characterId, stonesToAdd);
+    const addResult = await addSpiritStones(characterId, stonesToAdd, {
+      bizType: 'shop_rent',
+      memo: `收取店铺租金`,
+    });
     if (!addResult.success) return { success: false, message: addResult.message, totalCollected: 0, upgradedShops: [] };
 
     // 批量更新（rent_tick_count 已在 tick 时累加，直接使用当前值）
@@ -500,7 +510,10 @@ class ShopService {
     if (targetTierIdx > currentTierIdx) {
       // 升级装修
       const cost = calculateDecorationCost({ currentTier, targetTier, area });
-      const consumeResult = await consumeSpiritStones(characterId, cost);
+      const consumeResult = await consumeSpiritStones(characterId, cost, {
+        bizType: 'shop_upgrade',
+        memo: `店铺装修升级`,
+      });
       if (!consumeResult.success) return { success: false, message: '灵石不足' };
 
       await query(
@@ -523,7 +536,10 @@ class ShopService {
     } else {
       // 降级装修（refund 以整数灵石为单位）
       const refund = calculateDecorationRefund({ currentTier, targetTier, area });
-      const addResult = await addSpiritStones(characterId, refund);
+      const addResult = await addSpiritStones(characterId, refund, {
+        bizType: 'shop_upgrade',
+        memo: `装修降级退款`,
+      });
       if (!addResult.success) return { success: false, message: addResult.message };
 
       await query(
@@ -575,7 +591,10 @@ class ShopService {
     const decorCost = BigInt(tierPrice * SPACE_EXPANSION_AREA_INCREMENT);
     const totalCost = spaceCost + decorCost;
 
-    const consumeResult = await consumeSpiritStones(characterId, totalCost);
+    const consumeResult = await consumeSpiritStones(characterId, totalCost, {
+      bizType: 'shop_upgrade',
+      memo: `店铺空间扩展`,
+    });
     if (!consumeResult.success) return { success: false, message: '灵石不足' };
 
     const newArea = toIntValue(shop.area) + SPACE_EXPANSION_AREA_INCREMENT;
@@ -672,7 +691,10 @@ class ShopService {
     if (config.purchaseCost <= 0) return { success: false, message: '该类型不可购买' };
 
     const cost = BigInt(config.purchaseCost);
-    const consumeResult = await consumeSpiritStones(characterId, cost);
+    const consumeResult = await consumeSpiritStones(characterId, cost, {
+      bizType: 'shop_buy',
+      memo: `购买 ${config.name} 店铺`,
+    });
     if (!consumeResult.success) return { success: false, message: '灵石不足' };
 
     await query(

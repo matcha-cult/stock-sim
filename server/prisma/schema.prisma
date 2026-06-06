@@ -41,6 +41,11 @@ model characters {
   stock_trade_records          stock_market_trade_record[]
   stock_pending_orders         stock_market_pending_order[]
   shop_details                 shop_detail[]
+  spirit_stones_ledger         spirit_stones_ledger[]
+  // 仅用于 Prisma relation 校验，代码中不使用
+  scratch_tickets              scratch_ticket[] @ignore
+  month_card_ownerships        month_card_ownership[]
+  month_card_daily_claims      month_card_daily_claim[]
 }
 
 // 股票报价表
@@ -188,4 +193,94 @@ model stock_market_pending_order {
   @@index([stock_id, status], map: "idx_pending_orders_stock_status")
   @@index([character_id, status], map: "idx_pending_orders_character_status")
   @@index([character_id], map: "idx_pending_orders_character")
+}
+
+// 灵石流水账表（单式记账簿）
+model spirit_stones_ledger {
+  id            BigInt   @id @default(autoincrement())
+  character_id  Int
+  amount        BigInt
+  balance_after BigInt
+  biz_type      String   @db.VarChar(32)
+  biz_id        String?  @db.VarChar(128)
+  counterparty  Int?
+  memo          String?  @db.VarChar(500)
+  created_at    DateTime @default(now()) @db.Timestamp(6)
+
+  character     characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@index([character_id], map: "idx_ledger_character")
+  @@index([biz_type, biz_id], map: "idx_ledger_biz")
+  @@index([character_id, created_at], map: "idx_ledger_character_time")
+}
+
+// 刮刮乐彩票表（每天最多 3 张独立票，按顺序刮完一张再下一张）
+model scratch_ticket {
+  id             BigInt   @id @default(autoincrement())
+  character_id   Int
+  day            DateTime @db.Date          // 票归属日期（UTC 日期）
+  ticket_number  Int      @db.SmallInt      // 当天第几张票：1/2/3
+  grid_size      Int      @db.SmallInt      // 格子总数（如 9=3x3, 25=5x5）
+  grid_values    Json     @db.JsonB         // 格子数值数组 [0..gridSize-1]
+  scratched_mask Int      @default(0)       // 位标记，第 i 位为 1 表示第 i 格已刮
+  scratch_count  Int      @default(0)       // 该票已刮格子数（0-gridSize）
+  status         String   @default("active") @db.VarChar(20) // active/completed
+  settled        Boolean  @default(false)   // 是否已开奖
+  created_at     DateTime @default(now())    @db.Timestamp(6)
+  updated_at     DateTime @updatedAt         @db.Timestamp(6)
+
+  character      characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, day, ticket_number], map: "uq_scratch_character_day_ticket")
+  @@index([character_id, day], map: "idx_scratch_character_day")
+  @@index([character_id, status], map: "idx_scratch_character_status")
+  @@index([day, status], map: "idx_scratch_day_status")
+}
+
+// ========== 月卡系统 ==========
+
+// 月卡持有记录
+model month_card_ownership {
+  id                    BigInt   @id @default(autoincrement())
+  character_id          Int
+  activated_at          DateTime @default(now()) @db.Timestamp(6)
+  expires_at            DateTime @db.Timestamp(6)
+  status                String   @default("active") @db.VarChar(20)
+  total_days_purchased  Int      @default(0)
+  purchase_count        Int      @default(0)
+  created_at            DateTime @default(now()) @db.Timestamp(6)
+  updated_at            DateTime @updatedAt @db.Timestamp(6)
+
+  character             characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@index([character_id, status], map: "idx_month_card_character")
+  @@index([expires_at], map: "idx_month_card_expires")
+  @@index([character_id, status, expires_at], map: "idx_month_card_character_active")
+}
+
+// 月卡每日领取记录
+model month_card_daily_claim {
+  id                    BigInt   @id @default(autoincrement())
+  character_id          Int
+  claim_date            DateTime @db.Date
+  reward_spirit_stones  BigInt
+  created_at            DateTime @default(now()) @db.Timestamp(6)
+
+  character             characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, claim_date], map: "uq_daily_claim_character_date")
+  @@index([character_id, claim_date], map: "idx_daily_claim_character_date")
+}
+
+// 月卡配置
+model month_card_config {
+  id                    BigInt   @id @default(autoincrement())
+  config_key            String   @unique @db.VarChar(64)
+  duration_days         Int      @db.SmallInt
+  daily_reward_spirit_stones BigInt
+  scratch_bonus_bps     Int      @default(0) @db.SmallInt
+  shop_rent_bonus_bps   Int      @default(0) @db.SmallInt
+  description           String?  @db.VarChar(200)
+  created_at            DateTime @default(now()) @db.Timestamp(6)
+  updated_at            DateTime @updatedAt @db.Timestamp(6)
 }

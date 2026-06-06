@@ -43,7 +43,12 @@ export const STOCK_MARKET_MIN_PRICE_UNITS = STOCK_MARKET_MIN_PRICE_SPIRIT_STONES
 export const STOCK_MARKET_HISTORY_LIMIT = 200;
 export const STOCK_MARKET_TRADE_RECORD_PAGE_SIZE = 20;
 
-export const STOCK_MARKET_MAX_ABS_CHANGE_BPS = 800;
+/** AI 新闻驱动涨跌上限（百分比），默认 10%，可通过 STOCK_MARKET_MAX_ABS_CHANGE_PERCENT 覆盖。 */
+const STOCK_MARKET_MAX_ABS_CHANGE_PERCENT_ENV = parseFloat(process.env.STOCK_MARKET_MAX_ABS_CHANGE_PERCENT ?? '10');
+export const STOCK_MARKET_MAX_ABS_CHANGE_BPS = Number.isFinite(STOCK_MARKET_MAX_ABS_CHANGE_PERCENT_ENV)
+  && STOCK_MARKET_MAX_ABS_CHANGE_PERCENT_ENV > 0
+  ? Math.round(STOCK_MARKET_MAX_ABS_CHANGE_PERCENT_ENV * 100)
+  : 1000;
 
 /** 买卖压力驱动的最大涨跌基点，默认 ±50，可通过 STOCK_MARKET_PRESSURE_MAX_BPS 覆盖。 */
 const STOCK_MARKET_PRESSURE_MAX_BPS_ENV = parseInt(process.env.STOCK_MARKET_PRESSURE_MAX_BPS ?? '50', 10);
@@ -126,6 +131,15 @@ export const generateStockMarketNoiseChangeBps = (
   const noiseBps = Math.round(minBps + fractional * (maxBps - minBps));
 
   return isPositive ? noiseBps : -noiseBps;
+};
+
+/**
+ * 随机噪音抖动开关，默认开启。设为 'false' 或 '0' 则关闭。
+ * 关闭后无交易股票不会产生随机涨跌（基点为 0）。
+ */
+export const isStockMarketNoiseEnabled = (): boolean => {
+  const env = process.env.STOCK_MARKET_NOISE_ENABLED;
+  return env !== 'false' && env !== '0';
 };
 
 /**

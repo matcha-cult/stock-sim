@@ -22,6 +22,10 @@
  */
 import { query } from '../config/database.js';
 import { shopService } from './shop/shopService.js';
+import {
+  recordSpiritStones,
+  type SpiritStonesLedgerBizType,
+} from './ledgerService.js';
 
 export interface Character {
   id: number;
@@ -64,7 +68,12 @@ const validateNickname = (nickname: string): { success: boolean; nickname: strin
  */
 export const checkCharacter = async (userId: number): Promise<CharacterResult> => {
   const result = await query(
-    'SELECT id, user_id, nickname, gender, title, spirit_stones, silver, created_at, updated_at FROM characters WHERE user_id = $1',
+    `SELECT c.id, c.user_id, c.nickname, c.gender, c.title, c.spirit_stones, c.silver, c.created_at, c.updated_at,
+            (EXISTS (
+              SELECT 1 FROM month_card_ownership m
+              WHERE m.character_id = c.id AND m.status = 'active' AND m.expires_at > NOW()
+            )) AS month_card_active
+     FROM characters c WHERE c.user_id = $1`,
     [userId],
   );
 
@@ -167,12 +176,20 @@ export const getCharacter = async (userId: number): Promise<CharacterResult> => 
   return checkCharacter(userId);
 };
 
+type LedgerMeta = {
+  bizType: SpiritStonesLedgerBizType;
+  bizId?: string;
+  counterparty?: number;
+  memo?: string;
+};
+
 /**
  * 更新角色灵石余额（供股市服务调用）。
  */
 export const updateCharacterSpiritStones = async (
   characterId: number,
   delta: bigint,
+  ledgerMeta?: LedgerMeta,
 ): Promise<{ success: boolean; message: string; newBalance?: bigint }> => {
   const result = await query(
     `
@@ -189,9 +206,22 @@ export const updateCharacterSpiritStones = async (
     return { success: false, message: '灵石不足或角色不存在' };
   }
 
+  const newBalance = BigInt(result.rows[0].spirit_stones);
+  if (ledgerMeta) {
+    await recordSpiritStones({
+      characterId,
+      amount: delta,
+      balanceAfter: newBalance,
+      bizType: ledgerMeta.bizType,
+      bizId: ledgerMeta.bizId,
+      counterparty: ledgerMeta.counterparty,
+      memo: ledgerMeta.memo,
+    });
+  }
+
   return {
     success: true,
     message: '灵石更新成功',
-    newBalance: BigInt(result.rows[0].spirit_stones),
+    newBalance,
   };
 };

@@ -90,10 +90,12 @@ export type ShopConfigDto = {
   constants: {
     spaceExpansionAreaIncrement: number;
     spaceExpansionBaseCost: number;
+    spaceExpansionMaxCount: number;
     maxPendingRentTicks: number;
     decorationRefundRate: number;
     upgradeLevelBonusRate: number;
     upgradeTicksBase: number;
+    upgradeMaxLevel: number;
     rentTickIntervalMinutes: number;
   };
 };

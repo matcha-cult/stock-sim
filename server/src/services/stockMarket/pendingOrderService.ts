@@ -47,6 +47,7 @@ import {
   stockMarketPriceUnitsToSpiritStones,
   STOCK_MARKET_MIN_PRICE_UNITS,
   STOCK_MARKET_PRICE_SCALE,
+  type StockMarketTradeSide,
 } from './stockMarketRules.js';
 
 export type PendingOrderSide = 'buy' | 'sell';
@@ -76,8 +77,16 @@ export type PendingOrderDto = {
   status: PendingOrderStatus;
   quantity: number;
   limitPriceSpiritStones: number;
+  frozenSpiritStones: number;
   triggerMode: PendingOrderTriggerMode;
   createdAt: number;
+};
+
+export type GmPendingOrderDto = PendingOrderDto & {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  currentPriceSpiritStones: number;
 };
 
 type CreateOrderParams = {
@@ -176,7 +185,10 @@ class PendingOrderService {
       const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
       const totalCost = grossAmount + fee;
 
-      const consumeResult = await consumeSpiritStones(params.characterId, totalCost);
+      const consumeResult = await consumeSpiritStones(params.characterId, totalCost, {
+        bizType: 'pending_create',
+        memo: `创建 ${params.side} 挂单 ${definition.name} x${quantity}`,
+      });
       if (!consumeResult.success) {
         return { success: false, message: `灵石不足，预计需要 ${toDtoNumber(totalCost)} 灵石` };
       }
@@ -239,7 +251,10 @@ class PendingOrderService {
       const grossAmount = calculateStockMarketGrossAmount(limitPriceUnits, quantity, 'buy');
       const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
       const totalCost = grossAmount + fee;
-      await addSpiritStones(characterId, totalCost);
+      await addSpiritStones(characterId, totalCost, {
+        bizType: 'pending_cancel',
+        memo: `取消 ${side} 挂单，返还冻结资金`,
+      });
     }
 
     // 卖出单：恢复创建时冻结的股票数量（仅解冻，quantity 不变）
@@ -386,7 +401,7 @@ class PendingOrderService {
     // 判断是否满足成交条件
     const shouldExecute = this.shouldExecute(side, triggerMode, currentPriceUnits, limitPriceUnits);
     console.log(
-      `[PendingOrder] 挂单 ${orderId}: ${side} ${triggerMode} 当前价=${currentPrice} 限价=${limitPrice} 成交=${shouldExecute}`,
+      `[PendingOrder] characterId=${order.character_id} 挂单 ${orderId}: ${side} ${triggerMode} 当前价=${currentPrice} 限价=${limitPrice} 成交=${shouldExecute}`,
     );
     if (!shouldExecute) return;
 
@@ -397,13 +412,13 @@ class PendingOrderService {
     try {
       if (side === 'buy') {
         await this.executeBuyOrder(characterId, stockId, quantity, currentPriceUnits, orderId, limitPriceUnits);
-        console.log(`[PendingOrder] 挂单 ${orderId} 买入成交，数量=${quantity}`);
+        console.log(`[PendingOrder] characterId=${characterId} 挂单 ${orderId} 买入成交，数量=${quantity}`);
       } else {
         await this.executeSellOrder(characterId, stockId, quantity, currentPriceUnits, orderId, definitionMap);
-        console.log(`[PendingOrder] 挂单 ${orderId} 卖出成交，数量=${quantity}`);
+        console.log(`[PendingOrder] characterId=${characterId} 挂单 ${orderId} 卖出成交，数量=${quantity}`);
       }
     } catch (error) {
-      console.error(`[PendingOrder] 挂单 ${orderId} 执行失败:`, error);
+      console.error(`[PendingOrder] characterId=${characterId} 挂单 ${orderId} 执行失败:`, error);
       // 成交失败不影响其他挂单，继续处理
     }
   }
@@ -455,7 +470,10 @@ class PendingOrderService {
     // 返还冻结金额与实际成本之间的差额
     if (frozenTotal > totalCost) {
       const refund = frozenTotal - totalCost;
-      await addSpiritStones(characterId, refund);
+      await addSpiritStones(characterId, refund, {
+        bizType: 'pending_fill',
+        memo: `挂单成交价优于限价，返还差价`,
+      });
     }
 
     // 更新/创建持仓
@@ -516,14 +534,19 @@ class PendingOrderService {
     );
     const holding = holdingResult.rows[0];
     if (!holding) {
-      await this.markOrderFailed(orderId, '未持有该股票');
+      await this.markOrderFailed(orderId, '未持有该股票', characterId, stockId, quantity);
       return;
     }
 
     const holdingQty = toIntValue(holding.quantity);
     const frozenQty = toIntValue(holding.frozen_quantity ?? 0);
     if (quantity > frozenQty) {
-      await this.markOrderFailed(orderId, '冻结持仓不足');
+      await this.markOrderFailed(orderId, '冻结持仓不足', characterId, stockId, quantity);
+      return;
+    }
+    // 二次校验：防止数据不一致导致持仓被卖成负数（如 frozenQty > holdingQty 的异常状态）
+    if (quantity > holdingQty) {
+      await this.markOrderFailed(orderId, '实际持仓不足，订单数据异常', characterId, stockId, quantity);
       return;
     }
 
@@ -558,7 +581,10 @@ class PendingOrderService {
 
     // 加款
     if (netAmount > 0n) {
-      await addSpiritStones(characterId, netAmount);
+      await addSpiritStones(characterId, netAmount, {
+        bizType: 'pending_fill',
+        memo: `卖出挂单成交 ${definitionMap.get(stockId)?.name ?? stockId} x${quantity}`,
+      });
     }
 
     // 写 trade_record
@@ -585,8 +611,26 @@ class PendingOrderService {
     );
   }
 
-  private async markOrderFailed(orderId: bigint, reason: string): Promise<void> {
+  private async markOrderFailed(
+    orderId: bigint,
+    reason: string,
+    characterId?: number,
+    stockId?: string,
+    quantity?: number,
+  ): Promise<void> {
     console.log(`[PendingOrder] 挂单 ${orderId} 因 ${reason} 标记为取消`);
+    // 卖出挂单失败时，需要回滚创建时冻结的股票数量
+    if (characterId != null && stockId != null && quantity != null) {
+      await query(
+        `
+          UPDATE character_stock_holding
+          SET frozen_quantity = frozen_quantity - $3,
+              updated_at = NOW()
+          WHERE character_id = $1 AND stock_id = $2
+        `,
+        [characterId, stockId, quantity],
+      );
+    }
     await query(
       `UPDATE stock_market_pending_order SET status = 'cancelled', cancelled_at = NOW() WHERE id = $1`,
       [orderId.toString()],
@@ -632,9 +676,17 @@ class PendingOrderService {
     definitionMap: ReadonlyMap<string, StockMarketDefinition>,
   ): PendingOrderDto {
     const definition = definitionMap.get(row.stock_id);
-    const priceSpiritStones = stockMarketPriceUnitsToSpiritStones(
-      toBigIntValue(row.limit_price_units),
-    );
+    const limitPriceUnits = toBigIntValue(row.limit_price_units);
+    const priceSpiritStones = stockMarketPriceUnitsToSpiritStones(limitPriceUnits);
+    const quantity = toIntValue(row.quantity);
+    const side = row.side as StockMarketTradeSide;
+
+    // 计算冻结金额：买入 = gross + fee，卖出 = gross（冻结股票按限价的等价价值）
+    const grossAmount = calculateStockMarketGrossAmount(limitPriceUnits, quantity, side);
+    const fee = calculateStockMarketTradeFee(grossAmount, side);
+    const frozenSpiritStones = side === 'buy'
+      ? Number(grossAmount + fee)
+      : Number(grossAmount);
 
     return {
       id: toDtoNumber(toBigIntValue(row.id)),
@@ -643,11 +695,166 @@ class PendingOrderService {
       stockCode: definition?.code ?? row.stock_id,
       side: row.side as PendingOrderSide,
       status: row.status as PendingOrderStatus,
-      quantity: toIntValue(row.quantity),
+      quantity,
       limitPriceSpiritStones: priceSpiritStones,
+      frozenSpiritStones,
       triggerMode: row.trigger_mode as PendingOrderTriggerMode,
       createdAt: toTimestamp(row.created_at),
     };
+  }
+
+  /**
+   * GM 查看所有玩家的活跃挂单。
+   */
+  async gmGetAllPendingOrders(params: {
+    page: number;
+    pageSize: number;
+    characterId?: number;
+    nickname?: string;
+    stockId?: string;
+    side?: PendingOrderSide;
+  }): Promise<{
+    records: GmPendingOrderDto[];
+    total: number;
+    page: number;
+  }> {
+    const whereClauses: string[] = ['po.status = $1'];
+    const values: any[] = ['active'];
+    let paramIndex = 2;
+
+    if (params.characterId != null) {
+      whereClauses.push(`po.character_id = $${paramIndex}`);
+      values.push(params.characterId);
+      paramIndex++;
+    }
+    if (params.nickname) {
+      whereClauses.push(`c.nickname ILIKE $${paramIndex}`);
+      values.push(`%${params.nickname}%`);
+      paramIndex++;
+    }
+    if (params.stockId) {
+      whereClauses.push(`po.stock_id = $${paramIndex}`);
+      values.push(params.stockId);
+      paramIndex++;
+    }
+    if (params.side) {
+      whereClauses.push(`po.side = $${paramIndex}`);
+      values.push(params.side);
+      paramIndex++;
+    }
+
+    const whereSql = whereClauses.join(' AND ');
+
+    // 获取总数
+    const countResult = await query<{ count: string }>(
+      `
+        SELECT COUNT(*) FROM stock_market_pending_order po
+        JOIN characters c ON c.id = po.character_id
+        WHERE ${whereSql}
+      `,
+      values,
+    );
+    const total = parseInt(countResult.rows[0]?.count ?? '0', 10);
+
+    // 分页查询
+    const offset = (params.page - 1) * params.pageSize;
+    values.push(params.pageSize, offset);
+    const listResult = await query<PendingOrderRow & {
+      nickname: string;
+      title: string | null;
+      current_price_spirit_stones: string | number | bigint | null;
+    }>(
+      `
+        SELECT po.*, c.nickname, c.title,
+               sq.current_price_spirit_stones
+        FROM stock_market_pending_order po
+        JOIN characters c ON c.id = po.character_id
+        LEFT JOIN stock_market_quote sq ON sq.stock_id = po.stock_id
+        WHERE ${whereSql}
+        ORDER BY po.id ASC
+        LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+      `,
+      values,
+    );
+
+    const definitionMap = new Map(
+      getEnabledStockDefinitions().map((d) => [d.id, d] as const),
+    );
+
+    const records = listResult.rows.map((row) => {
+      const baseDto = this.buildDto(row, definitionMap);
+      const currentPriceUnits = toBigIntValue(row.current_price_spirit_stones);
+      return {
+        ...baseDto,
+        characterId: row.character_id,
+        nickname: row.nickname,
+        title: row.title,
+        currentPriceSpiritStones: stockMarketPriceUnitsToSpiritStones(currentPriceUnits),
+      };
+    });
+
+    return { records, total, page: params.page };
+  }
+
+  /**
+   * GM 取消任意玩家的活跃挂单。
+   * 复用 cancelOrder 的逻辑（返还冻结资金/恢复冻结持仓），去掉角色归属校验。
+   */
+  @Transactional
+  async gmCancelOrder(orderId: number): Promise<{ success: boolean; message: string }> {
+    const orderResult = await query<PendingOrderRow>(
+      `
+        SELECT id, character_id, stock_id, side, status, quantity, limit_price_units
+        FROM stock_market_pending_order
+        WHERE id = $1 AND status = 'active'
+        FOR UPDATE
+      `,
+      [orderId.toString()],
+    );
+
+    if (orderResult.rowCount === 0) {
+      return { success: false, message: '挂单不存在或已成交/已取消' };
+    }
+
+    const order = orderResult.rows[0];
+    const side = order.side as PendingOrderSide;
+    const quantity = toIntValue(order.quantity);
+    const limitPriceUnits = toBigIntValue(order.limit_price_units);
+    const characterId = order.character_id;
+
+    if (side === 'buy') {
+      const grossAmount = calculateStockMarketGrossAmount(limitPriceUnits, quantity, 'buy');
+      const fee = calculateStockMarketTradeFee(grossAmount, 'buy');
+      const totalCost = grossAmount + fee;
+      await addSpiritStones(characterId, totalCost, {
+        bizType: 'pending_cancel',
+        memo: `GM 取消 ${side} 挂单，返还冻结资金`,
+      });
+    }
+
+    if (side === 'sell') {
+      const stockId = order.stock_id;
+      await query(
+        `
+          UPDATE character_stock_holding
+          SET frozen_quantity = frozen_quantity - $3,
+              updated_at = NOW()
+          WHERE character_id = $1 AND stock_id = $2
+        `,
+        [characterId, stockId, quantity],
+      );
+    }
+
+    await query(
+      `
+        UPDATE stock_market_pending_order
+        SET status = 'cancelled', cancelled_at = NOW()
+        WHERE id = $1
+      `,
+      [orderId.toString()],
+    );
+
+    return { success: true, message: `已取消挂单 #${orderId}` };
   }
 }
 

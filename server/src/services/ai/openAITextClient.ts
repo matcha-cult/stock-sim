@@ -95,6 +95,10 @@ export const callConfiguredTextModel = async (params: {
     baseURL: config.baseURL,
     timeout: params.timeoutMs,
   });
+
+  // 调试：打印模型响应
+  console.log('[AI Response] Model:', config.modelName);
+
   const completion = await client.chat.completions.create(payload);
 
   // 调试：打印模型响应

@@ -48,10 +48,12 @@ export type ShopProfitCalculatorProps = {
     constants: {
       spaceExpansionAreaIncrement: number;
       spaceExpansionBaseCost: number;
+      spaceExpansionMaxCount: number;
       maxPendingRentTicks: number;
       decorationRefundRate: number;
       upgradeLevelBonusRate: number;
       upgradeTicksBase: number;
+      upgradeMaxLevel: number;
       rentTickIntervalMinutes: number;
     };
   };
@@ -142,13 +144,13 @@ const ShopProfitCalculator = observer(({ config, shops }: ShopProfitCalculatorPr
       const targetTierConfig = decorationTiers[targetTier];
       if (!targetTierConfig) continue;
 
-      // 枚举扩展次数（从当前到 +4）
-      const maxExtraExpansion = 4;
+      // 枚举扩展次数（从当前到 +4，最多不超过后端上限）
+      const maxExtraExpansion = Math.min(4, constants.spaceExpansionMaxCount - shop.spaceExpansion);
       for (let extraExp = 0; extraExp <= maxExtraExpansion; extraExp++) {
         const targetExpansion = shop.spaceExpansion + extraExp;
 
-        // 枚举升级等级（从当前到 +4）
-        const maxExtraUpgrade = 4;
+        // 枚举升级等级（从当前到 +4，最多不超过后端上限）
+        const maxExtraUpgrade = Math.min(4, constants.upgradeMaxLevel - shop.upgradeLevel);
         for (let extraUp = 0; extraUp <= maxExtraUpgrade; extraUp++) {
           const targetUpgradeLevel = shop.upgradeLevel + extraUp;
 

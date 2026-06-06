@@ -15,6 +15,10 @@ import characterRoutes from '../routes/characterRoutes.js';
 import stockMarketRoutes from '../routes/stockMarketRoutes.js';
 import rankRoutes from '../routes/rankRoutes.js';
 import shopRoutes from '../routes/shopRoutes.js';
+import ledgerRoutes from '../routes/ledgerRoutes.js';
+import scratchGameRoutes from '../routes/scratchGameRoutes.js';
+import monthCardRoutes from '../routes/monthCardRoutes.js';
+import gmMonthCardRoutes from '../routes/gmMonthCardRoutes.js';
 
 export function registerRoutes(app: express.Application): void {
   // 认证路由
@@ -31,4 +35,16 @@ export function registerRoutes(app: express.Application): void {
 
   // 店铺路由
   app.use('/api/shop', shopRoutes);
+
+  // 灵石流水账路由
+  app.use('/api/ledger', ledgerRoutes);
+
+  // 刮刮乐路由
+  app.use('/api/scratch', scratchGameRoutes);
+
+  // 月卡路由（玩家侧）
+  app.use('/api/month-card', monthCardRoutes);
+
+  // 月卡路由（GM 侧）
+  app.use('/api/gm/month-card', gmMonthCardRoutes);
 }

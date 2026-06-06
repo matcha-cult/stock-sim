@@ -24,6 +24,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   App, Button, Card, Drawer, Empty, Flex, Spin, Table, Tag, Timeline, Typography,
 } from 'antd';
+const { Text } = Typography;
 import type { ColumnsType } from 'antd/es/table';
 import { ReloadOutlined } from '@ant-design/icons';
 import {
@@ -39,8 +40,10 @@ import {
   getStockMarketToneClassName,
   formatStockMarketTime,
 } from '../../domain/stock-market/viewTransform';
+import { RequestDedup } from '../../stores/RequestDedup';
 
-const { Text, Title } = Typography;
+// 组件级请求去重（仅 in-flight 守卫）
+const dedup = new RequestDedup();
 
 const statusColorMap: Record<string, string> = {
   active: 'processing',
@@ -62,37 +65,52 @@ const GmNewsViewer: React.FC<GmNewsViewerProps> = ({ definitionMap }) => {
   const [chainLoading, setChainLoading] = useState(false);
 
   const fetchEvents = useCallback(async () => {
+    if (!dedup.enter('newsEvents')) return;
+
     setLoading(true);
-    try {
-      const response = await getNewsEventList(SILENT_API_REQUEST_CONFIG);
-      if (response.success) {
-        setEvents(response.data ?? []);
-      } else {
-        message.error(response.message ?? '加载事件列表失败');
+    const promise = (async () => {
+      try {
+        const response = await getNewsEventList(SILENT_API_REQUEST_CONFIG);
+        if (response.success) {
+          setEvents(response.data ?? []);
+        } else {
+          message.error(response.message ?? '加载事件列表失败');
+        }
+      } catch {
+        message.error('加载事件列表失败');
+      } finally {
+        setLoading(false);
+        dedup.complete('newsEvents');
       }
-    } catch {
-      message.error('加载事件列表失败');
-    } finally {
-      setLoading(false);
-    }
+    })();
+    dedup.start('newsEvents', promise);
+    return promise;
   }, [message]);
 
   const fetchChain = useCallback(async (eventId: string) => {
+    const key = `chain:${eventId}`;
+    if (!dedup.enter(key)) return;
+
     setChainLoading(true);
-    try {
-      const response = await getNewsEventChain(eventId, SILENT_API_REQUEST_CONFIG);
-      if (response.success) {
-        setChainData(response.data ?? null);
-      } else {
-        message.error(response.message ?? '加载续写链失败');
+    const promise = (async () => {
+      try {
+        const response = await getNewsEventChain(eventId, SILENT_API_REQUEST_CONFIG);
+        if (response.success) {
+          setChainData(response.data ?? null);
+        } else {
+          message.error(response.message ?? '加载续写链失败');
+          setChainData(null);
+        }
+      } catch {
+        message.error('加载续写链失败');
         setChainData(null);
+      } finally {
+        setChainLoading(false);
+        dedup.complete(key);
       }
-    } catch {
-      message.error('加载续写链失败');
-      setChainData(null);
-    } finally {
-      setChainLoading(false);
-    }
+    })();
+    dedup.start(key, promise);
+    return promise;
   }, [message]);
 
   const handleSelectEvent = useCallback((eventId: string) => {
@@ -183,41 +201,38 @@ const GmNewsViewer: React.FC<GmNewsViewerProps> = ({ definitionMap }) => {
   );
 
   return (
-    <Flex vertical gap={16} data-section="gm-news-viewer">
-      {/* 顶部控制栏 */}
-      <Flex justify="space-between" align="center" gap={12} wrap="wrap">
-        <Title level={5} style={{ margin: 0 }}>新闻事件查看器</Title>
-        <Flex gap={12} align="center">
-          <Button size="small" icon={<ReloadOutlined />} onClick={fetchEvents} loading={loading}>
-            刷新
-          </Button>
-        </Flex>
-      </Flex>
-
+    <Card
+      size="small"
+      title="GM新闻事件查看器"
+      extra={
+        <Button size="small" icon={<ReloadOutlined />} onClick={fetchEvents} loading={loading}>
+          刷新
+        </Button>
+      }
+      data-section="gm-news-viewer"
+    >
       {/* 事件列表 */}
-      <Card size="small" style={{ overflow: 'hidden' }}>
-        {events.length === 0 && !loading ? (
-          <Empty description="暂无事件数据" />
-        ) : (
-          <Table<NewsEventDto>
-            columns={eventColumns}
-            dataSource={events}
-            rowKey="id"
-            size="small"
-            pagination={{ pageSize: 15, showSizeChanger: false }}
-            loading={loading}
-            scroll={{ x: 800 }}
-            style={{ fontSize: 13 }}
-            onRow={(record) => ({
-              onClick: () => handleSelectEvent(record.id),
-              style: {
-                cursor: 'pointer',
-                background: selectedEventId === record.id ? 'var(--bg-hover)' : undefined,
-              },
-            })}
-          />
-        )}
-      </Card>
+      {events.length === 0 && !loading ? (
+        <Empty description="暂无事件数据" />
+      ) : (
+        <Table<NewsEventDto>
+          columns={eventColumns}
+          dataSource={events}
+          rowKey="id"
+          size="small"
+          pagination={{ pageSize: 15, showSizeChanger: false }}
+          loading={loading}
+          scroll={{ x: 800 }}
+          style={{ fontSize: 13 }}
+          onRow={(record) => ({
+            onClick: () => handleSelectEvent(record.id),
+            style: {
+              cursor: 'pointer',
+              background: selectedEventId === record.id ? 'var(--bg-hover)' : undefined,
+            },
+          })}
+        />
+      )}
 
       {/* Drawer 模式展示续写链 */}
       <Drawer
@@ -236,7 +251,7 @@ const GmNewsViewer: React.FC<GmNewsViewerProps> = ({ definitionMap }) => {
           loading={chainLoading}
         />
       </Drawer>
-    </Flex>
+    </Card>
   );
 };
 

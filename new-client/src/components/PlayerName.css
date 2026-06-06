@@ -1,0 +1,109 @@
+/**
+ * 玩家名称特效样式。
+ *
+ * GM 权限：红色文字 + 红色流光（优先级最高）
+ * 月卡激活：金色文字 + 金色流光
+ * GM 优先于月卡：两者都满足时只显示 GM 红色流光 + GM 标志
+ */
+
+.player-name {
+  position: relative;
+  display: inline-block;
+}
+
+.player-name-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* AppHeader 中的用户名作为 Dropdown 触发器时需要鼠标手型 */
+.app-header-username {
+  cursor: pointer;
+}
+
+.player-name-gm-tag {
+  margin: 0 !important;
+  font-size: 10px;
+  line-height: 1;
+  padding: 2px 2px;
+  height: auto;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* GM 红色流光 */
+.player-name.is-gm {
+  color: #8b2325;
+  font-weight: 500;
+}
+
+.player-name.is-gm::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 35%,
+    rgba(255, 180, 180, 0.2) 42%,
+    rgba(255, 255, 255, 0.95) 48%,
+    rgba(255, 160, 160, 0.8) 54%,
+    rgba(255, 255, 255, 0) 65%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 58% 100%;
+  background-repeat: no-repeat;
+  background-position: -80% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: none;
+  animation: player-name-shimmer 3.2s linear infinite;
+}
+
+/* 月卡金色流光 */
+.player-name.is-month-card-active {
+  color: var(--color-success, #e6a23c);
+  font-weight: 700;
+}
+
+.player-name.is-month-card-active::after {
+  content: attr(data-text);
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  background-image: linear-gradient(
+    100deg,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0) 35%,
+    rgba(255, 250, 230, 0.2) 42%,
+    rgba(255, 255, 255, 0.95) 48%,
+    rgba(250, 222, 160, 0.8) 54%,
+    rgba(255, 255, 255, 0) 65%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  background-size: 58% 100%;
+  background-repeat: no-repeat;
+  background-position: -80% 50%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  text-shadow: none;
+  animation: player-name-shimmer 3.2s linear infinite;
+}
+
+@keyframes player-name-shimmer {
+  from {
+    background-position: -80% 50%;
+  }
+  to {
+    background-position: 180% 50%;
+  }
+}

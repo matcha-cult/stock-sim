@@ -2,7 +2,7 @@
  * 股市 Store。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：管理股市概览、历史走势、交易记录、收益详情的请求状态和响应数据。
+ * 1. 做什么：管理股市概览、历史走势、交易记录、收益详情、排行榜、挂单的请求状态和响应数据。
  * 2. 不做什么：不做 UI 渲染、不直接操作表单状态。
  *
  * 输入 / 输出：
@@ -16,11 +16,13 @@
  * - 替代旧 client 组件内的 useState + useCallback 请求流，用 MobX observable 驱动。
  * - 请求逻辑集中在本模块，组件层只做 UI 交互 + 调用 Store 方法。
  * - 被 RootStore 持有，所有需要股市数据的组件通过 RootStore 读取。
+ * - 请求去重统一使用 RequestDedup，避免 StrictMode double-mount 和快速切 tab 重复请求。
  *
  * 关键边界条件与坑点：
  * 1. 选中股票不存在于新概览时需要自动回退到第一支。
  * 2. 后台刷新使用静默配置，不弹自动错误 toast。
- * 3. 历史请求需要在选中股票变化时触发，组件侧通过 reaction 或 effect 联动。
+ * 3. 历史请求需要在选中股票变化时触发，组件侧通过 effect 联动。
+ * 4. dedup.enter() 必须在设置 loading 之前调用；dedup.complete() 必须在 finally 中调用。
  */
 
 import { makeAutoObservable } from 'mobx';
@@ -49,16 +51,16 @@ import {
   getStockMarketRanks,
   type WealthRankDto,
   type StockMarketRankDto,
+  type StockMarketRankMetric,
 } from '../services/api/rank';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
+import { RequestDedup } from './RequestDedup';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
 export class StockStore {
-  /** 上次刷新 overview 时间戳，用于短时间去重（避免 StrictMode 双挂载重复请求）。 */
-  private lastOverviewFetchTs = 0;
-  /** 去重窗口：5s 内不重复请求。 */
-  private static readonly DEDUP_MS = 5_000;
+  /** 请求去重实例（TTL 5s）。 */
+  private readonly dedup = new RequestDedup();
 
   overview: StockMarketOverviewDto | null = null;
   selectedStockId: string = '';
@@ -93,30 +95,31 @@ export class StockStore {
   }
 
   async refreshOverview(background = false): Promise<void> {
-    const now = Date.now();
-    if (!background && now - this.lastOverviewFetchTs < StockStore.DEDUP_MS) {
-      return;
-    }
-    this.lastOverviewFetchTs = now;
+    if (!this.dedup.enter('overview', background)) return;
 
     if (!background) this.loading = true;
-    try {
-      const response = await getStockMarketOverview(
-        background ? SILENT_API_REQUEST_CONFIG : undefined,
-      );
-      const nextOverview = response.data ?? null;
-      this.overview = nextOverview;
-      if (nextOverview) {
-        const exists = nextOverview.stocks.some((s) => s.stockId === this.selectedStockId);
-        this.selectedStockId = exists ? this.selectedStockId : nextOverview.stocks[0]?.stockId ?? '';
+    const promise = (async () => {
+      try {
+        const response = await getStockMarketOverview(
+          background ? SILENT_API_REQUEST_CONFIG : undefined,
+        );
+        const nextOverview = response.data ?? null;
+        this.overview = nextOverview;
+        if (nextOverview) {
+          const exists = nextOverview.stocks.some((s) => s.stockId === this.selectedStockId);
+          this.selectedStockId = exists ? this.selectedStockId : nextOverview.stocks[0]?.stockId ?? '';
+        }
+      } catch {
+        if (!background) {
+          this.overview = null;
+        }
+      } finally {
+        if (!background) this.loading = false;
+        this.dedup.complete('overview');
       }
-    } catch {
-      if (!background) {
-        this.overview = null;
-      }
-    } finally {
-      if (!background) this.loading = false;
-    }
+    })();
+    this.dedup.start('overview', promise);
+    return promise;
   }
 
   setSelectedStockIdWithFallback(id: string): void {
@@ -141,73 +144,102 @@ export class StockStore {
   }
 
   async refreshTrades(page: number, background = false): Promise<void> {
+    const key = `trades:${page}`;
+    if (!this.dedup.enter(key, background)) return;
+
     if (!background) this.tradesLoading = true;
-    try {
-      const response = await getStockMarketTrades(
-        { page },
-        background ? SILENT_API_REQUEST_CONFIG : undefined,
-      );
-      const data = response.data;
-      this.tradeRecords = data?.records ?? [];
-      this.tradeTotal = data?.total ?? 0;
-      this.tradePage = data?.page ?? page;
-      this.tradePageSize = data?.pageSize ?? DEFAULT_TRADE_PAGE_SIZE;
-    } catch {
-      if (!background) {
-        this.tradeRecords = [];
-        this.tradeTotal = 0;
+    const promise = (async () => {
+      try {
+        const response = await getStockMarketTrades(
+          { page },
+          background ? SILENT_API_REQUEST_CONFIG : undefined,
+        );
+        const data = response.data;
+        this.tradeRecords = data?.records ?? [];
+        this.tradeTotal = data?.total ?? 0;
+        this.tradePage = data?.page ?? page;
+        this.tradePageSize = data?.pageSize ?? DEFAULT_TRADE_PAGE_SIZE;
+      } catch {
+        if (!background) {
+          this.tradeRecords = [];
+          this.tradeTotal = 0;
+        }
+      } finally {
+        if (!background) this.tradesLoading = false;
+        this.dedup.complete(key);
       }
-    } finally {
-      if (!background) this.tradesLoading = false;
-    }
+    })();
+    this.dedup.start(key, promise);
+    return promise;
   }
 
   async refreshProfitDetail(background = false): Promise<void> {
+    if (!this.dedup.enter('profit', background)) return;
+
     if (!background) this.profitLoading = true;
-    try {
-      const response = await getStockMarketProfitDetail(
-        background ? SILENT_API_REQUEST_CONFIG : undefined,
-      );
-      this.profitDetail = response.data ?? null;
-    } catch {
-      if (!background) {
-        this.profitDetail = null;
+    const promise = (async () => {
+      try {
+        const response = await getStockMarketProfitDetail(
+          background ? SILENT_API_REQUEST_CONFIG : undefined,
+        );
+        this.profitDetail = response.data ?? null;
+      } catch {
+        if (!background) {
+          this.profitDetail = null;
+        }
+      } finally {
+        if (!background) this.profitLoading = false;
+        this.dedup.complete('profit');
       }
-    } finally {
-      if (!background) this.profitLoading = false;
-    }
+    })();
+    this.dedup.start('profit', promise);
+    return promise;
   }
 
   async refreshWealthRanks(background = false): Promise<void> {
+    if (!this.dedup.enter('wealth', background)) return;
+
     if (!background) this.rankLoading = true;
-    try {
-      const response = await getWealthRanks(50, background ? SILENT_API_REQUEST_CONFIG : undefined);
-      this.wealthRanks = response.data ?? [];
-    } catch {
-      if (!background) {
-        this.wealthRanks = [];
+    const promise = (async () => {
+      try {
+        const response = await getWealthRanks(50, background ? SILENT_API_REQUEST_CONFIG : undefined);
+        this.wealthRanks = response.data ?? [];
+      } catch {
+        if (!background) {
+          this.wealthRanks = [];
+        }
+      } finally {
+        if (!background) this.rankLoading = false;
+        this.dedup.complete('wealth');
       }
-    } finally {
-      if (!background) this.rankLoading = false;
-    }
+    })();
+    this.dedup.start('wealth', promise);
+    return promise;
   }
 
-  async refreshStockMarketRanks(background = false): Promise<void> {
+  async refreshStockMarketRanks(metric: StockMarketRankMetric = 'value', background = false): Promise<void> {
+    if (!this.dedup.enter('stockMarketRanks', background)) return;
+
     if (!background) this.rankLoading = true;
-    try {
-      const response = await getStockMarketRanks(
-        'value',
-        50,
-        background ? SILENT_API_REQUEST_CONFIG : undefined,
-      );
-      this.stockMarketRanks = response.data ?? [];
-    } catch {
-      if (!background) {
-        this.stockMarketRanks = [];
+    const promise = (async () => {
+      try {
+        const response = await getStockMarketRanks(
+          metric,
+          50,
+          background ? SILENT_API_REQUEST_CONFIG : undefined,
+        );
+        this.stockMarketRanks = response.data ?? [];
+      } catch {
+        if (!background) {
+          this.stockMarketRanks = [];
+        }
+      } finally {
+        if (!background) this.rankLoading = false;
+        this.dedup.complete('stockMarketRanks');
       }
-    } finally {
-      if (!background) this.rankLoading = false;
-    }
+    })();
+    this.dedup.start('stockMarketRanks', promise);
+    return promise;
   }
 
   async executeTrade(
@@ -268,20 +300,28 @@ export class StockStore {
     this.rankLoading = false;
     this.pendingOrders = [];
     this.pendingOrdersLoading = false;
+    this.dedup.reset();
   }
 
   // ---- 挂单操作 ----
 
   async refreshPendingOrders(): Promise<void> {
+    if (!this.dedup.enter('pendingOrders')) return;
+
     this.pendingOrdersLoading = true;
-    try {
-      const response = await getPendingOrders(SILENT_API_REQUEST_CONFIG);
-      this.pendingOrders = response.data?.orders ?? [];
-    } catch {
-      this.pendingOrders = [];
-    } finally {
-      this.pendingOrdersLoading = false;
-    }
+    const promise = (async () => {
+      try {
+        const response = await getPendingOrders(SILENT_API_REQUEST_CONFIG);
+        this.pendingOrders = response.data?.orders ?? [];
+      } catch {
+        this.pendingOrders = [];
+      } finally {
+        this.pendingOrdersLoading = false;
+        this.dedup.complete('pendingOrders');
+      }
+    })();
+    this.dedup.start('pendingOrders', promise);
+    return promise;
   }
 
   async createPendingOrder(params: {

@@ -265,6 +265,7 @@ export interface PendingOrderDto {
   status: PendingOrderStatus;
   quantity: number;
   limitPriceSpiritStones: number;
+  frozenSpiritStones: number;
   triggerMode: PendingOrderTriggerMode;
   createdAt: number;
 }
@@ -304,4 +305,151 @@ export const getPendingOrders = (
   requestConfig?: AxiosRequestConfig,
 ): Promise<PendingOrdersListResponse> => {
   return api.get('/api/stock-market/pending-orders', requestConfig);
+};
+
+// ---- GM 股市查看器 ----
+
+export interface GmPlayerHoldingSummaryDto {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  totalHoldingQty: number;
+  totalMarketValueSpiritStones: number;
+  totalCostSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  realizedPnlSpiritStones: number;
+  totalPnlSpiritStones: number;
+  stockCount: number;
+}
+
+export interface GmCharacterHoldingItemDto {
+  stockId: string;
+  code: string;
+  name: string;
+  sector: string;
+  quantity: number;
+  frozenQuantity: number;
+  availableQty: number;
+  costSpiritStones: number;
+  currentPriceSpiritStones: number;
+  marketValueSpiritStones: number;
+  unrealizedPnlSpiritStones: number;
+  unrealizedPnlPercent: number;
+}
+
+export interface GmCharacterHoldingDto {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  holdings: GmCharacterHoldingItemDto[];
+  portfolio: {
+    totalHoldingQty: number;
+    totalCostSpiritStones: number;
+    totalMarketValueSpiritStones: number;
+    totalUnrealizedPnlSpiritStones: number;
+  };
+}
+
+export type GmHoldingsListResponse = {
+  success: boolean;
+  message?: string;
+  data: {
+    records: GmPlayerHoldingSummaryDto[];
+    total: number;
+    page: number;
+    pageSize: number;
+  };
+};
+
+export type GmCharacterHoldingResponse = {
+  success: boolean;
+  message?: string;
+  data: GmCharacterHoldingDto;
+};
+
+export type GmForceSellResponse = {
+  success: boolean;
+  message?: string;
+  soldStockCount?: number;
+  soldQuantity?: number;
+  netAmountSpiritStones?: number;
+};
+
+export const gmGetHoldingsList = (
+  params?: {
+    page?: number;
+    pageSize?: number;
+    nickname?: string;
+    characterId?: number;
+  },
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmHoldingsListResponse> => {
+  return api.get('/api/stock-market/gm/holdings', withRequestParams(requestConfig, {
+    page: params?.page,
+    pageSize: params?.pageSize,
+    nickname: params?.nickname,
+    characterId: params?.characterId,
+  }));
+};
+
+export const gmGetCharacterHoldings = (
+  characterId: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmCharacterHoldingResponse> => {
+  return api.get(`/api/stock-market/gm/holdings/${characterId}`, requestConfig);
+};
+
+export const gmForceSellStock = (
+  characterId: number,
+  body: { stockId: string; quantity?: number },
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmForceSellResponse> => {
+  return api.post(`/api/stock-market/gm/sell/${characterId}`, body, requestConfig);
+};
+
+// ---- GM 挂单管理 ----
+
+export interface GmPendingOrderDto extends PendingOrderDto {
+  characterId: number;
+  nickname: string;
+  title: string | null;
+  currentPriceSpiritStones: number;
+}
+
+export type GmPendingOrderListResponse = {
+  success: boolean;
+  message?: string;
+  data: {
+    records: GmPendingOrderDto[];
+    total: number;
+    page: number;
+  };
+};
+
+export const gmGetAllPendingOrders = (
+  params?: {
+    page?: number;
+    pageSize?: number;
+    nickname?: string;
+    characterId?: number;
+    stockId?: string;
+    side?: PendingOrderSide;
+  },
+  requestConfig?: AxiosRequestConfig,
+): Promise<GmPendingOrderListResponse> => {
+  return api.get('/api/stock-market/gm/pending-orders', withRequestParams(requestConfig, {
+    page: params?.page,
+    pageSize: params?.pageSize,
+    nickname: params?.nickname,
+    characterId: params?.characterId,
+    stockId: params?.stockId,
+    side: params?.side,
+  }));
+};
+
+export const gmCancelPendingOrder = (
+  orderId: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<{ success: boolean; message?: string }> => {
+  return api.delete(`/api/stock-market/gm/pending-orders/${orderId}`, requestConfig);
 };

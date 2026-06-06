@@ -29,6 +29,11 @@ import { sendResult, sendSuccess } from '../middleware/response.js';
 import { parseFiniteNumber, parseNonEmptyText, getSingleQueryValue } from '../services/shared/httpParam.js';
 import { stockMarketService } from '../services/stockMarket/stockMarketService.js';
 import { pendingOrderService } from '../services/stockMarket/pendingOrderService.js';
+import {
+  adjustSpiritStones,
+  lookupCharacterInfo,
+  type GmAdjustBizType,
+} from '../services/inventory/gmSpiritStonesService.js';
 
 const router: RouterType = Router();
 
@@ -66,6 +71,10 @@ const stockMarketNewsEventChainQpsLimit = createStockMarketQpsLimit('news-event-
 const stockMarketCreatePendingOrderQpsLimit = createStockMarketQpsLimit('create-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketCancelPendingOrderQpsLimit = createStockMarketQpsLimit('cancel-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketListPendingOrdersQpsLimit = createStockMarketQpsLimit('list-pending-orders', STOCK_MARKET_QUERY_QPS_LIMIT);
+const stockMarketGmPendingOrdersQpsLimit = createStockMarketQpsLimit('gm-pending-orders', STOCK_MARKET_QUERY_QPS_LIMIT);
+const stockMarketGmCancelPendingOrderQpsLimit = createStockMarketQpsLimit('gm-cancel-pending-order', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketGmSpiritStonesAdjustQpsLimit = createStockMarketQpsLimit('gm-spirit-stones-adjust', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketGmCharacterLookupQpsLimit = createStockMarketQpsLimit('gm-character-lookup', STOCK_MARKET_QUERY_QPS_LIMIT);
 
 const parseTradeBody = (body: StockMarketTradeBody): { stockId: string; quantity: number } | null => {
   const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
@@ -257,6 +266,179 @@ router.get('/pending-orders', requireCharacter, stockMarketListPendingOrdersQpsL
   const characterId = req.characterId!;
   const orders = await pendingOrderService.getActiveOrders(characterId);
   sendSuccess(res, { orders });
+}));
+
+// ---- GM 持仓查看与强制操作 ----
+
+const gmHoldingsQpsLimit = createStockMarketQpsLimit('gm-holdings', STOCK_MARKET_QUERY_QPS_LIMIT);
+const gmSellQpsLimit = createStockMarketQpsLimit('gm-sell', STOCK_MARKET_MUTATION_QPS_LIMIT);
+
+router.get('/gm/holdings', requireGm, gmHoldingsQpsLimit, asyncHandler(async (req, res) => {
+  const page = parseFiniteNumber(getSingleQueryValue(req.query.page));
+  const pageSize = parseFiniteNumber(getSingleQueryValue(req.query.pageSize));
+  const nickname = parseNonEmptyText(getSingleQueryValue(req.query.nickname));
+  const cid = parseFiniteNumber(getSingleQueryValue(req.query.characterId));
+
+  const data = await stockMarketService.gmGetAllHoldings({
+    page: page ?? 1,
+    pageSize: pageSize ?? 20,
+    nickname: nickname ?? undefined,
+    characterId: cid != null && Number.isFinite(cid) ? cid : undefined,
+  });
+  sendSuccess(res, data);
+}));
+
+router.get('/gm/holdings/:characterId', requireGm, gmHoldingsQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = parseFiniteNumber(typeof req.params.characterId === 'string' ? req.params.characterId : undefined);
+  if (characterId === undefined) {
+    sendResult(res, { success: false, message: 'characterId 参数无效' });
+    return;
+  }
+
+  const data = await stockMarketService.gmGetCharacterHoldings(characterId);
+  if (!data) {
+    sendResult(res, { success: false, message: '角色不存在' });
+    return;
+  }
+  sendSuccess(res, data);
+}));
+
+type GmForceSellBody = {
+  stockId?: string | null;
+  quantity?: string | number | null;
+};
+
+router.post('/gm/sell/:characterId', requireGm, gmSellQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = parseFiniteNumber(typeof req.params.characterId === 'string' ? req.params.characterId : undefined);
+  if (characterId === undefined) {
+    sendResult(res, { success: false, message: 'characterId 参数无效' });
+    return;
+  }
+
+  const body = req.body as GmForceSellBody;
+  const stockId = typeof body.stockId === 'string' ? body.stockId.trim() : '';
+  if (!stockId) {
+    sendResult(res, { success: false, message: 'stockId 参数无效' });
+    return;
+  }
+
+  const quantity = parseFiniteNumber(body.quantity ?? undefined);
+  const result = await stockMarketService.gmForceSellStock({
+    characterId,
+    stockId,
+    quantity: quantity != null ? Math.max(1, Math.trunc(quantity)) : undefined,
+  });
+  if (result.success) {
+    await safePushCharacterUpdate(req.userId!);
+  }
+  sendResult(res, result);
+}));
+
+// ---- GM 挂单管理 ----
+
+router.get('/gm/pending-orders', requireGm, stockMarketGmPendingOrdersQpsLimit, asyncHandler(async (req, res) => {
+  const page = parseFiniteNumber(getSingleQueryValue(req.query.page));
+  const pageSize = parseFiniteNumber(getSingleQueryValue(req.query.pageSize));
+  const nickname = parseNonEmptyText(getSingleQueryValue(req.query.nickname));
+  const cid = parseFiniteNumber(getSingleQueryValue(req.query.characterId));
+  const stockId = parseNonEmptyText(getSingleQueryValue(req.query.stockId));
+  const sideRaw = getSingleQueryValue(req.query.side);
+  const side = sideRaw === '' ? undefined : (sideRaw as 'buy' | 'sell');
+
+  if (side !== undefined && side !== 'buy' && side !== 'sell') {
+    sendResult(res, { success: false, message: 'side 参数无效' });
+    return;
+  }
+
+  const data = await pendingOrderService.gmGetAllPendingOrders({
+    page: page ?? 1,
+    pageSize: pageSize ?? 20,
+    nickname: nickname ?? undefined,
+    characterId: cid != null && Number.isFinite(cid) ? cid : undefined,
+    stockId: stockId ?? undefined,
+    side,
+  });
+  sendSuccess(res, data);
+}));
+
+router.delete('/gm/pending-orders/:orderId', requireGm, stockMarketGmCancelPendingOrderQpsLimit, asyncHandler(async (req, res) => {
+  const orderId = parseFiniteNumber(typeof req.params.orderId === 'string' ? req.params.orderId : undefined);
+  if (orderId === undefined) {
+    sendResult(res, { success: false, message: '订单ID参数无效' });
+    return;
+  }
+
+  const result = await pendingOrderService.gmCancelOrder(orderId);
+  sendResult(res, result);
+}));
+
+// ---- GM 灵石管理 ----
+
+/**
+ * GM 查询角色基本信息（昵称 + 当前余额）。
+ */
+router.get('/gm/character/:characterId', requireGm, stockMarketGmCharacterLookupQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = parseFiniteNumber(typeof req.params.characterId === 'string' ? req.params.characterId : undefined);
+  if (characterId === undefined) {
+    sendResult(res, { success: false, message: '角色ID参数无效' });
+    return;
+  }
+
+  const info = await lookupCharacterInfo(characterId);
+  if (!info) {
+    sendResult(res, { success: false, message: '角色不存在' });
+    return;
+  }
+  sendSuccess(res, info);
+}));
+
+/**
+ * GM 调整灵石余额（单人或全体）。
+ */
+router.post('/gm/spirit-stones/adjust', requireGm, stockMarketGmSpiritStonesAdjustQpsLimit, asyncHandler(async (req, res) => {
+  const body = req.body as Record<string, unknown>;
+
+  const target = body.target;
+  if (target !== 'single' && target !== 'all') {
+    sendResult(res, { success: false, message: '调整目标必须为 single 或 all' });
+    return;
+  }
+
+  const operation = body.operation;
+  if (operation !== 'add' && operation !== 'reduce') {
+    sendResult(res, { success: false, message: '操作类型必须为 add 或 reduce' });
+    return;
+  }
+
+  const amount = parseFiniteNumber(body.amount);
+  if (amount === undefined || !Number.isInteger(amount) || amount <= 0) {
+    sendResult(res, { success: false, message: '调整数量必须为正整数' });
+    return;
+  }
+
+  const bizType = body.bizType;
+  if (bizType !== 'gm_compensation' && bizType !== 'gm_rebate') {
+    sendResult(res, { success: false, message: '业务类型必须为 gm_compensation 或 gm_rebate' });
+    return;
+  }
+
+  const characterId = parseFiniteNumber(body.characterId);
+  if (target === 'single' && (characterId === undefined || characterId <= 0)) {
+    sendResult(res, { success: false, message: '单人调整必须指定有效的角色ID' });
+    return;
+  }
+
+  const memo = typeof body.memo === 'string' ? body.memo.trim() : '';
+
+  const result = await adjustSpiritStones({
+    target: target as 'single' | 'all',
+    characterId: characterId ?? undefined,
+    operation: operation as 'add' | 'reduce',
+    amount,
+    bizType: bizType as GmAdjustBizType,
+    memo,
+  });
+  sendResult(res, result);
 }));
 
 export default router;
