@@ -49,6 +49,7 @@ import GmStockViewer from './GmStockViewer/GmStockViewer';
 import GmPendingOrderViewer from './GmPendingOrderViewer/GmPendingOrderViewer';
 import GmSpiritStonesManager from './GmSpiritStonesManager/GmSpiritStonesManager';
 import GmMonthCardManager from './GmMonthCardManager/GmMonthCardManager';
+import ScratchCardPage from './ScratchCardPage';
 import {
   buildStockMarketOverviewViewModel,
   buildStockMarketTradePreview,
@@ -529,7 +530,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
             {
               key: 'scratch',
               label: '刮刮乐',
-              children: <div style={{ padding: 24, color: 'var(--text-tertiary)' }}>功能维护中</div>,
+              children: <ScratchCardPage />,
             },
             ...(authStore.user?.permissions.includes('GM')
               ? [{

@@ -40,6 +40,7 @@ export type SpiritStonesLedgerBizType =
   | 'gm_rebate'
   | 'gm_grant_month_card'
   | 'gm_revoke_month_card'
+  | 'scratch_prize'
   | 'month_card_daily'
   | 'other';
 
@@ -315,5 +316,6 @@ export const LEDGER_BIZ_TYPE_LABELS: Record<SpiritStonesLedgerBizType, string> =
   gm_grant_month_card: 'GM 发放月卡',
   gm_revoke_month_card: 'GM 回收月卡',
   month_card_daily: '月卡每日领取',
+  scratch_prize: '刮刮乐奖金',
   other: '其他',
 };

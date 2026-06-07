@@ -34,28 +34,30 @@ export interface LineDef {
 
 // ========== 开奖服务类型 ==========
 
-/** 单张票的选线输入 */
-export interface TicketSettleInput {
-  ticketNumber: number;
-  lineKey: string;
-}
-
-/** 单张票的开奖结果 */
-export interface TicketSettleResult {
-  ticketNumber: number;
-  lineKey: string;
-  lineName: string;
+/** 开奖结果（单张结算） */
+export interface SettleResultDto {
+  settled: boolean;
+  prize: number;
   lineSum: number;
   tierKey: string;
   tierName: string;
-  prizeAmount: number;
-}
-
-/** 开奖总结果 */
-export interface SettleResultDto {
-  settled: boolean;
-  totalPrize: number;
-  tickets: TicketSettleResult[];
+  nextTicketNumber: number | null;
+  /** 开奖后当前票的完整数据，用于前端替换本地缓存 */
+  ticket: {
+    ticketNumber: number;
+    configKey: string;
+    gridSize: number;
+    scratchCount: number;
+    maxScratchCount: number;
+    scratchedMask: number;
+    revealedValues: number[];
+    settled: boolean;
+    selectedLine: string;
+    lineSum: number;
+    prizeTier: string | null;
+    prizeTierName: string | null;
+    prizeAmount: number | null;
+  };
 }
 
 // ========== 线索引计算 ==========

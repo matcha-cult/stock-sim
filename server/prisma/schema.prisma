@@ -228,6 +228,7 @@ model scratch_ticket {
   max_scratch_count Int      @default(0) @db.SmallInt  // 最大可刮数
   status            String   @default("active") @db.VarChar(20) // active/completed/settled
   settled           Boolean  @default(false)   // 是否已开奖
+  reset_flag        Boolean  @default(false)   // 是否已被重置
   selected_line     String?  @db.VarChar(32)   // 选中的线（如 "row_0", "diag_1"）
   line_sum          Int?     // 选中线的和值
   prize_tier        String?  @db.VarChar(32)   // 中奖等级键

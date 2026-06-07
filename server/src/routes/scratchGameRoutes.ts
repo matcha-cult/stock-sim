@@ -1,7 +1,7 @@
 /**
  * 刮刮乐 HTTP 路由。
  *
- * 作用：提供获取当天彩票列表、刮格子、开奖的接口。
+ * 作用：提供概览（当天票据）、刮格子、单张开奖的接口。
  * 路由只做鉴权、QPS 和参数归一化，业务逻辑集中在 service。
  */
 import { Router, type Router as RouterType } from 'express';
@@ -10,6 +10,7 @@ import { requireCharacter } from '../middleware/auth.js';
 import { createQpsLimitMiddleware } from '../middleware/qpsLimit.js';
 import { sendSuccess } from '../middleware/response.js';
 import { scratchTicketService } from '../services/scratchGame/scratchTicketService.js';
+import { scratchPrizeConfigCache } from '../services/scratchGame/scratchPrizeConfigCache.js';
 
 const router: RouterType = Router();
 
@@ -26,13 +27,22 @@ const createScratchQpsLimit = (routeKey: string, limit: number) => createQpsLimi
   resolveScope: (req) => req.userId!,
 });
 
-const scratchTicketQpsLimit = createScratchQpsLimit('ticket', SCRATCH_QUERY_QPS_LIMIT);
+const scratchOverviewQpsLimit = createScratchQpsLimit('overview', SCRATCH_QUERY_QPS_LIMIT);
 const scratchCellQpsLimit = createScratchQpsLimit('cell', SCRATCH_MUTATION_QPS_LIMIT);
 const scratchSettleQpsLimit = createScratchQpsLimit('settle', SCRATCH_MUTATION_QPS_LIMIT);
+const scratchResetQpsLimit = createScratchQpsLimit('reset', SCRATCH_MUTATION_QPS_LIMIT);
+const scratchConfigQpsLimit = createQpsLimitMiddleware({
+  keyPrefix: 'qps:scratch:config',
+  limit: SCRATCH_QUERY_QPS_LIMIT,
+  windowMs: SCRATCH_QPS_WINDOW_MS,
+  message: SCRATCH_QPS_LIMIT_MESSAGE,
+  resolveScope: (req) => req.ip ?? 'global',
+});
 
-router.get('/tickets', requireCharacter, scratchTicketQpsLimit, asyncHandler(async (req, res) => {
+// GET /api/scratch/overview — 获取当天票据概览
+router.get('/overview', requireCharacter, scratchOverviewQpsLimit, asyncHandler(async (req, res) => {
   const characterId = req.characterId!;
-  const data = await scratchTicketService.getDayTickets(characterId);
+  const data = await scratchTicketService.overview(characterId);
   sendSuccess(res, data);
 }));
 
@@ -41,6 +51,7 @@ type ScratchCellBody = {
   cellIndex?: number | null;
 };
 
+// POST /api/scratch/scratch — 刮一个格子
 router.post('/scratch', requireCharacter, scratchCellQpsLimit, asyncHandler(async (req, res) => {
   const characterId = req.characterId!;
   const body = req.body as ScratchCellBody;
@@ -60,29 +71,38 @@ router.post('/scratch', requireCharacter, scratchCellQpsLimit, asyncHandler(asyn
   sendSuccess(res, data);
 }));
 
+// POST /api/scratch/settle — 单张开奖
 router.post('/settle', requireCharacter, scratchSettleQpsLimit, asyncHandler(async (req, res) => {
   const characterId = req.characterId!;
-  const body = req.body as { lines?: { ticketNumber?: unknown; lineKey?: unknown }[] };
+  const body = req.body as { ticketNumber?: unknown; lineKey?: unknown };
 
-  if (!Array.isArray(body.lines) || body.lines.length === 0) {
-    res.status(400).json({ success: false, message: 'lines 必须为非空数组' });
+  const ticketNumber = typeof body.ticketNumber === 'number' ? body.ticketNumber : null;
+  const lineKey = typeof body.lineKey === 'string' ? body.lineKey : null;
+
+  if (ticketNumber === null || ticketNumber < 1 || ticketNumber > 3) {
+    res.status(400).json({ success: false, message: 'ticketNumber 必须为 1-3 的整数' });
+    return;
+  }
+  if (lineKey === null || !lineKey) {
+    res.status(400).json({ success: false, message: 'lineKey 必须为有效字符串' });
     return;
   }
 
-  const lines = body.lines.map((item, idx) => {
-    const ticketNumber = typeof item.ticketNumber === 'number' ? item.ticketNumber : null;
-    const lineKey = typeof item.lineKey === 'string' ? item.lineKey : null;
-    if (ticketNumber === null || ticketNumber < 1 || ticketNumber > 3) {
-      throw new Error(`lines[${idx}].ticketNumber 必须为 1-3 的整数`);
-    }
-    if (lineKey === null || !lineKey) {
-      throw new Error(`lines[${idx}].lineKey 必须为有效字符串`);
-    }
-    return { ticketNumber, lineKey };
-  });
-
-  const data = await scratchTicketService.settle(characterId, lines);
+  const data = await scratchTicketService.settle(characterId, ticketNumber, lineKey);
   sendSuccess(res, data);
+}));
+
+// GET /api/scratch/config — 获取开奖规则配置（票类型、奖级、可选线）
+router.get('/config', scratchConfigQpsLimit, asyncHandler(async (_req, res) => {
+  const data = scratchPrizeConfigCache.getAllRules();
+  sendSuccess(res, data);
+}));
+
+// POST /api/scratch/reset — 重置当天未开奖票
+router.post('/reset', requireCharacter, scratchResetQpsLimit, asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const data = await scratchTicketService.resetTickets(characterId);
+  sendSuccess(res, { tickets: data });
 }));
 
 export default router;

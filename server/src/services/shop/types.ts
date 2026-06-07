@@ -36,7 +36,7 @@ export const SHOP_TYPE_CONFIG: Record<ShopType, {
   [SHOP_TYPES.PLANT]: { name: '灵植', initialArea: 50, initialRent: 25, purchaseCost: 200000 },
   [SHOP_TYPES.MINERAL]: { name: '矿材', initialArea: 40, initialRent: 20, purchaseCost: 120000 },
   [SHOP_TYPES.ARTIFACT]: { name: '法器', initialArea: 35, initialRent: 18, purchaseCost: 80000 },
-  [SHOP_TYPES.PILL]: { name: '丹药', initialArea: 30, initialRent: 25, purchaseCost: 150000 },
+  [SHOP_TYPES.PILL]: { name: '丹药', initialArea: 30, initialRent: 15, purchaseCost: 150000 },
   [SHOP_TYPES.FOOD]: { name: '餐饮', initialArea: 25, initialRent: 15, purchaseCost: 50000 },
   [SHOP_TYPES.BOOK]: { name: '书籍', initialArea: 20, initialRent: 10, purchaseCost: 0 },
 };

@@ -86,7 +86,7 @@ const SHOP_TYPE_CONFIG: Record<string, {
   PLT: { name: '灵植', initialArea: 50, initialRent: 25 },
   MIN: { name: '矿材', initialArea: 40, initialRent: 20 },
   ART: { name: '法器', initialArea: 35, initialRent: 18 },
-  DAN: { name: '丹药', initialArea: 30, initialRent: 25 },
+  DAN: { name: '丹药', initialArea: 30, initialRent: 15 },
   FBD: { name: '餐饮', initialArea: 25, initialRent: 15 },
   BOO: { name: '书籍', initialArea: 20, initialRent: 10 },
 };
