@@ -20,18 +20,24 @@ const router: RouterType = Router();
 
 const AUTH_QPS_LIMIT_MESSAGE = '认证请求过于频繁，请稍后再试';
 
+const REGISTER_QPS_LIMIT = parseInt(process.env.AUTH_REGISTER_QPS_LIMIT ?? '6', 10);
+const REGISTER_QPS_WINDOW_MS = parseInt(process.env.AUTH_REGISTER_QPS_WINDOW_MS ?? String(10 * 60 * 1000), 10);
+
+const LOGIN_QPS_LIMIT = parseInt(process.env.AUTH_LOGIN_QPS_LIMIT ?? '12', 10);
+const LOGIN_QPS_WINDOW_MS = parseInt(process.env.AUTH_LOGIN_QPS_WINDOW_MS ?? String(60 * 1000), 10);
+
 const registerQpsLimit = createQpsLimitMiddleware({
   keyPrefix: 'qps:auth:register',
-  limit: 6,
-  windowMs: 10 * 60 * 1000,
+  limit: REGISTER_QPS_LIMIT,
+  windowMs: REGISTER_QPS_WINDOW_MS,
   message: AUTH_QPS_LIMIT_MESSAGE,
-  resolveScope: () => 'global',
+  resolveScope: (req) => req.ip ?? 'unknown',
 });
 
 const loginQpsLimit = createQpsLimitMiddleware({
   keyPrefix: 'qps:auth:login',
-  limit: 12,
-  windowMs: 60 * 1000,
+  limit: LOGIN_QPS_LIMIT,
+  windowMs: LOGIN_QPS_WINDOW_MS,
   message: AUTH_QPS_LIMIT_MESSAGE,
   resolveScope: () => 'global',
 });
