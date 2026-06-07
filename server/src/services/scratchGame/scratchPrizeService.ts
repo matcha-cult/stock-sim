@@ -105,8 +105,9 @@ class ScratchPrizeService {
       [lineKey, lineSum, tierKey, prizeAmount, allMask, String(row.id)],
     );
 
-    // 5. 如果奖金 > 0：更新角色灵石 + 写流水
-    if (prizeAmount > 0) {
+    // 5. 如果奖金 > 0 且非测试模式：更新角色灵石 + 写流水
+    const { settleWithoutPrize } = scratchPrizeConfigCache.getGlobalFlags();
+    if (prizeAmount > 0 && !settleWithoutPrize) {
       await query(
         `UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = now() WHERE id = $2`,
         [prizeAmount, characterId],

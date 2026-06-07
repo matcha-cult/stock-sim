@@ -91,7 +91,6 @@ export default function ScratchCardPage(): React.ReactNode {
   const { message } = App.useApp();
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<ScratchSettleResultDto | null>(null);
-  const [scratchingCellIndex, setScratchingCellIndex] = useState<number | null>(null);
   const [selectedTicketNumber, setSelectedTicketNumber] = useState<number | null>(null);
   const [rulesVisible, setRulesVisible] = useState(false);
 
@@ -126,25 +125,15 @@ export default function ScratchCardPage(): React.ReactNode {
   // 格子点击
   const handleCellClick = useCallback(async (cellIndex: number) => {
     if (!currentTicket || currentTicket.settled) return;
-    if (scratchingCellIndex !== null) return; // 正在刮
 
     const ticket = currentTicket;
-    // 检查是否可以刮
     if (ticket.settled) return;
     if ((ticket.scratchedMask & (1 << cellIndex)) !== 0) return; // 已刮
     if (ticket.scratchCount >= ticket.maxScratchCount) return; // 已刮满
+    if (cellLoading) return; // 正在刮
 
-    setScratchingCellIndex(cellIndex);
-    try {
-      const result = await scratchCell(ticket.ticketNumber, cellIndex);
-      if (!result) return;
-      if (result.scratchCount >= result.maxScratchCount) {
-        message.info('已刮满，请选择开奖线并点击"开奖"');
-      }
-    } finally {
-      setScratchingCellIndex(null);
-    }
-  }, [currentTicket, scratchingCellIndex, scratchCell, message]);
+    await scratchCell(ticket.ticketNumber, cellIndex);
+  }, [currentTicket, cellLoading, scratchCell]);
 
   // 选线
   const handleLineSelect = useCallback((lineKey: string) => {
@@ -340,7 +329,7 @@ export default function ScratchCardPage(): React.ReactNode {
             ticket={currentTicket}
             lines={lines}
             selectedLine={displaySelectedLine}
-            scratchingCellIndex={scratchingCellIndex}
+            cellLoading={cellLoading}
             cellSize={cellSize}
             gap={gap}
             onCellClick={handleCellClick}
@@ -562,7 +551,7 @@ interface ScratchGridProps {
   ticket: ScratchTicketDto;
   lines: LineDef[];
   selectedLine: string | null;
-  scratchingCellIndex: number | null;
+  cellLoading: boolean;
   cellSize: number;
   gap: number;
   onCellClick: (cellIndex: number) => void;
@@ -573,7 +562,7 @@ function ScratchGrid({
   ticket,
   lines,
   selectedLine,
-  scratchingCellIndex,
+  cellLoading,
   cellSize,
   gap,
   onCellClick,
@@ -616,11 +605,10 @@ function ScratchGrid({
       const col = i % N;
       const isRevealed = (ticket.scratchedMask & (1 << i)) !== 0;
       const isSelected = selectedLineIndices.has(i);
-      const isScratching = scratchingCellIndex === i;
       const isSettled = ticket.settled;
 
-      // 已开奖或已刮的格子显示值，否则显示 ?
-      const displayValue = (isSettled || isRevealed) ? ticket.revealedValues[i] : '?';
+      // 已开奖或已刮的格子显示值，未刮格子共享 cellLoading loading 状态
+      const displayValue = (isSettled || isRevealed) ? ticket.revealedValues[i] : (cellLoading ? <Spin size="small" /> : '?');
 
       // 未刮格子：灰色边框 + 灰色背景；已刮格子：主色 30% 背景；选线格子：主色边框
       const cellBorder = isSelected ? '2px solid #1890ff' : '1px solid var(--border-color-soft)';
@@ -659,16 +647,12 @@ function ScratchGrid({
             }
           }}
         >
-          {isScratching ? (
-            <Spin size="small" />
-          ) : (
-            displayValue
-          )}
+          {displayValue}
         </div>,
       );
     }
     return result;
-  }, [ticket, selectedLineIndices, scratchingCellIndex, cellSize, N, onCellClick]);
+  }, [ticket, selectedLineIndices, cellLoading, cellSize, N, onCellClick]);
 
   // 右侧操作列：所有行都渲染空占位 div，不显示任何内容
   const rightIndicators = useMemo(() => {
