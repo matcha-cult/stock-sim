@@ -62,7 +62,26 @@ router.post('/scratch', requireCharacter, scratchCellQpsLimit, asyncHandler(asyn
 
 router.post('/settle', requireCharacter, scratchSettleQpsLimit, asyncHandler(async (req, res) => {
   const characterId = req.characterId!;
-  const data = await scratchTicketService.settle(characterId);
+  const body = req.body as { lines?: { ticketNumber?: unknown; lineKey?: unknown }[] };
+
+  if (!Array.isArray(body.lines) || body.lines.length === 0) {
+    res.status(400).json({ success: false, message: 'lines 必须为非空数组' });
+    return;
+  }
+
+  const lines = body.lines.map((item, idx) => {
+    const ticketNumber = typeof item.ticketNumber === 'number' ? item.ticketNumber : null;
+    const lineKey = typeof item.lineKey === 'string' ? item.lineKey : null;
+    if (ticketNumber === null || ticketNumber < 1 || ticketNumber > 3) {
+      throw new Error(`lines[${idx}].ticketNumber 必须为 1-3 的整数`);
+    }
+    if (lineKey === null || !lineKey) {
+      throw new Error(`lines[${idx}].lineKey 必须为有效字符串`);
+    }
+    return { ticketNumber, lineKey };
+  });
+
+  const data = await scratchTicketService.settle(characterId, lines);
   sendSuccess(res, data);
 }));
 

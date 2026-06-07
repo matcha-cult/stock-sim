@@ -31,6 +31,7 @@ import { initStockDefinitions } from './services/staticConfigLoader.js';
 import { initializeStockMarketScheduler, stopStockMarketScheduler } from './services/stockMarket/stockMarketScheduler.js';
 import { initializeShopRentScheduler, stopShopRentScheduler } from './services/shop/shopRentScheduler.js';
 import { monthCardConfigCache } from './services/monthCard/monthCardConfigCache.js';
+import { scratchPrizeConfigCache } from './services/scratchGame/scratchPrizeConfigCache.js';
 import './types/express.d.ts';
 
 dotenv.config();
@@ -63,6 +64,10 @@ async function startServer() {
   // 加载月卡配置（种子 UPSERT + 缓存加载）
   await monthCardConfigCache.init();
   logger.info('月卡配置缓存已加载（种子已同步）');
+
+  // 加载刮刮乐奖金配置（种子 UPSERT + 缓存加载）
+  await scratchPrizeConfigCache.init();
+  logger.info('刮刮乐奖金配置缓存已加载（种子已同步）');
 
   // 测试 Redis 连接
   try {

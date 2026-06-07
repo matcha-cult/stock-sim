@@ -63,7 +63,6 @@ import {
 import StockCandlestick from './StockCandlestick';
 import PendingOrderCard from './PendingOrderCard';
 import PendingOrderManagement from './PendingOrderManagement';
-// import ScratchCard from './ScratchCard'; // 刮刮乐已屏蔽
 import PlayerName from './PlayerName';
 
 const { Content } = Layout;
@@ -527,12 +526,11 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
               label: '灵石流水',
               children: <LedgerTab />,
             },
-            // 刮刮乐已屏蔽
-            // {
-            //   key: 'scratch',
-            //   label: '刮刮乐',
-            //   children: <ScratchCard />,
-            // },
+            {
+              key: 'scratch',
+              label: '刮刮乐',
+              children: <div style={{ padding: 24, color: 'var(--text-tertiary)' }}>功能维护中</div>,
+            },
             ...(authStore.user?.permissions.includes('GM')
               ? [{
                 key: 'gm-online-ops' as const,

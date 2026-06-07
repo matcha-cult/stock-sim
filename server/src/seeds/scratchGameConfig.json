@@ -1,0 +1,63 @@
+{
+  "configs": [
+    {
+      "configKey": "3x3",
+      "ticketNumber": 1,
+      "gridSize": 9,
+      "maxScratchCount": 3,
+      "minVisibleCount": 3,
+      "description": "九宫格"
+    },
+    {
+      "configKey": "4x4",
+      "ticketNumber": 2,
+      "gridSize": 16,
+      "maxScratchCount": 4,
+      "minVisibleCount": 4,
+      "description": "十六格"
+    },
+    {
+      "configKey": "5x5",
+      "ticketNumber": 3,
+      "gridSize": 25,
+      "maxScratchCount": 5,
+      "minVisibleCount": 5,
+      "description": "二十五格"
+    }
+  ],
+  "prizeTiers": [
+    {
+      "configKey": "3x3",
+      "tiers": [
+        { "tierKey": "grand",       "tierName": "特等奖", "sumMin": 6,   "sumMax": 6,   "prizeAmount": 50000, "sortOrder": 0 },
+        { "tierKey": "regular_1",   "tierName": "一等奖", "sumMin": 24,  "sumMax": 24,  "prizeAmount": 20000, "sortOrder": 1 },
+        { "tierKey": "regular_2",   "tierName": "二等奖", "sumMin": 7,   "sumMax": 9,   "prizeAmount": 5000,  "sortOrder": 2 },
+        { "tierKey": "regular_3",   "tierName": "三等奖", "sumMin": 19,  "sumMax": 23,  "prizeAmount": 2000,  "sortOrder": 3 },
+        { "tierKey": "regular_4",   "tierName": "四等奖", "sumMin": 10,  "sumMax": 13,  "prizeAmount": 500,   "sortOrder": 4 },
+        { "tierKey": "consolation", "tierName": "安慰奖",   "sumMin": 14,  "sumMax": 18,  "prizeAmount": 300,   "sortOrder": 5 }
+      ]
+    },
+    {
+      "configKey": "4x4",
+      "tiers": [
+        { "tierKey": "grand",       "tierName": "特等奖", "sumMin": 10,  "sumMax": 10,  "prizeAmount": 50000, "sortOrder": 0 },
+        { "tierKey": "regular_1",   "tierName": "一等奖", "sumMin": 58,  "sumMax": 58,  "prizeAmount": 20000, "sortOrder": 1 },
+        { "tierKey": "regular_2",   "tierName": "二等奖", "sumMin": 11,  "sumMax": 16,  "prizeAmount": 5000,  "sortOrder": 2 },
+        { "tierKey": "regular_3",   "tierName": "三等奖", "sumMin": 45,  "sumMax": 57,  "prizeAmount": 2000,  "sortOrder": 3 },
+        { "tierKey": "regular_4",   "tierName": "四等奖", "sumMin": 17,  "sumMax": 28,  "prizeAmount": 500,   "sortOrder": 4 },
+        { "tierKey": "consolation", "tierName": "安慰奖",   "sumMin": 29,  "sumMax": 44,  "prizeAmount": 300,   "sortOrder": 5 }
+      ]
+    },
+    {
+      "configKey": "5x5",
+      "tiers": [
+        { "tierKey": "grand",       "tierName": "特等奖", "sumMin": 15,  "sumMax": 15,  "prizeAmount": 50000, "sortOrder": 0 },
+        { "tierKey": "regular_1",   "tierName": "一等奖", "sumMin": 115, "sumMax": 115, "prizeAmount": 20000, "sortOrder": 1 },
+        { "tierKey": "regular_2",   "tierName": "二等奖", "sumMin": 16,  "sumMax": 25,  "prizeAmount": 5000,  "sortOrder": 2 },
+        { "tierKey": "regular_3",   "tierName": "三等奖", "sumMin": 86,  "sumMax": 114, "prizeAmount": 2000,  "sortOrder": 3 },
+        { "tierKey": "regular_4",   "tierName": "四等奖", "sumMin": 26,  "sumMax": 45,  "prizeAmount": 500,   "sortOrder": 4 },
+        { "tierKey": "consolation", "tierName": "安慰奖",   "sumMin": 46,  "sumMax": 85,  "prizeAmount": 300,   "sortOrder": 5 }
+      ]
+    }
+  ]
+}
