@@ -533,7 +533,7 @@ const ShopPanel = observer(() => {
   const ownedTypes = new Set(shopStore.shops.map((s) => s.shopType));
   const purchasableShops = shopStore.config
     ? Object.entries(shopStore.config.shopTypes)
-      .filter(([type, cfg]) => type !== 'BOO' && cfg.purchaseCost > 0 && !ownedTypes.has(type))
+      .filter(([type, cfg]) => cfg.purchaseCost >= 0 && !ownedTypes.has(type))
       .sort(([, a], [, b]) => a.purchaseCost - b.purchaseCost)
     : [];
 
@@ -867,8 +867,8 @@ const ShopPanel = observer(() => {
                       初始面积 {cfg.initialArea} ㎡，每次收取租金 {cfg.initialRent} 灵石
                     </Text>
                   </Flex>
-                  <Text style={{ color: 'var(--colorError)', fontWeight: 600 }}>
-                    {formatSpiritStones(cfg.purchaseCost)} 灵石
+                  <Text style={{ color: cfg.purchaseCost > 0 ? 'var(--colorError)' : 'var(--colorSuccess)', fontWeight: 600 }}>
+                    {cfg.purchaseCost > 0 ? `${formatSpiritStones(cfg.purchaseCost)} 灵石` : '免费'}
                   </Text>
                 </Flex>
               </Card>

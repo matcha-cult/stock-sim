@@ -634,12 +634,6 @@ class ShopService {
       return { success: false, message: '已拥有该类型店铺' };
     }
 
-    // 检查是否已有任意店铺（防止滥用）
-    const anyShopCheck = await query(
-      `SELECT id FROM shop_detail WHERE character_id = $1 LIMIT 1`,
-      [characterId],
-    );
-
     const config = SHOP_TYPE_CONFIG[INITIAL_SHOP_TYPE];
     const area = config.initialArea;
 
@@ -688,7 +682,7 @@ class ShopService {
 
     const config = SHOP_TYPE_CONFIG[shopType];
     if (!config) return { success: false, message: '店铺类型不存在' };
-    if (config.purchaseCost <= 0) return { success: false, message: '该类型不可购买' };
+    if (config.purchaseCost < 0) return { success: false, message: '该类型不可购买' };
 
     const cost = BigInt(config.purchaseCost);
     const consumeResult = await consumeSpiritStones(characterId, cost, {
