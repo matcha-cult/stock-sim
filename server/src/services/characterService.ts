@@ -14,7 +14,7 @@
  *
  * 复用设计说明：
  * - 仅保留股市交易所需的角色属性，移除所有游戏功能依赖。
- * - 默认灵石设置为 10000，让新用户可以立即体验股市交易。
+ * - 默认灵石通过环境变量 DEFAULT_REGISTRATION_SPIRIT_STONES 配置，未设置时回退 10000。
  *
  * 关键边界条件与坑点：
  * 1. 每个用户只能创建一个角色，创建前必须检查是否已存在。
@@ -26,6 +26,11 @@ import {
   recordSpiritStones,
   type SpiritStonesLedgerBizType,
 } from './ledgerService.js';
+
+const DEFAULT_REGISTRATION_SPIRIT_STONES = parseInt(
+  process.env.DEFAULT_REGISTRATION_SPIRIT_STONES ?? '10000',
+  10,
+);
 
 export interface Character {
   id: number;
@@ -111,7 +116,7 @@ export const checkCharacter = async (userId: number): Promise<CharacterResult> =
 
 /**
  * 创建角色。
- * 默认灵石设置为 10000，让新用户可以立即体验股市交易。
+ * 初始灵石通过环境变量 DEFAULT_REGISTRATION_SPIRIT_STONES 配置，未设置时回退 10000。
  */
 export const createCharacter = async (
   userId: number,
@@ -130,18 +135,18 @@ export const createCharacter = async (
     return { success: false, message: nicknameValidation.message! };
   }
 
-  // 创建角色（默认灵石 10000）
+  // 创建角色（灵石从环境变量读取）
   const insertSQL = `
     INSERT INTO characters (
       user_id, nickname, gender, title,
       spirit_stones, silver, updated_at
     ) VALUES (
       $1, $2, $3, '散修',
-      10000, 0, CURRENT_TIMESTAMP
+      $4, 0, CURRENT_TIMESTAMP
     ) RETURNING id, user_id, nickname, gender, title, spirit_stones, silver, created_at, updated_at
   `;
 
-  const result = await query(insertSQL, [userId, nicknameValidation.nickname, gender]);
+  const result = await query(insertSQL, [userId, nicknameValidation.nickname, gender, DEFAULT_REGISTRATION_SPIRIT_STONES]);
   const row = result.rows[0];
 
   const characterId = Number(row.id);
