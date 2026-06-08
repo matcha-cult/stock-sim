@@ -28,7 +28,7 @@ model users {
 model characters {
   id               Int      @id @default(autoincrement())
   user_id          Int      @unique
-  nickname         String   @db.VarChar(50)
+  nickname         String   @unique @db.VarChar(50)
   gender           String   @db.VarChar(10)
   title            String?  @default("散修") @db.VarChar(50)
   spirit_stones    BigInt   @default(10000)

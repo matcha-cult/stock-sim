@@ -85,8 +85,8 @@ const validate = (config: ConfigSeed): void => {
 };
 
 const validateTiers = (configKey: string, tiers: TierSeed[], lineLen: number): void => {
-  if (tiers.length !== 6) {
-    throw new Error(`config ${configKey}: 奖金 tier 数量必须为 6，当前 ${tiers.length}`);
+  if (tiers.length < 6) {
+    throw new Error(`config ${configKey}: 奖金 tier 数量不能少于 6，当前 ${tiers.length}`);
   }
   const gridSize = lineLen * lineLen;
   const minSum = (lineLen * (lineLen + 1)) / 2;

@@ -89,8 +89,8 @@ const validate = (config: ConfigSeed): void => {
 };
 
 const validateTiers = (configKey: string, tiers: TierSeed[], lineLen: number): void => {
-  if (tiers.length !== 6) {
-    throw new Error(`config ${configKey}: 奖金 tier 数量必须为 6（1 特等 + 4 普通 + 1 安慰），当前 ${tiers.length}`);
+  if (tiers.length < 6) {
+    throw new Error(`config ${configKey}: 奖金 tier 数量不能少于 6（支持双区间拆分），当前 ${tiers.length}`);
   }
 
   const minSum = (lineLen * (lineLen + 1)) / 2;  // 1+2+...+N
