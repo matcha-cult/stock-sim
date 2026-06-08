@@ -1,0 +1,10 @@
+[
+  { "factory_type": "WOODWORK",  "base_cost_per_puppet": 1000, "max_puppets": 16 },
+  { "factory_type": "FORGE",     "base_cost_per_puppet": 1500, "max_puppets": 20 },
+  { "factory_type": "ARMORY",    "base_cost_per_puppet": 1300, "max_puppets": 18 },
+  { "factory_type": "JADESMITH", "base_cost_per_puppet": 2500, "max_puppets": 12 },
+  { "factory_type": "LEATHER",   "base_cost_per_puppet": 800,  "max_puppets": 14 },
+  { "factory_type": "WEAVING",   "base_cost_per_puppet": 1200, "max_puppets": 14 },
+  { "factory_type": "ALCHEMY",   "base_cost_per_puppet": 2000, "max_puppets": 10 },
+  { "factory_type": "CULINARY",  "base_cost_per_puppet": 1200, "max_puppets": 16 }
+]

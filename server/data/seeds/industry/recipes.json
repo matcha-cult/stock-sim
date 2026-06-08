@@ -1,0 +1,138 @@
+[
+  {
+    "recipe_id": "WOOD_CRAFT",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["WOODWORK_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "WOOD_ARTIFACT",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["WOODWORK_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "SWORD_FORGE",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["FORGE_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "TOOL_FORGE",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["FORGE_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "ARMOR_CAST",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["ARMORY_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "SHIELD_CAST",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["ARMORY_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "JADE_CRAFT",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["JADESMITH_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "GEM_SET",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["JADESMITH_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "LEATHER_ARMOR",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["LEATHER_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "LEATHER_GEAR",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["LEATHER_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "ROBE_WEAVE",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["WEAVING_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "SILK_WEAVE",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["WEAVING_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "PILL_REFINING",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["ALCHEMY_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "ELIXIR_BREW",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["ALCHEMY_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "PASTRY_MAKE",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["CULINARY_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "FEAST_COOK",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["CULINARY_MACHINE"],
+    "materials": []
+  },
+  {
+    "recipe_id": "BREW_MAKE",
+    "product_id": "",
+    "output_per_tick": 0,
+    "min_puppets_per_machine": 1,
+    "allowed_machine_types": ["CULINARY_MACHINE"],
+    "materials": []
+  }
+]

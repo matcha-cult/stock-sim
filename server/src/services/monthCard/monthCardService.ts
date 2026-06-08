@@ -32,7 +32,7 @@ import {
   recordSpiritStones,
   type SpiritStonesLedgerBizType,
 } from '../ledgerService.js';
-import { monthCardConfigCache } from './monthCardConfigCache.js';
+import { getMonthCardConfig } from './monthCardConfigCache.js';
 import type {
   MonthCardStatusDto,
   GrantResultDto,
@@ -64,7 +64,7 @@ const buildStatusDto = (
     expiresAt: expiresAt.getTime(),
     daysRemaining,
     todayClaimed,
-    config: monthCardConfigCache.getConfig(),
+    config: getMonthCardConfig(),
   };
 };
 
@@ -126,7 +126,7 @@ class MonthCardService {
     characterId: number,
     days?: number,
   ): Promise<GrantResultDto> {
-    const config = monthCardConfigCache.getConfig();
+    const config = getMonthCardConfig();
     const durationDays = days ?? config.durationDays;
 
     if (durationDays <= 0) {
@@ -250,7 +250,7 @@ class MonthCardService {
    */
   @Transactional
   async claimDailyReward(characterId: number): Promise<ClaimResultDto> {
-    const config = monthCardConfigCache.getConfig();
+    const config = getMonthCardConfig();
     const today = getUtcDay();
 
     // 1. 校验月卡状态（FOR UPDATE）

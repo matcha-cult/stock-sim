@@ -1,0 +1,10 @@
+[
+  { "type": "WOODWORK",  "name": "灵木坊",  "startup_cost": 3000, "max_puppets": 16 },
+  { "type": "FORGE",     "name": "百炼炉",  "startup_cost": 5000, "max_puppets": 20 },
+  { "type": "ARMORY",    "name": "铸甲阁",  "startup_cost": 4500, "max_puppets": 18 },
+  { "type": "JADESMITH", "name": "琢玉斋",  "startup_cost": 8000, "max_puppets": 12 },
+  { "type": "LEATHER",   "name": "炼革坊",  "startup_cost": 2000, "max_puppets": 14 },
+  { "type": "WEAVING",   "name": "织锦阁",  "startup_cost": 3500, "max_puppets": 14 },
+  { "type": "ALCHEMY",   "name": "炼丹房",  "startup_cost": 7000, "max_puppets": 10 },
+  { "type": "CULINARY",  "name": "百味楼",  "startup_cost": 4000, "max_puppets": 16 }
+]

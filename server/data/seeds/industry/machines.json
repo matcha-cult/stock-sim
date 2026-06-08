@@ -1,0 +1,82 @@
+[
+  {
+    "machine_type": "WOODWORK_MACHINE",
+    "name": "灵木机",
+    "factory_type": "WOODWORK",
+    "base_price": 3000,
+    "upgrade_cost_multiplier": 1.5,
+    "output_per_level_bps": 2000,
+    "max_upgrade_level": 10,
+    "description": "加工灵木，产出法器、阵盘等"
+  },
+  {
+    "machine_type": "FORGE_MACHINE",
+    "name": "锻灵机",
+    "factory_type": "FORGE",
+    "base_price": 5000,
+    "upgrade_cost_multiplier": 1.6,
+    "output_per_level_bps": 2000,
+    "max_upgrade_level": 10,
+    "description": "百炼淬火，产出飞剑、灵符等"
+  },
+  {
+    "machine_type": "ARMORY_MACHINE",
+    "name": "铸灵机",
+    "factory_type": "ARMORY",
+    "base_price": 4500,
+    "upgrade_cost_multiplier": 1.5,
+    "output_per_level_bps": 2000,
+    "max_upgrade_level": 10,
+    "description": "浇筑法甲，产出护甲、阵盾等"
+  },
+  {
+    "machine_type": "JADESMITH_MACHINE",
+    "name": "琢灵机",
+    "factory_type": "JADESMITH",
+    "base_price": 8000,
+    "upgrade_cost_multiplier": 1.8,
+    "output_per_level_bps": 2500,
+    "max_upgrade_level": 10,
+    "description": "雕琢灵玉，产出玉饰、符印等"
+  },
+  {
+    "machine_type": "LEATHER_MACHINE",
+    "name": "炼革机",
+    "factory_type": "LEATHER",
+    "base_price": 2000,
+    "upgrade_cost_multiplier": 1.4,
+    "output_per_level_bps": 2000,
+    "max_upgrade_level": 10,
+    "description": "鞣制灵革，产出皮甲、法囊等"
+  },
+  {
+    "machine_type": "WEAVING_MACHINE",
+    "name": "织灵机",
+    "factory_type": "WEAVING",
+    "base_price": 3500,
+    "upgrade_cost_multiplier": 1.5,
+    "output_per_level_bps": 2000,
+    "max_upgrade_level": 10,
+    "description": "织造灵丝，产出法袍、阵幡等"
+  },
+  {
+    "machine_type": "ALCHEMY_MACHINE",
+    "name": "炼丹机",
+    "factory_type": "ALCHEMY",
+    "base_price": 7000,
+    "upgrade_cost_multiplier": 1.7,
+    "output_per_level_bps": 2500,
+    "max_upgrade_level": 10,
+    "description": "炼制丹药，产出回灵丹、灵液等"
+  },
+  {
+    "machine_type": "CULINARY_MACHINE",
+    "name": "庖厨机",
+    "factory_type": "CULINARY",
+    "base_price": 4000,
+    "upgrade_cost_multiplier": 1.5,
+    "output_per_level_bps": 2000,
+    "max_upgrade_level": 10,
+    "description": "烹调灵膳，产出灵糕点、灵酿等"
+  }
+]

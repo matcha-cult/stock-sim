@@ -1,0 +1,18 @@
+[
+  { "id": "IRON_ORE", "name": "灵铁矿", "base_price": 5000, "volatility_bps": 300, "min_sell_qty": 10, "price_min": 500, "price_max": 25000, "enabled": true },
+  { "id": "SPIRIT_WOOD", "name": "灵木", "base_price": 3000, "volatility_bps": 200, "min_sell_qty": 20, "price_min": 300, "price_max": 15000, "enabled": true },
+  { "id": "HERB", "name": "灵草", "base_price": 8000, "volatility_bps": 500, "min_sell_qty": 5, "price_min": 800, "price_max": 40000, "enabled": true },
+  { "id": "SUGAR", "name": "糖", "base_price": 1750, "volatility_bps": 1500, "min_sell_qty": 1000, "price_min": 1500, "price_max": 2000, "enabled": true },
+  { "id": "CLAY", "name": "陶土", "base_price": 2000, "volatility_bps": 150, "min_sell_qty": 50, "price_min": 200, "price_max": 10000, "enabled": true },
+  { "id": "SPIRIT_SILVER", "name": "灵银矿", "base_price": 12000, "volatility_bps": 400, "min_sell_qty": 5, "price_min": 1200, "price_max": 60000, "enabled": true },
+  { "id": "SPIRIT_GOLD", "name": "灵金矿", "base_price": 20000, "volatility_bps": 350, "min_sell_qty": 2, "price_min": 2000, "price_max": 100000, "enabled": true },
+  { "id": "GEMSTONE", "name": "宝石", "base_price": 30000, "volatility_bps": 600, "min_sell_qty": 1, "price_min": 3000, "price_max": 150000, "enabled": true },
+  { "id": "BEAST_HIDE", "name": "妖兽皮", "base_price": 6000, "volatility_bps": 300, "min_sell_qty": 10, "price_min": 600, "price_max": 30000, "enabled": true },
+  { "id": "SPIRIT_GREASE", "name": "灵脂", "base_price": 10000, "volatility_bps": 450, "min_sell_qty": 5, "price_min": 1000, "price_max": 50000, "enabled": true },
+  { "id": "SILK_COCOON", "name": "灵蚕茧", "base_price": 8000, "volatility_bps": 400, "min_sell_qty": 10, "price_min": 800, "price_max": 40000, "enabled": true },
+  { "id": "SPIRIT_HEMP", "name": "灵麻", "base_price": 4000, "volatility_bps": 250, "min_sell_qty": 20, "price_min": 400, "price_max": 20000, "enabled": true },
+  { "id": "SPIRIT_VEG", "name": "灵蔬", "base_price": 3000, "volatility_bps": 350, "min_sell_qty": 50, "price_min": 300, "price_max": 15000, "enabled": true },
+  { "id": "SPIRIT_GRAIN", "name": "灵谷", "base_price": 2500, "volatility_bps": 200, "min_sell_qty": 500, "price_min": 250, "price_max": 12500, "enabled": true },
+  { "id": "SPIRIT_MEAT", "name": "灵肉", "base_price": 8000, "volatility_bps": 400, "min_sell_qty": 50, "price_min": 800, "price_max": 40000, "enabled": true },
+  { "id": "SPIRIT_SPRING", "name": "灵泉", "base_price": 5000, "volatility_bps": 200, "min_sell_qty": 100, "price_min": 500, "price_max": 25000, "enabled": true }
+]
