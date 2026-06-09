@@ -18,7 +18,7 @@ import { requireCharacter, requireGm } from '../middleware/auth.js';
 import { createQpsLimitMiddleware } from '../middleware/qpsLimit.js';
 import { sendSuccess } from '../middleware/response.js';
 import { parseFiniteNumber, getSingleQueryValue } from '../services/shared/httpParam.js';
-import { getOwnLedger, gmQueryLedger } from '../services/ledgerService.js';
+import { getOwnLedger, gmQueryLedger, gmExportAllLedger } from '../services/ledgerService.js';
 
 const router: RouterType = Router();
 
@@ -63,6 +63,23 @@ router.get('/gm/query', requireGm, gmLedgerQpsLimit, asyncHandler(async (req, re
     nicknameKeyword: typeof nicknameKeyword === 'string' ? nicknameKeyword.trim() : undefined,
     bizType: typeof bizType === 'string' ? bizType.trim() : undefined,
     page: page ?? 1,
+  });
+  sendSuccess(res, data);
+}));
+
+/**
+ * GM 全量导出玩家灵石流水（无分页限制，上限 5000 条，用于 CSV 导出）。
+ */
+router.get('/gm/export-all', requireGm, gmLedgerQpsLimit, asyncHandler(async (req, res) => {
+  const characterIdParam = getSingleQueryValue(req.query.characterId);
+  const characterId = characterIdParam != null ? parseFiniteNumber(characterIdParam) : undefined;
+  const nicknameKeyword = getSingleQueryValue(req.query.nickname);
+  const bizType = getSingleQueryValue(req.query.bizType);
+
+  const data = await gmExportAllLedger({
+    characterId: characterId ?? undefined,
+    nicknameKeyword: typeof nicknameKeyword === 'string' ? nicknameKeyword.trim() : undefined,
+    bizType: typeof bizType === 'string' ? bizType.trim() : undefined,
   });
   sendSuccess(res, data);
 }));

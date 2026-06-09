@@ -18,11 +18,12 @@
  */
 
 import { useEffect, useState, useCallback } from 'react';
-import { App, Button, Card, Empty, Flex, Pagination, Spin, Table, Tag } from 'antd';
+import { App, Button, Card, Empty, Flex, Pagination, Spin, Table, Tag, Tooltip } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ReloadOutlined } from '@ant-design/icons';
+import { DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
 import { getMyLedger, LEDGER_BIZ_TYPE_LABELS, type LedgerRecordDto } from '../services/api/ledger';
 import { RequestDedup } from '../stores/RequestDedup';
+import { formatLedgerTime, exportLedgerCsv } from '../utils/ledgerFormat';
 
 // 组件级请求去重（仅 in-flight 守卫）
 const dedup = new RequestDedup();
@@ -62,6 +63,20 @@ const LedgerTab: React.FC = () => {
     return promise;
   }, [message]);
 
+  const handleExportCsv = () => {
+    exportLedgerCsv(
+      records,
+      '灵石流水',
+      [
+        { header: '时间', getValue: (r) => formatLedgerTime(r.createdAt) },
+        { header: '业务类型', getValue: (r) => LEDGER_BIZ_TYPE_LABELS[r.bizType] ?? r.bizType },
+        { header: '变动金额', getValue: (r) => r.amount },
+        { header: '变动后余额', getValue: (r) => r.balanceAfter },
+        { header: '备注', getValue: (r) => r.memo },
+      ],
+    );
+  };
+
   useEffect(() => {
     void fetchLedger(1);
   }, [fetchLedger]);
@@ -72,13 +87,7 @@ const LedgerTab: React.FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 160,
-      render: (ts: number) => {
-        const d = new Date(ts * 1000);
-        return d.toLocaleString('zh-CN', {
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit',
-        });
-      },
+      render: (ts: number) => formatLedgerTime(ts),
     },
     {
       title: '业务类型',
@@ -133,14 +142,26 @@ const LedgerTab: React.FC = () => {
       size="small"
       title="灵石流水"
       extra={
-        <Button
-          type="default"
-          size="small"
-          icon={<ReloadOutlined spin={loading} />}
-          onClick={() => void fetchLedger(page)}
-        >
-          刷新
-        </Button>
+        <Flex gap={8}>
+          <Tooltip title="仅导出当前页（20 条）">
+            <Button
+              type="default"
+              size="small"
+              icon={<DownloadOutlined />}
+              onClick={handleExportCsv}
+            >
+              导出当前页
+            </Button>
+          </Tooltip>
+          <Button
+            type="default"
+            size="small"
+            icon={<ReloadOutlined spin={loading} />}
+            onClick={() => void fetchLedger(page)}
+          >
+            刷新
+          </Button>
+        </Flex>
       }
     >
       <Spin spinning={loading}>

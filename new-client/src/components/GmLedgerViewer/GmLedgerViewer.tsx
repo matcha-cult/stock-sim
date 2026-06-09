@@ -22,9 +22,10 @@ import {
   App, Button, Card, Empty, Flex, Input, Pagination, Select, Spin, Table, Tag,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
-import { gmQueryLedger, LEDGER_BIZ_TYPE_LABELS, type LedgerRecordDto } from '../../services/api/ledger';
+import { DownloadOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { gmQueryLedger, gmExportAllLedger, LEDGER_BIZ_TYPE_LABELS, type LedgerRecordDto } from '../../services/api/ledger';
 import { RequestDedup } from '../../stores/RequestDedup';
+import { formatLedgerTime, exportLedgerCsv } from '../../utils/ledgerFormat';
 
 // 组件级请求去重（仅 in-flight 守卫）
 const dedup = new RequestDedup();
@@ -39,6 +40,7 @@ const GmLedgerViewer: React.FC = () => {
 
   const [records, setRecords] = useState<LedgerRecordDto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const pageSize = 20;
@@ -97,6 +99,60 @@ const GmLedgerViewer: React.FC = () => {
     void fetchLedger(1);
   };
 
+  const handleExportCsv = async () => {
+    setExporting(true);
+    try {
+      const params: { characterId?: number; nickname?: string; bizType?: string } = {};
+      const cid = Number(characterId);
+      if (Number.isFinite(cid) && cid > 0) {
+        params.characterId = cid;
+      }
+      if (nickname.trim()) {
+        params.nickname = nickname.trim();
+      }
+      if (bizType) {
+        params.bizType = bizType;
+      }
+
+      const result = await gmExportAllLedger(params);
+      if (result.success && result.data) {
+        if (result.data.records.length === 0) {
+          message.info('没有可导出的数据');
+          return;
+        }
+        if (result.data.records.length < result.data.total) {
+          message.warning(`数据量较大，仅导出前 ${result.data.records.length} 条（共 ${result.data.total} 条）`);
+        }
+        exportLedgerCsv(
+          result.data.records,
+          'GM灵石流水',
+          [
+            { header: '角色ID', getValue: (r) => r.characterId },
+            { header: '角色昵称', getValue: (r) => r.nickname },
+            { header: '时间', getValue: (r) => formatLedgerTime(r.createdAt) },
+            { header: '业务类型', getValue: (r) => LEDGER_BIZ_TYPE_LABELS[r.bizType] ?? r.bizType },
+            { header: '变动金额', getValue: (r) => r.amount },
+            { header: '变动后余额', getValue: (r) => r.balanceAfter },
+            {
+              header: '对手方',
+              getValue: (r) =>
+                r.counterparty != null
+                  ? `${r.counterpartyNickname ?? '?'}(#${r.counterparty})`
+                  : '-',
+            },
+            { header: '备注', getValue: (r) => r.memo },
+          ],
+        );
+      } else {
+        message.error(result.message ?? '导出流水失败');
+      }
+    } catch {
+      message.error('导出流水失败');
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const columns: ColumnsType<LedgerRecordDto> = [
     {
       title: '角色ID',
@@ -116,13 +172,7 @@ const GmLedgerViewer: React.FC = () => {
       dataIndex: 'createdAt',
       key: 'createdAt',
       width: 170,
-      render: (ts: number) => {
-        const d = new Date(ts * 1000);
-        return d.toLocaleString('zh-CN', {
-          year: 'numeric', month: '2-digit', day: '2-digit',
-          hour: '2-digit', minute: '2-digit', second: '2-digit',
-        });
-      },
+      render: (ts: number) => formatLedgerTime(ts),
     },
     {
       title: '业务类型',
@@ -183,7 +233,17 @@ const GmLedgerViewer: React.FC = () => {
   };
 
   return (
-    <Card title="GM流水账查询" size="small">
+    <Card title="GM流水账查询" size="small" extra={
+      <Button
+        type="default"
+        size="small"
+        icon={<DownloadOutlined />}
+        onClick={handleExportCsv}
+        loading={exporting}
+      >
+        导出全部
+      </Button>
+    }>
       <Flex vertical gap={16}>
         {/* 过滤条件 */}
         <Flex gap={12} wrap="wrap" align="flex-end">

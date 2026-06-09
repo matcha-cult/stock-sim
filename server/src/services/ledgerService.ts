@@ -129,10 +129,12 @@ export const getOwnLedger = async (
       counterparty: number | null;
       memo: string | null;
       created_at: Date | string;
+      epoch: number;
     }>(
       `
       SELECT id, character_id, amount, balance_after, biz_type, biz_id,
-             counterparty, memo, created_at
+             counterparty, memo, created_at,
+             EXTRACT(EPOCH FROM created_at) AS epoch
       FROM spirit_stones_ledger
       WHERE character_id = $1
       ORDER BY created_at DESC, id DESC
@@ -164,16 +166,14 @@ export interface GmLedgerResult {
   pageSize: number;
 }
 
-/**
- * GM 查询玩家灵石流水（支持按角色ID、昵称模糊、业务类型过滤）。
- */
-export const gmQueryLedger = async (
-  params: GmLedgerQueryParams,
-): Promise<GmLedgerResult> => {
-  const pageNum = params.page ?? 1;
-  const safePage = Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1;
-  const offset = (safePage - 1) * LEDGER_PAGE_SIZE;
+// ---- 内部工具：构建 GM 查询 WHERE 条件 ----
 
+type GmLedgerWhereResult = {
+  whereClause: string;
+  values: unknown[];
+};
+
+const buildGmLedgerWhere = (params: GmLedgerQueryParams): GmLedgerWhereResult => {
   const conditions: string[] = [];
   const values: unknown[] = [];
   let vi = 1;
@@ -196,7 +196,24 @@ export const gmQueryLedger = async (
     vi++;
   }
 
-  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+  return {
+    whereClause: conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '',
+    values,
+  };
+};
+
+/**
+ * GM 查询玩家灵石流水（支持按角色ID、昵称模糊、业务类型过滤）。
+ */
+export const gmQueryLedger = async (
+  params: GmLedgerQueryParams,
+): Promise<GmLedgerResult> => {
+  const pageNum = params.page ?? 1;
+  const safePage = Number.isFinite(pageNum) && pageNum > 0 ? pageNum : 1;
+  const offset = (safePage - 1) * LEDGER_PAGE_SIZE;
+
+  const { whereClause, values } = buildGmLedgerWhere(params);
+  const vi = values.length + 1;
 
   const countResult = await query<{ total: string | number }>(
     `
@@ -218,10 +235,12 @@ export const gmQueryLedger = async (
     counterparty: number | null;
     memo: string | null;
     created_at: Date | string;
+    epoch: number;
   }>(
     `
     SELECT l.id, l.character_id, l.amount, l.balance_after, l.biz_type, l.biz_id,
-           l.counterparty, l.memo, l.created_at
+           l.counterparty, l.memo, l.created_at,
+           EXTRACT(EPOCH FROM l.created_at) AS epoch
     FROM spirit_stones_ledger l
     INNER JOIN characters c ON c.id = l.character_id
     ${whereClause}
@@ -235,6 +254,63 @@ export const gmQueryLedger = async (
   const records = await enrichLedgerRows(rowsResult.rows);
 
   return { records, total, page: safePage, pageSize: LEDGER_PAGE_SIZE };
+};
+
+/**
+ * GM 全量导出玩家灵石流水（无分页限制，用于 CSV 导出）。
+ * 返回 5000 条上限，防止一次性拉取过多数据。
+ */
+const GM_EXPORT_MAX_ROWS = 5000;
+
+export interface GmLedgerExportResult {
+  records: LedgerRowDto[];
+  total: number;
+}
+
+export const gmExportAllLedger = async (
+  params: Omit<GmLedgerQueryParams, 'page'>,
+): Promise<GmLedgerExportResult> => {
+  const { whereClause, values } = buildGmLedgerWhere(params);
+
+  const countResult = await query<{ total: string | number }>(
+    `
+    SELECT COUNT(*)::bigint AS total
+    FROM spirit_stones_ledger l
+    INNER JOIN characters c ON c.id = l.character_id
+    ${whereClause}
+    `,
+    values,
+  );
+
+  const total = Number(countResult.rows[0].total);
+  const rowsResult = await query<{
+    id: string | number | bigint;
+    character_id: number;
+    amount: string | number | bigint;
+    balance_after: string | number | bigint;
+    biz_type: string;
+    biz_id: string | null;
+    counterparty: number | null;
+    memo: string | null;
+    created_at: Date | string;
+    epoch: number;
+  }>(
+    `
+    SELECT l.id, l.character_id, l.amount, l.balance_after, l.biz_type, l.biz_id,
+           l.counterparty, l.memo, l.created_at,
+           EXTRACT(EPOCH FROM l.created_at) AS epoch
+    FROM spirit_stones_ledger l
+    INNER JOIN characters c ON c.id = l.character_id
+    ${whereClause}
+    ORDER BY l.created_at DESC, l.id DESC
+    LIMIT $${values.length + 1}
+    `,
+    [...values, GM_EXPORT_MAX_ROWS],
+  );
+
+  const records = await enrichLedgerRows(rowsResult.rows);
+
+  return { records, total };
 };
 
 // ---- 内部工具 ----
@@ -252,6 +328,7 @@ const enrichLedgerRows = async (rows: {
   counterparty: number | null;
   memo: string | null;
   created_at: Date | string;
+  epoch: number;
 }[]): Promise<LedgerRowDto[]> => {
   if (rows.length === 0) return [];
 
@@ -273,9 +350,10 @@ const enrichLedgerRows = async (rows: {
   }
 
   return rows.map((row) => {
-    const createdAt = row.created_at instanceof Date
-      ? Math.floor(row.created_at.getTime() / 1000)
-      : Math.floor(new Date(row.created_at).getTime() / 1000);
+    // 使用 PostgreSQL 的 EXTRACT(EPOCH) 而不是 Date.getTime()
+    // 原因：列是 timestamp without time zone + DB 时区 UTC，
+    // node-postgres 把存储值当作 UTC 解析为 Date，导致 getTime() 产生的 epoch 偏小 8 小时
+    const createdAt = Math.floor(Number(row.epoch));
 
     return {
       id: String(row.id),

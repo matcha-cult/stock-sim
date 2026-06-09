@@ -28,6 +28,11 @@ export interface LedgerQueryResult {
   pageSize: number;
 }
 
+export interface LedgerExportResult {
+  records: LedgerRecordDto[];
+  total: number;
+}
+
 /**
  * 玩家查询自己的灵石流水。
  */
@@ -55,6 +60,24 @@ export const gmQueryLedger = (
     nickname: params?.nickname,
     bizType: params?.bizType,
     page: params?.page,
+  }));
+};
+
+/**
+ * GM 全量导出玩家灵石流水（无分页限制，上限 5000 条）。
+ */
+export const gmExportAllLedger = (
+  params?: {
+    characterId?: number;
+    nickname?: string;
+    bizType?: string;
+  },
+  requestConfig?: AxiosRequestConfig,
+): Promise<{ success: boolean; data: LedgerExportResult; message?: string }> => {
+  return api.get('/api/ledger/gm/export-all', withRequestParams(requestConfig, {
+    characterId: params?.characterId,
+    nickname: params?.nickname,
+    bizType: params?.bizType,
   }));
 };
 

@@ -70,7 +70,8 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'market' | 'pending-orders' | 'profit' | 'records' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'gm-online-ops';
+type ActiveTab = 'stock-market' | 'pending-orders' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'gm-online-ops';
+type StockSubTab = 'market' | 'pending-orders-sub' | 'profit' | 'records';
 type GmTabKey = 'gm-spirit-stones' | 'gm-month-card' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
@@ -93,7 +94,8 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const isMobile = useIsMobile();
 
   const [quantity, setQuantity] = useState(1);
-  const [activeTab, setActiveTab] = useState<ActiveTab>('market');
+  const [activeTab, setActiveTab] = useState<ActiveTab>('stock-market');
+  const [stockSubTab, setStockSubTab] = useState<StockSubTab>('market');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<ActionKey>('');
   const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket' | 'shopRent'>('wealth');
@@ -189,15 +191,15 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
 
   // 切换到交易记录 tab 时拉取
   useEffect(() => {
-    if (activeTab !== 'records') return;
+    if (stockSubTab !== 'records') return;
     void stockStore.refreshTrades(stockStore.tradePage);
-  }, [activeTab, stockStore]);
+  }, [stockSubTab, stockStore]);
 
   // 切换到收益 tab 时拉取
   useEffect(() => {
-    if (activeTab !== 'profit') return;
+    if (stockSubTab !== 'profit') return;
     void stockStore.refreshProfitDetail();
-  }, [activeTab, stockStore]);
+  }, [stockSubTab, stockStore]);
 
   // 切换到排行 tab 时拉取
   useEffect(() => {
@@ -253,13 +255,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const refreshAfterTrade = useCallback(async () => {
     await stockStore.refreshOverview(true);
     await authStore.refreshCharacter();
-    if (activeTab === 'records') {
+    if (stockSubTab === 'records') {
       await stockStore.refreshTrades(stockStore.tradePage, true);
     }
-    if (activeTab === 'profit') {
+    if (stockSubTab === 'profit') {
       await stockStore.refreshProfitDetail(true);
     }
-  }, [activeTab, authStore, stockStore]);
+  }, [stockSubTab, authStore, stockStore]);
 
   const handleTrade = useCallback(async (
     side: 'buy' | 'sell',
@@ -325,8 +327,14 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'market' || key === 'pending-orders' || key === 'profit' || key === 'records' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'gm-online-ops') {
+    if (key === 'stock-market' || key === 'pending-orders' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'gm-online-ops') {
       setActiveTab(key as ActiveTab);
+    }
+  }, []);
+
+  const handleStockSubTabChange = useCallback((key: string) => {
+    if (key === 'market' || key === 'pending-orders-sub' || key === 'profit' || key === 'records') {
+      setStockSubTab(key as StockSubTab);
     }
   }, []);
 
@@ -416,82 +424,95 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
           destroyInactiveTabPane
           items={[
             {
-              key: 'market',
-              label: '股市行情',
+              key: 'stock-market',
+              label: '抹茶股市',
               children: (
-                <MarketTabContent
-                  overview={overview}
-                  overviewModel={overviewModel}
-                  selectedStock={selectedStockDto}
-                  selectedStockView={selectedStockView}
-                  tradePreview={tradePreview}
-                  historyModel={historyModel}
-                  historyLoading={stockStore.historyLoading}
-                  activeNews={activeNews}
-                  newsRecords={newsRecords}
-                  newsIndex={newsIndex}
-                  quantity={quantity}
-                  maxTradeQty={maxTradeQty}
-                  canBuy={canBuy}
-                  canBuyAll={canBuyAll}
-                  canSell={canSell}
-                  canClearSelected={canClearSelected}
-                  canClearAll={canClearAll}
-                  maxAffordableBuyQty={maxAffordableBuyQty}
-                  localActionKey={localActionKey}
-                  isMobile={isMobile}
-                  mobileDetailOpen={mobileDetailOpen}
-                  onRefresh={() => void stockStore.refreshOverview()}
-                  refreshLoading={stockStore.loading}
-                  onSelectStock={handleSelectStock}
-                  onQuantityChange={handleQuantityChange}
-                  onUseLimitQuantity={handleUseTradeLimitQuantity}
-                  onBuy={() => void handleTrade('buy')}
-                  onBuyAll={handleBuyAll}
-                  onSell={() => void handleTrade('sell')}
-                  onClearStock={() => handleClearPosition('stock')}
-                  onClearAll={() => handleClearPosition('all')}
-                  onBuyMenuClick={handleBuyActionMenuClick}
-                  onSellMenuClick={handleSellActionMenuClick}
-                  onShowNewerNews={handleShowNewerNews}
-                  onShowOlderNews={handleShowOlderNews}
-                  buyActionMenuItems={buyActionMenuItems}
-                  sellActionMenuItems={sellActionMenuItems}
-                  onMobileDetailClose={() => {
-                    setMobileDetailOpen(false);
-                    stockStore.selectedStockId = '';
-                  }}
-                />
-              ),
-            },
-            {
-              key: 'pending-orders',
-              label: '挂单管理',
-              children: <PendingOrderManagement />,
-            },
-            {
-              key: 'profit',
-              label: '股市收益',
-              children: (
-                <ProfitTab
-                  profitModel={profitDetailModel}
-                  profitLoading={stockStore.profitLoading}
-                  onRefresh={() => void stockStore.refreshProfitDetail()}
-                />
-              ),
-            },
-            {
-              key: 'records',
-              label: '股市记录',
-              children: (
-                <RecordsTab
-                  tradeRecordViews={tradeRecordViews}
-                  tradesLoading={stockStore.tradesLoading}
-                  tradePage={stockStore.tradePage}
-                  tradePageSize={stockStore.tradePageSize}
-                  tradeTotal={stockStore.tradeTotal}
-                  onRefresh={() => void stockStore.refreshTrades(stockStore.tradePage)}
-                  onPageChange={(page) => { stockStore.tradePage = page; }}
+                <Tabs
+                  activeKey={stockSubTab}
+                  onChange={handleStockSubTabChange}
+                  destroyInactiveTabPane
+                  items={[
+                    {
+                      key: 'market',
+                      label: '股市行情',
+                      children: (
+                        <MarketTabContent
+                          overview={overview}
+                          overviewModel={overviewModel}
+                          selectedStock={selectedStockDto}
+                          selectedStockView={selectedStockView}
+                          tradePreview={tradePreview}
+                          historyModel={historyModel}
+                          historyLoading={stockStore.historyLoading}
+                          activeNews={activeNews}
+                          newsRecords={newsRecords}
+                          newsIndex={newsIndex}
+                          quantity={quantity}
+                          maxTradeQty={maxTradeQty}
+                          canBuy={canBuy}
+                          canBuyAll={canBuyAll}
+                          canSell={canSell}
+                          canClearSelected={canClearSelected}
+                          canClearAll={canClearAll}
+                          maxAffordableBuyQty={maxAffordableBuyQty}
+                          localActionKey={localActionKey}
+                          isMobile={isMobile}
+                          mobileDetailOpen={mobileDetailOpen}
+                          onRefresh={() => void stockStore.refreshOverview()}
+                          refreshLoading={stockStore.loading}
+                          onSelectStock={handleSelectStock}
+                          onQuantityChange={handleQuantityChange}
+                          onUseLimitQuantity={handleUseTradeLimitQuantity}
+                          onBuy={() => void handleTrade('buy')}
+                          onBuyAll={handleBuyAll}
+                          onSell={() => void handleTrade('sell')}
+                          onClearStock={() => handleClearPosition('stock')}
+                          onClearAll={() => handleClearPosition('all')}
+                          onBuyMenuClick={handleBuyActionMenuClick}
+                          onSellMenuClick={handleSellActionMenuClick}
+                          onShowNewerNews={handleShowNewerNews}
+                          onShowOlderNews={handleShowOlderNews}
+                          buyActionMenuItems={buyActionMenuItems}
+                          sellActionMenuItems={sellActionMenuItems}
+                          onMobileDetailClose={() => {
+                            setMobileDetailOpen(false);
+                            stockStore.selectedStockId = '';
+                          }}
+                        />
+                      ),
+                    },
+                    {
+                      key: 'pending-orders-sub',
+                      label: '挂单管理',
+                      children: <PendingOrderManagement />,
+                    },
+                    {
+                      key: 'profit',
+                      label: '股市收益',
+                      children: (
+                        <ProfitTab
+                          profitModel={profitDetailModel}
+                          profitLoading={stockStore.profitLoading}
+                          onRefresh={() => void stockStore.refreshProfitDetail()}
+                        />
+                      ),
+                    },
+                    {
+                      key: 'records',
+                      label: '股市记录',
+                      children: (
+                        <RecordsTab
+                          tradeRecordViews={tradeRecordViews}
+                          tradesLoading={stockStore.tradesLoading}
+                          tradePage={stockStore.tradePage}
+                          tradePageSize={stockStore.tradePageSize}
+                          tradeTotal={stockStore.tradeTotal}
+                          onRefresh={() => void stockStore.refreshTrades(stockStore.tradePage)}
+                          onPageChange={(page) => { stockStore.tradePage = page; }}
+                        />
+                      ),
+                    },
+                  ]}
                 />
               ),
             },
