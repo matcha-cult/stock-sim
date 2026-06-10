@@ -34,6 +34,7 @@ import type { StockMarketDefinition } from './stockMarketDefinitions.js';
 import {
   normalizeStockMarketAiChangeBps,
   stockMarketPriceUnitsToSpiritStones,
+  STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT,
   STOCK_MARKET_MAX_ABS_CHANGE_BPS,
 } from './stockMarketRules.js';
 import {
@@ -220,13 +221,11 @@ const readTrimmedText = (
   return normalized;
 };
 
-const STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT = 2;
-
 const readChangeBps = (source: TechniqueModelJsonObject, stockId: string): number | null => {
   const value = source.changePercent;
   if (typeof value !== 'number') return null;
   console.log(`[StockMarketAI] ${stockId} AI 原始涨跌:`, value, '%');
-  // 绝对值小于 2% 时，抬升到 2% + 原小数位（保持符号）
+  // 绝对值小于下限时，抬升到下限 + 原小数位（保持符号）
   const absValue = Math.abs(value);
   const clampedAbs = absValue < STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT
     ? STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT + (absValue - Math.floor(absValue))
@@ -515,7 +514,7 @@ const buildStockMarketUserMessage = (params: {
       'summary 使用 12 到 160 个中文字符，且必须输出，作为 JSON 顶层字段，不要写在 event 内部',
       `changePercent 表示本次涨跌百分比，正数上涨、负数下跌，范围 ${-maxChangePercent} 到 ${maxChangePercent}，最多两位小数，不能为 0`,
       '单轮 impacts 的 changePercent 简单合计应尽量接近 0，目标区间为 -3.00 到 3.00',
-      '常规单股波动优先控制在 -8.00 到 8.00；超过 10.00 或低于 -10.00 只用于重大突发事件',
+      '常规单股波动优先控制在 -5.00 到 5.50；超过 6.50 或低于 -6.0 只用于重大突发事件',
       '优先输出 2 到 4 个相互关联的受影响股票，形成一涨一跌或多空配对，不强制多空平衡但要避免单边持续',
       '本轮新闻题材必须优先围绕 marketScenario，impacts 优先从 marketScenario.focusStockIds 中选择',
       'eventContext.selectedEvent 非空时，本轮必须续写该事件，event.action 只能是 continue、escalate 或 resolve',

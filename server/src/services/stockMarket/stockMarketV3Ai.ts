@@ -35,6 +35,7 @@ import type { StockMarketDefinition } from './stockMarketDefinitions.js';
 import {
   normalizeStockMarketAiChangeBps,
   stockMarketPriceUnitsToSpiritStones,
+  STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT,
   STOCK_MARKET_MAX_ABS_CHANGE_BPS,
 } from './stockMarketRules.js';
 import type { V3SceneDefinition } from './stockMarketV3SceneDefinitions.js';
@@ -70,7 +71,6 @@ export type V3AiNewsDraftResult =
 
 const V3_AI_TEMPERATURE = 0.8;
 const V3_AI_MAX_ATTEMPTS = 3;
-const V3_AI_MIN_ABS_CHANGE_PERCENT = 2;
 
 const buildV3ResponseSchema = (
   enabledStockIds: readonly string[],
@@ -152,7 +152,7 @@ const buildV3UserMessage = (params: {
 
   // 强度 → 百分比范围映射
   const strengthToRange = (strength: number): string => {
-    if (strength <= 1) return `±${V3_AI_MIN_ABS_CHANGE_PERCENT}~6%`;
+    if (strength <= 1) return `±${STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT}~6%`;
     if (strength === 2) return '6~10%';
     return '10~12%';
   };
@@ -219,8 +219,8 @@ const readChangeBps = (source: TechniqueModelJsonObject, stockId: string): numbe
   const value = source.changePercent;
   if (typeof value !== 'number') return null;
   const absValue = Math.abs(value);
-  const clampedAbs = absValue < V3_AI_MIN_ABS_CHANGE_PERCENT
-    ? V3_AI_MIN_ABS_CHANGE_PERCENT + (absValue - Math.floor(absValue))
+  const clampedAbs = absValue < STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT
+    ? STOCK_MARKET_AI_MIN_ABS_CHANGE_PERCENT + (absValue - Math.floor(absValue))
     : absValue;
   return normalizeStockMarketAiChangeBps(Math.sign(value) * clampedAbs);
 };
