@@ -29,7 +29,7 @@ import { useContext, useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   App, Button, Card, Col, Descriptions, Empty, Flex, Modal, Row,
-  Select, Segmented, Slider, Spin, Statistic, Tag, Tooltip, Typography, Divider, Table,
+  Select, Segmented, Slider, Spin, Statistic, Tag, Tooltip, Typography, Divider, Table, Progress,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import {
@@ -182,6 +182,8 @@ const ShopCard = observer(({
     }>;
     constants: {
       upgradeLevelBonusRate: number;
+      upgradeTicksBase: number;
+      upgradeMaxLevel: number;
     };
   } | null;
   hasGmPermission: boolean;
@@ -267,6 +269,28 @@ const ShopCard = observer(({
             </Text>
           )}
         </Flex>
+
+        {/* 升级经验条 */}
+        {(() => {
+          const maxLevel = config?.constants.upgradeMaxLevel ?? 50;
+          const isMaxLevel = shop.upgradeLevel >= maxLevel;
+          // 累计公式：升到 Lv.(L+1) 需要 5×(L+1)×(L+2) 总 tick
+          const cumulativeCurrent = 5 * shop.upgradeLevel * (shop.upgradeLevel + 1);
+          const cumulativeNext = 5 * (shop.upgradeLevel + 1) * (shop.upgradeLevel + 2);
+          const levelSpan = cumulativeNext - cumulativeCurrent;
+          const levelProgress = Math.max(0, shop.rentTickCount - cumulativeCurrent);
+          const percent = isMaxLevel ? 100 : Math.min(100, Math.floor((levelProgress / levelSpan) * 100));
+          return (
+            <Tooltip title={isMaxLevel ? '已满级' : `${levelProgress}/${levelSpan}`}>
+              <Progress
+                percent={percent}
+                size="small"
+                strokeColor={isMaxLevel ? '#722ed1' : undefined}
+                format={() => isMaxLevel ? 'MAX' : `${levelProgress}/${levelSpan}`}
+              />
+            </Tooltip>
+          );
+        })()}
 
         {/* 租金信息 */}
         <Flex vertical gap={4} style={{ background: 'var(--fill-quaternary)', borderRadius: 6, padding: '8px 10px' }}>

@@ -10,7 +10,8 @@
  * - 输出：店铺 DTO、操作结果。
  *
  * 数据流 / 状态流：
- * tick 调度器 → processShopRentTick → 批量更新 pending_rent → 玩家收取 → 转账 + 升级判定；
+ * tick 调度器 → processShopRentTick → 批量更新 pending_rent + 自动升级判定；
+ * 玩家收取 → 仅清零 pending_rent 转账灵石（升级已由 tick 自动完成）；
  * 玩家操作 → 装修/扩空间 → 扣灵石 → 更新店铺属性。
  *
  * 复用设计说明：
@@ -51,7 +52,6 @@ import {
   calculateDecorationCost,
   calculateDecorationRefund,
   calculateSpaceExpansionCost,
-  calculateUpgradeTicksNeeded,
   UPGRADE_MAX_LEVEL,
 } from './types.js';
 import { getNextShopRentTickAt } from './shopRentTime.js';
@@ -119,8 +119,6 @@ export type CollectRentResult = {
   success: boolean;
   message: string;
   collectedRent?: number;
-  upgraded?: boolean;
-  newUpgradeLevel?: number;
 };
 
 export type DecorationResult = {
@@ -334,48 +332,23 @@ class ShopService {
     });
     if (!addResult.success) return { success: false, message: addResult.message };
 
-    // 更新店铺状态（rent_tick_count 已在 tick 时累加，收取时直接使用当前值）
-    const currentTickCount = toBigIntValue(shop.rent_tick_count);
+    // 更新店铺状态
     const newTotalCollected = toBigIntValue(shop.total_rent_collected) + pendingRent;
     await query(
       `
         UPDATE shop_detail
         SET pending_rent = 0,
             total_rent_collected = $1,
-            rent_tick_count = $2,
             updated_at = NOW()
-        WHERE id = $3 AND character_id = $4
+        WHERE id = $2 AND character_id = $3
       `,
-      [newTotalCollected.toString(), currentTickCount.toString(), shopId, characterId],
+      [newTotalCollected.toString(), shopId, characterId],
     );
-
-    // 升级判定（使用 tick 已累加的 rent_tick_count）
-    let upgraded = false;
-    let newUpgradeLevel = toIntValue(shop.upgrade_level);
-    const currentLevel = newUpgradeLevel;
-    const ticksNeeded = calculateUpgradeTicksNeeded(currentLevel);
-    if (currentLevel < UPGRADE_MAX_LEVEL && currentTickCount >= BigInt(ticksNeeded)) {
-      newUpgradeLevel = currentLevel + 1;
-      upgraded = true;
-      await query(
-        `
-          UPDATE shop_detail
-          SET upgrade_level = $1,
-              updated_at = NOW()
-          WHERE id = $2 AND character_id = $3
-        `,
-        [newUpgradeLevel, shopId, characterId],
-      );
-    }
 
     return {
       success: true,
-      message: upgraded
-        ? `收取租金成功，获得 ${toDtoShopPrice(pendingRent)} 灵石，店铺升级到 Lv.${newUpgradeLevel}！`
-        : `收取租金成功，获得 ${toDtoShopPrice(pendingRent)} 灵石`,
+      message: `收取租金成功，获得 ${toDtoShopPrice(pendingRent)} 灵石`,
       collectedRent: toDtoShopPrice(pendingRent),
-      upgraded,
-      newUpgradeLevel,
     };
   }
 
@@ -387,7 +360,6 @@ class ShopService {
     success: boolean;
     message: string;
     totalCollected: number;
-    upgradedShops: number[];
   }> {
     ensureShopFeatureEnabled();
     // 加锁读取所有店铺
@@ -401,16 +373,14 @@ class ShopService {
     );
 
     if (shopResult.rows.length === 0) {
-      return { success: false, message: '没有可收取的租金', totalCollected: 0, upgradedShops: [] };
+      return { success: false, message: '没有可收取的租金', totalCollected: 0 };
     }
 
     let totalRent = 0n;
     const shopUpdates: Array<{
       id: number;
       pendingRent: bigint;
-      rentTickCount: bigint;
       totalRentCollected: bigint;
-      upgradeLevel: number;
     }> = [];
 
     for (const row of shopResult.rows) {
@@ -420,14 +390,12 @@ class ShopService {
       shopUpdates.push({
         id: toIntValue(row.id),
         pendingRent: pending,
-        rentTickCount: toBigIntValue(row.rent_tick_count),
         totalRentCollected: toBigIntValue(row.total_rent_collected),
-        upgradeLevel: toIntValue(row.upgrade_level),
       });
     }
 
     if (totalRent <= 0n) {
-      return { success: false, message: '没有可收取的租金', totalCollected: 0, upgradedShops: [] };
+      return { success: false, message: '没有可收取的租金', totalCollected: 0 };
     }
 
     // 转账（pending_rent 以分为单位，characters.spirit_stones 以整灵石为单位）
@@ -436,33 +404,21 @@ class ShopService {
       bizType: 'shop_rent',
       memo: `收取店铺租金`,
     });
-    if (!addResult.success) return { success: false, message: addResult.message, totalCollected: 0, upgradedShops: [] };
+    if (!addResult.success) return { success: false, message: addResult.message, totalCollected: 0 };
 
-    // 批量更新（rent_tick_count 已在 tick 时累加，直接使用当前值）
-    const upgradedShops: number[] = [];
+    // 批量更新（清零待收租金）
     for (const s of shopUpdates) {
       const newTotalCollected = s.totalRentCollected + s.pendingRent;
-
-      let upgraded = false;
-      let newLevel = s.upgradeLevel;
-      const ticksNeeded = calculateUpgradeTicksNeeded(s.upgradeLevel);
-      if (s.upgradeLevel < UPGRADE_MAX_LEVEL && s.rentTickCount >= BigInt(ticksNeeded)) {
-        newLevel = s.upgradeLevel + 1;
-        upgraded = true;
-        upgradedShops.push(s.id);
-      }
 
       await query(
         `
           UPDATE shop_detail
           SET pending_rent = 0,
               total_rent_collected = $1,
-              rent_tick_count = $2,
-              upgrade_level = $3,
               updated_at = NOW()
-          WHERE id = $4 AND character_id = $5
+          WHERE id = $2 AND character_id = $3
         `,
-        [newTotalCollected.toString(), s.rentTickCount.toString(), newLevel, s.id, characterId],
+        [newTotalCollected.toString(), s.id, characterId],
       );
     }
 
@@ -470,7 +426,6 @@ class ShopService {
       success: true,
       message: `一键收取成功，共获得 ${toDtoShopPrice(totalRent)} 灵石`,
       totalCollected: toDtoShopPrice(totalRent),
-      upgradedShops,
     };
   }
 
@@ -819,6 +774,52 @@ class ShopService {
       );
 
       processed++;
+    }
+
+    // 升级判定：遍历所有店铺，检查 rent_tick_count 是否满足升级条件
+    // 支持跨级升级（玩家长时间未上线后一次性升到对应等级）
+    const upgradedShopIds: number[] = [];
+    const upgradedLevels: number[] = [];
+    for (const row of allShops.rows) {
+      const lastDecorateTickId = row.last_decorate_tick_id;
+      if (lastDecorateTickId !== null && toBigIntValue(lastDecorateTickId) === currentTickId) {
+        continue;
+      }
+
+      const shopId = toIntValue(row.id);
+      const currentLevel = toIntValue(row.upgrade_level);
+      if (currentLevel >= UPGRADE_MAX_LEVEL) continue;
+
+      const shopResult = await query<{ rent_tick_count: string }>(
+        `SELECT rent_tick_count FROM shop_detail WHERE id = $1`,
+        [shopId],
+      );
+      const rentTickCount = toBigIntValue(shopResult.rows[0]?.rent_tick_count);
+
+      // 逐级升级：每级所需 tick = 10 × (level + 1)，累计到 newLevel 需要 sum(10×1..10×(newLevel+1))
+      let newLevel = currentLevel;
+      while (newLevel < UPGRADE_MAX_LEVEL) {
+        const cumulativeNeeded = BigInt(5 * (newLevel + 1) * (newLevel + 2));
+        if (rentTickCount >= cumulativeNeeded) {
+          newLevel++;
+        } else {
+          break;
+        }
+      }
+
+      if (newLevel > currentLevel) {
+        upgradedShopIds.push(shopId);
+        upgradedLevels.push(newLevel);
+      }
+    }
+
+    if (upgradedShopIds.length > 0) {
+      for (let i = 0; i < upgradedShopIds.length; i++) {
+        await query(
+          `UPDATE shop_detail SET upgrade_level = $1, updated_at = NOW() WHERE id = $2`,
+          [upgradedLevels[i], upgradedShopIds[i]],
+        );
+      }
     }
 
     await query(

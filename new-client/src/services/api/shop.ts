@@ -37,8 +37,6 @@ export type CollectRentResult = {
   success: boolean;
   message: string;
   collectedRent?: number;
-  upgraded?: boolean;
-  newUpgradeLevel?: number;
 };
 
 export type DecorationResult = {
@@ -74,7 +72,6 @@ export type CollectAllResult = {
   success: boolean;
   message: string;
   totalCollected: number;
-  upgradedShops: number[];
 };
 
 export type ShopConfigDto = {
