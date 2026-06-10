@@ -39,6 +39,9 @@ dotenv.config();
 const PORT = Number(process.env.PORT ?? 3000);
 const CORS_ORIGIN = process.env.CORS_ORIGIN ?? 'http://localhost:5173';
 
+// 支持多个开发端口
+const CORS_ORIGINS = [CORS_ORIGIN, 'http://localhost:5174'].filter(Boolean);
+
 async function startServer() {
   // 测试数据库连接
   try {
@@ -83,7 +86,7 @@ async function startServer() {
 
   // 中间件配置
   app.use(helmet());
-  app.use(cors({ origin: CORS_ORIGIN, credentials: true }));
+  app.use(cors({ origin: CORS_ORIGINS, credentials: true }));
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true, limit: '1mb' }));
 
