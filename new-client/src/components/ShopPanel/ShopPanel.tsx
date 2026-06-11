@@ -183,6 +183,7 @@ const ShopCard = observer(({
     constants: {
       upgradeLevelBonusRate: number;
       upgradeTicksBase: number;
+      upgradeTicksDivisor: number;
       upgradeMaxLevel: number;
     };
   } | null;
@@ -274,9 +275,12 @@ const ShopCard = observer(({
         {(() => {
           const maxLevel = config?.constants.upgradeMaxLevel ?? 50;
           const isMaxLevel = shop.upgradeLevel >= maxLevel;
-          // 累计公式：升到 Lv.(L+1) 需要 5×(L+1)×(L+2) 总 tick
-          const cumulativeCurrent = 5 * shop.upgradeLevel * (shop.upgradeLevel + 1);
-          const cumulativeNext = 5 * (shop.upgradeLevel + 1) * (shop.upgradeLevel + 2);
+          // 累计公式：升到 Lv.(L+1) 需要 base×(L+1)×(L+2) / (2×divisor) 总 tick
+          const base = config?.constants.upgradeTicksBase ?? 10;
+          const divisor = config?.constants.upgradeTicksDivisor ?? 2;
+          const cumAt = (lvl: number) => Math.ceil(base * (lvl + 1) * (lvl + 2) / (2 * divisor));
+          const cumulativeCurrent = cumAt(shop.upgradeLevel - 1);
+          const cumulativeNext = cumAt(shop.upgradeLevel);
           const levelSpan = cumulativeNext - cumulativeCurrent;
           const levelProgress = Math.max(0, shop.rentTickCount - cumulativeCurrent);
           const percent = isMaxLevel ? 100 : Math.min(100, Math.floor((levelProgress / levelSpan) * 100));

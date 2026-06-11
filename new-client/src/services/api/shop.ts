@@ -92,6 +92,7 @@ export type ShopConfigDto = {
     decorationRefundRate: number;
     upgradeLevelBonusRate: number;
     upgradeTicksBase: number;
+    upgradeTicksDivisor: number;
     upgradeMaxLevel: number;
     rentTickIntervalMinutes: number;
   };

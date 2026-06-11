@@ -44,6 +44,7 @@ import {
   DECORATION_REFUND_RATE,
   UPGRADE_LEVEL_BONUS_RATE,
   UPGRADE_TICKS_BASE,
+  UPGRADE_TICKS_DIVISOR,
   INITIAL_SHOP_TYPE,
   INITIAL_SHOP_TIER,
   type ShopType,
@@ -263,6 +264,7 @@ class ShopService {
       decorationRefundRate: number;
       upgradeLevelBonusRate: number;
       upgradeTicksBase: number;
+      upgradeTicksDivisor: number;
       upgradeMaxLevel: number;
       rentTickIntervalMinutes: number;
     };
@@ -296,6 +298,7 @@ class ShopService {
         decorationRefundRate: DECORATION_REFUND_RATE,
         upgradeLevelBonusRate: UPGRADE_LEVEL_BONUS_RATE,
         upgradeTicksBase: UPGRADE_TICKS_BASE,
+        upgradeTicksDivisor: UPGRADE_TICKS_DIVISOR,
         upgradeMaxLevel: UPGRADE_MAX_LEVEL,
         rentTickIntervalMinutes: SHOP_RENT_TICK_INTERVAL_MINUTES,
       },
@@ -799,7 +802,7 @@ class ShopService {
       // 逐级升级：每级所需 tick = 10 × (level + 1)，累计到 newLevel 需要 sum(10×1..10×(newLevel+1))
       let newLevel = currentLevel;
       while (newLevel < UPGRADE_MAX_LEVEL) {
-        const cumulativeNeeded = BigInt(5 * (newLevel + 1) * (newLevel + 2));
+        const cumulativeNeeded = BigInt(Math.ceil(5 * (newLevel + 1) * (newLevel + 2) / UPGRADE_TICKS_DIVISOR));
         if (rentTickCount >= cumulativeNeeded) {
           newLevel++;
         } else {

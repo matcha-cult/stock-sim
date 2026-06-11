@@ -139,6 +139,12 @@ export const UPGRADE_LEVEL_BONUS_RATE = 0.1;
 /** 升级所需收租次数基数（每级 × 10） */
 export const UPGRADE_TICKS_BASE = 10;
 
+/** 升级需求除数（累计公式分母，默认 2，可通过 UPGRADE_TICKS_DIVISOR 环境变量配置） */
+const UPGRADE_TICKS_DIVISOR_ENV = parseInt(process.env.UPGRADE_TICKS_DIVISOR ?? '2', 10);
+export const UPGRADE_TICKS_DIVISOR = Number.isFinite(UPGRADE_TICKS_DIVISOR_ENV) && UPGRADE_TICKS_DIVISOR_ENV > 0
+  ? UPGRADE_TICKS_DIVISOR_ENV
+  : 2;
+
 /** 店铺最大升级等级（默认 50 级，可通过 UPGRADE_MAX_LEVEL 环境变量配置） */
 const UPGRADE_MAX_LEVEL_ENV = parseInt(process.env.UPGRADE_MAX_LEVEL ?? '50', 10);
 export const UPGRADE_MAX_LEVEL = Number.isFinite(UPGRADE_MAX_LEVEL_ENV) && UPGRADE_MAX_LEVEL_ENV > 0
@@ -227,5 +233,5 @@ export const calculateSpaceExpansionCost = (params: {
  * 计算升级到下一级所需累计收租次数。
  */
 export const calculateUpgradeTicksNeeded = (currentLevel: number): number => {
-  return UPGRADE_TICKS_BASE * (currentLevel + 1);
+  return Math.ceil(UPGRADE_TICKS_BASE * (currentLevel + 1) / UPGRADE_TICKS_DIVISOR);
 };
