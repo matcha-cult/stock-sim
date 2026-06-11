@@ -97,6 +97,20 @@ export type ShopRentRankRow = {
   shopCount: number;
 };
 
+export type ScratchRankMetric = 'total' | 'grandCount' | 'firstCount';
+
+export type ScratchRankRow = {
+  rank: number;
+  characterId: number;
+  name: string;
+  title: string;
+  monthCardActive: boolean;
+  totalPrizeAmount: number;
+  settledCount: number;
+  grandPrizeCount: number;
+  firstPrizeCount: number;
+};
+
 type WealthRankQueryRow = {
   rank: number | string;
   character_id: number | string;
@@ -128,6 +142,17 @@ type ShopRentRankQueryRow = {
   shopCount: number | string;
 };
 
+type ScratchRankQueryRow = {
+  rank: number | string;
+  character_id: number | string;
+  name: string;
+  title: string | null;
+  totalPrizeAmount: number | string;
+  settledCount: number | string;
+  grandPrizeCount: number | string;
+  firstPrizeCount: number | string;
+};
+
 const STOCK_MARKET_RANK_ORDER_SQL: Record<StockMarketRankMetric, string> = {
   value: '"totalMarketValueSpiritStones" DESC, "totalPnlSpiritStones" DESC, character_id ASC',
   unrealizedProfit: '"unrealizedPnlSpiritStones" DESC, "totalMarketValueSpiritStones" DESC, character_id ASC',
@@ -140,6 +165,22 @@ const STOCK_MARKET_RANK_FILTER_SQL: Record<StockMarketRankMetric, string> = {
   unrealizedProfit: 'COALESCE(h.total_market_value_spirit_stones, 0)::bigint > 0',
   totalProfit: '(COALESCE(h.total_market_value_spirit_stones, 0)::bigint - COALESCE(h.total_cost_spirit_stones, 0)::bigint + COALESCE(r.realized_pnl_spirit_stones, 0)::bigint) > 0',
   totalLoss: '(COALESCE(h.total_market_value_spirit_stones, 0)::bigint - COALESCE(h.total_cost_spirit_stones, 0)::bigint + COALESCE(r.realized_pnl_spirit_stones, 0)::bigint) < 0',
+};
+
+const SCRATCH_RANK_ORDER_SQL: Record<ScratchRankMetric, string> = {
+  total: '"totalPrizeAmount" DESC, "grandPrizeCount" DESC, character_id ASC',
+  grandCount: '"grandPrizeCount" DESC, "totalPrizeAmount" DESC, character_id ASC',
+  firstCount: '"firstPrizeCount" DESC, "totalPrizeAmount" DESC, character_id ASC',
+};
+
+const normalizeScratchRankMetric = (
+  metric: string | null | undefined,
+): ScratchRankMetric | null => {
+  const normalized = typeof metric === 'string' ? metric.trim().toLowerCase() : '';
+  if (normalized === 'total') return 'total';
+  if (normalized === 'grandcount') return 'grandCount';
+  if (normalized === 'firstcount') return 'firstCount';
+  return null;
 };
 
 // ============================================
@@ -324,6 +365,65 @@ const loadShopRentRanks = async (limit: number): Promise<ShopRentRankRow[]> => {
 };
 
 // ============================================
+// 刮刮乐排行 loader
+// ============================================
+
+const loadScratchRanks = async (
+  metric: ScratchRankMetric,
+  limit: number,
+): Promise<ScratchRankRow[]> => {
+  const orderSql = SCRATCH_RANK_ORDER_SQL[metric];
+  const res = await query(
+    `
+      WITH scratch_totals AS (
+        SELECT
+          character_id,
+          COALESCE(SUM(prize_amount), 0)::bigint AS "totalPrizeAmount",
+          COUNT(*)::int AS "settledCount",
+          COUNT(*) FILTER (WHERE prize_tier = 'grand')::int AS "grandPrizeCount",
+          COUNT(*) FILTER (WHERE prize_tier = 'regular_1')::int AS "firstPrizeCount"
+        FROM scratch_ticket
+        WHERE settled = true AND prize_amount IS NOT NULL
+        GROUP BY character_id
+      )
+      SELECT
+        ROW_NUMBER() OVER (ORDER BY ${orderSql})::int AS rank,
+        c.id AS character_id,
+        c.nickname AS name,
+        c.title,
+        COALESCE(t."totalPrizeAmount", 0)::bigint AS "totalPrizeAmount",
+        COALESCE(t."settledCount", 0)::int AS "settledCount",
+        COALESCE(t."grandPrizeCount", 0)::int AS "grandPrizeCount",
+        COALESCE(t."firstPrizeCount", 0)::int AS "firstPrizeCount"
+      FROM characters c
+      JOIN scratch_totals t ON t.character_id = c.id
+      WHERE c.nickname IS NOT NULL AND c.nickname <> ''
+      ORDER BY rank
+      LIMIT $1
+    `,
+    [limit],
+  );
+
+  const rows = res.rows as ScratchRankQueryRow[];
+  const characterIds = rows.map((row) => Number(row.character_id));
+  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(characterIds);
+  const gmStatusMap = await getGmStatusMapByCharacterIds(characterIds);
+
+  return rows.map((row) => ({
+    rank: Number(row.rank),
+    characterId: Number(row.character_id),
+    name: String(row.name),
+    title: typeof row.title === 'string' ? row.title : '',
+    monthCardActive: monthCardActiveMap.get(Number(row.character_id)) ?? false,
+    isGm: gmStatusMap.get(Number(row.character_id)) ?? false,
+    totalPrizeAmount: Number(row.totalPrizeAmount),
+    settledCount: Number(row.settledCount),
+    grandPrizeCount: Number(row.grandPrizeCount),
+    firstPrizeCount: Number(row.firstPrizeCount),
+  }));
+};
+
+// ============================================
 // 缓存实例
 // ============================================
 
@@ -357,6 +457,21 @@ const shopRentRankCache = createCacheLayer<number, ShopRentRankRow[]>({
   loader: loadShopRentRanks,
 });
 
+const createScratchRankCache = (
+  metric: ScratchRankMetric,
+) => createCacheLayer<number, ScratchRankRow[]>({
+  keyPrefix: `rank:scratch:${metric}:`,
+  redisTtlSec: RANK_CACHE_REDIS_TTL_SEC,
+  memoryTtlMs: RANK_CACHE_MEMORY_TTL_MS,
+  loader: (limit) => loadScratchRanks(metric, limit),
+});
+
+const scratchRankCaches: Record<ScratchRankMetric, ReturnType<typeof createScratchRankCache>> = {
+  total: createScratchRankCache('total'),
+  grandCount: createScratchRankCache('grandCount'),
+  firstCount: createScratchRankCache('firstCount'),
+};
+
 // ============================================
 // 导出函数
 // ============================================
@@ -388,5 +503,19 @@ export const getShopRentRanks = async (
 ): Promise<{ success: boolean; message: string; data?: ShopRentRankRow[] }> => {
   const l = clampLimit(limit, 50);
   const data = (await shopRentRankCache.get(l)) ?? [];
+  return { success: true, message: 'ok', data };
+};
+
+export const getScratchRanks = async (
+  metricRaw: string | null | undefined,
+  limit?: number,
+): Promise<{ success: boolean; message: string; data?: ScratchRankRow[] }> => {
+  const metric = normalizeScratchRankMetric(metricRaw);
+  if (!metric) {
+    return { success: false, message: '刮刮乐排行维度不合法' };
+  }
+
+  const l = clampLimit(limit, 50);
+  const data = (await scratchRankCaches[metric].get(l)) ?? [];
   return { success: true, message: 'ok', data };
 };

@@ -49,9 +49,12 @@ import {
 import {
   getWealthRanks,
   getStockMarketRanks,
+  getScratchRanks,
   type WealthRankDto,
   type StockMarketRankDto,
   type StockMarketRankMetric,
+  type ScratchRankDto,
+  type ScratchRankMetric,
 } from '../services/api/rank';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
 import { RequestDedup } from './RequestDedup';
@@ -80,6 +83,7 @@ export class StockStore {
   // 排行相关
   wealthRanks: WealthRankDto[] = [];
   stockMarketRanks: StockMarketRankDto[] = [];
+  scratchRanks: ScratchRankDto[] = [];
   rankLoading: boolean = false;
 
   // 挂单相关
@@ -242,6 +246,31 @@ export class StockStore {
     return promise;
   }
 
+  async refreshScratchRanks(metric: ScratchRankMetric = 'total', background = false): Promise<void> {
+    if (!this.dedup.enter('scratchRanks', background)) return;
+
+    if (!background) this.rankLoading = true;
+    const promise = (async () => {
+      try {
+        const response = await getScratchRanks(
+          metric,
+          50,
+          background ? SILENT_API_REQUEST_CONFIG : undefined,
+        );
+        this.scratchRanks = response.data ?? [];
+      } catch {
+        if (!background) {
+          this.scratchRanks = [];
+        }
+      } finally {
+        if (!background) this.rankLoading = false;
+        this.dedup.complete('scratchRanks');
+      }
+    })();
+    this.dedup.start('scratchRanks', promise);
+    return promise;
+  }
+
   async executeTrade(
     side: StockMarketTradeSide,
     stockId: string,
@@ -297,6 +326,7 @@ export class StockStore {
     this.newsIndex = 0;
     this.wealthRanks = [];
     this.stockMarketRanks = [];
+    this.scratchRanks = [];
     this.rankLoading = false;
     this.pendingOrders = [];
     this.pendingOrdersLoading = false;

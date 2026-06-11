@@ -67,6 +67,21 @@ export type ShopRentRankDto = {
   shopCount: number;
 };
 
+export type ScratchRankMetric = 'total' | 'grandCount' | 'firstCount';
+
+export type ScratchRankDto = {
+  rank: number;
+  characterId: number;
+  name: string;
+  title: string;
+  monthCardActive: boolean;
+  isGm: boolean;
+  totalPrizeAmount: number;
+  settledCount: number;
+  grandPrizeCount: number;
+  firstPrizeCount: number;
+};
+
 interface RankApiResponse<TData> {
   success: boolean;
   message?: string;
@@ -103,4 +118,14 @@ export const getShopRentRanks = (
   const params: Record<string, unknown> = {};
   if (limit) params.limit = limit;
   return api.get('/api/rank/shop-rent', { params, ...requestConfig });
+};
+
+export const getScratchRanks = (
+  metric: ScratchRankMetric,
+  limit?: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<RankApiResponse<ScratchRankDto[]>> => {
+  const params: Record<string, unknown> = { metric };
+  if (limit) params.limit = limit;
+  return api.get('/api/rank/scratch', { params, ...requestConfig });
 };

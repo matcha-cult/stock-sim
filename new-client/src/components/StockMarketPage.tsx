@@ -34,11 +34,11 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import {
   ClearOutlined, FallOutlined, LeftOutlined, ReloadOutlined,
-  RightOutlined, ShoppingCartOutlined, LineChartOutlined, CrownOutlined, ShopOutlined,
+  RightOutlined, ShoppingCartOutlined, LineChartOutlined, CrownOutlined, ShopOutlined, GiftOutlined,
 } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import { useIsMobile } from '../shared/responsive';
-import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto, StockMarketRankMetric } from '../services/api/rank';
+import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto, StockMarketRankMetric, ScratchRankDto, ScratchRankMetric } from '../services/api/rank';
 import { getShopRentRanks } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import ShopPanel from './ShopPanel';
@@ -98,8 +98,9 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const [stockSubTab, setStockSubTab] = useState<StockSubTab>('market');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<ActionKey>('');
-  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket' | 'shopRent'>('wealth');
+  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket' | 'shopRent' | 'scratch'>('wealth');
   const [stockMarketRankMetric, setStockMarketRankMetric] = useState<StockMarketRankMetric>('value');
+  const [scratchRankMetric, setScratchRankMetric] = useState<ScratchRankMetric>('total');
   const [activeGmTab, setActiveGmTab] = useState<GmTabKey>('gm-spirit-stones');
 
   // 收租排行
@@ -206,6 +207,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
     if (activeTab !== 'ranking') return;
     void stockStore.refreshWealthRanks();
     void stockStore.refreshStockMarketRanks();
+    void stockStore.refreshScratchRanks();
   }, [activeTab, stockStore]);
 
   // 排行维度切换时重新拉取
@@ -213,6 +215,12 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
     if (activeTab !== 'ranking') return;
     void stockStore.refreshStockMarketRanks(stockMarketRankMetric);
   }, [activeTab, stockMarketRankMetric, stockStore]);
+
+  // 刮刮乐排行维度切换时重新拉取
+  useEffect(() => {
+    if (activeTab !== 'ranking') return;
+    void stockStore.refreshScratchRanks(scratchRankMetric);
+  }, [activeTab, scratchRankMetric, stockStore]);
 
   // 移动端关闭详情
   useEffect(() => {
@@ -529,10 +537,12 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   wealthRanks={stockStore.wealthRanks}
                   stockMarketRanks={stockStore.stockMarketRanks}
                   shopRentRanks={shopRentRanks}
+                  scratchRanks={stockStore.scratchRanks}
                   rankLoading={stockStore.rankLoading}
                   onRefreshWealth={() => void stockStore.refreshWealthRanks()}
                   onRefreshStockMarket={(metric?: StockMarketRankMetric) => void stockStore.refreshStockMarketRanks(metric ?? stockMarketRankMetric)}
                   onRefreshShopRent={fetchShopRentRanks}
+                  onRefreshScratch={(metric?: ScratchRankMetric) => void stockStore.refreshScratchRanks(metric ?? scratchRankMetric)}
                   onTabChange={(tab) => {
                     setActiveRankTab(tab);
                   }}
@@ -540,6 +550,8 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   isMobile={isMobile}
                   stockMarketRankMetric={stockMarketRankMetric}
                   onStockMarketRankMetricChange={setStockMarketRankMetric}
+                  scratchRankMetric={scratchRankMetric}
+                  onScratchRankMetricChange={setScratchRankMetric}
                 />
               ),
             },
@@ -1385,15 +1397,19 @@ interface RankingTabProps {
   wealthRanks: WealthRankDto[];
   stockMarketRanks: StockMarketRankDto[];
   shopRentRanks: ShopRentRankDto[];
+  scratchRanks: ScratchRankDto[];
   rankLoading: boolean;
   onRefreshWealth: () => void;
   onRefreshStockMarket: (metric?: StockMarketRankMetric) => void;
   onRefreshShopRent: () => void;
-  onTabChange: (tab: 'wealth' | 'stockMarket' | 'shopRent') => void;
-  activeRankTab: 'wealth' | 'stockMarket' | 'shopRent';
+  onRefreshScratch: (metric?: ScratchRankMetric) => void;
+  onTabChange: (tab: 'wealth' | 'stockMarket' | 'shopRent' | 'scratch') => void;
+  activeRankTab: 'wealth' | 'stockMarket' | 'shopRent' | 'scratch';
   isMobile: boolean;
   stockMarketRankMetric: StockMarketRankMetric;
   onStockMarketRankMetricChange: (metric: StockMarketRankMetric) => void;
+  scratchRankMetric: ScratchRankMetric;
+  onScratchRankMetricChange: (metric: ScratchRankMetric) => void;
 }
 
 const formatSpiritStones = (value: number): string => {
@@ -1563,10 +1579,11 @@ const getStockMarketRankColumns = (isMobile: boolean): ColumnsType<StockMarketRa
 
 function RankingTab(props: RankingTabProps): React.ReactNode {
   const {
-    wealthRanks, stockMarketRanks, shopRentRanks,
-    rankLoading, onRefreshWealth, onRefreshStockMarket, onRefreshShopRent,
+    wealthRanks, stockMarketRanks, shopRentRanks, scratchRanks,
+    rankLoading, onRefreshWealth, onRefreshStockMarket, onRefreshShopRent, onRefreshScratch,
     onTabChange, activeRankTab, isMobile,
     stockMarketRankMetric, onStockMarketRankMetricChange,
+    scratchRankMetric, onScratchRankMetricChange,
   } = props;
 
   const wealthColumns = useMemo(() => getWealthRankColumns(isMobile), [isMobile]);
@@ -1581,18 +1598,31 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
     onRefreshStockMarket();
   }, [onRefreshStockMarket]);
 
+  const handleScratchMetricChange = useCallback((metric: ScratchRankMetric) => {
+    onScratchRankMetricChange(metric);
+    onRefreshScratch(metric);
+  }, [onScratchRankMetricChange, onRefreshScratch]);
+
+  const handleScratchRefresh = useCallback(() => {
+    onRefreshScratch();
+  }, [onRefreshScratch]);
+
   const onRefresh = activeRankTab === 'wealth'
     ? onRefreshWealth
     : activeRankTab === 'stockMarket'
       ? handleStockMarketRefresh
-      : onRefreshShopRent;
+      : activeRankTab === 'scratch'
+        ? handleScratchRefresh
+        : onRefreshShopRent;
 
   if (rankLoading) {
     const currentData = activeRankTab === 'wealth'
       ? wealthRanks
       : activeRankTab === 'stockMarket'
         ? stockMarketRanks
-        : shopRentRanks;
+        : activeRankTab === 'scratch'
+          ? scratchRanks
+          : shopRentRanks;
     if (currentData.length === 0) {
       return (
         <Flex data-section="ranking-loading" justify="center" style={{ padding: 24 }}>
@@ -1606,13 +1636,14 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
     <Flex vertical gap={12} data-section="ranking-tab">
       {/* 排行类型切换 */}
       <Flex justify="space-between" align="center" gap={12} wrap="wrap">
-        <Segmented<'wealth' | 'stockMarket' | 'shopRent'>
+        <Segmented<'wealth' | 'stockMarket' | 'shopRent' | 'scratch'>
           value={activeRankTab}
           onChange={onTabChange}
           options={[
             { label: '财富', value: 'wealth', icon: <CrownOutlined /> },
             { label: '股市', value: 'stockMarket', icon: <LineChartOutlined /> },
             { label: '收租', value: 'shopRent', icon: <ShopOutlined /> },
+            { label: '彩票', value: 'scratch', icon: <GiftOutlined /> },
           ]}
         />
         <Button
@@ -1669,6 +1700,99 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
               size="small"
               pagination={false}
               scroll={{ x: 800 }}
+              style={{ fontSize: 13 }}
+            />
+          )}
+        </Card>
+      ) : activeRankTab === 'scratch' ? (
+        <Card
+          size="small"
+          style={{ overflow: 'hidden' }}
+          extra={
+            <Segmented<ScratchRankMetric>
+              value={scratchRankMetric}
+              onChange={handleScratchMetricChange}
+              options={[
+                { label: '总额', value: 'total' as const },
+                { label: '特等奖', value: 'grandCount' as const },
+                { label: '一等奖', value: 'firstCount' as const },
+              ]}
+            />
+          }
+        >
+          {scratchRanks.length === 0 ? (
+            <Empty description="暂无排行数据" />
+          ) : (
+            <Table<ScratchRankDto>
+              columns={[
+                {
+                  title: '排名',
+                  dataIndex: 'rank',
+                  key: 'rank',
+                  width: 60,
+                  fixed: isMobile ? undefined : 'left',
+                  render: (rank: number) => {
+                    const color = getRankBadgeColor(rank);
+                    const icon = rank <= 3 ? <CrownOutlined /> : null;
+                    return (
+                      <Flex gap={4} align="center">
+                        {icon && <span style={{ color: color === 'gold' ? '#faad14' : color === 'volcano' ? '#fa541c' : '#fa8c16' }}>{icon}</span>}
+                        <Tag color={color} style={{ margin: 0, minWidth: 28, textAlign: 'center' }}>{rank}</Tag>
+                      </Flex>
+                    );
+                  },
+                },
+                {
+                  title: '角色',
+                  dataIndex: 'name',
+                  key: 'name',
+                  width: 120,
+                  fixed: isMobile ? undefined : 'left',
+                  render: (_: unknown, record: ScratchRankDto) => (
+                    <PlayerName name={record.name} monthCardActive={record.monthCardActive} isGm={record.isGm} />
+                  ),
+                },
+                {
+                  title: '中奖总额',
+                  dataIndex: 'totalPrizeAmount',
+                  key: 'totalPrizeAmount',
+                  width: 120,
+                  align: 'right',
+                  render: (value: number) => (
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {formatSpiritStones(value)}
+                    </span>
+                  ),
+                },
+                {
+                  title: '开奖票数',
+                  dataIndex: 'settledCount',
+                  key: 'settledCount',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: '特等奖',
+                  dataIndex: 'grandPrizeCount',
+                  key: 'grandPrizeCount',
+                  width: 70,
+                  align: 'center',
+                  render: (v: number) => v > 0 ? <Tag color="gold">{v}</Tag> : v,
+                },
+                {
+                  title: '一等奖',
+                  dataIndex: 'firstPrizeCount',
+                  key: 'firstPrizeCount',
+                  width: 70,
+                  align: 'center',
+                  render: (v: number) => v > 0 ? <Tag color="volcano">{v}</Tag> : v,
+                },
+              ]}
+              dataSource={scratchRanks}
+              rowKey="characterId"
+              size="small"
+              pagination={false}
+              scroll={{ x: 560 }}
               style={{ fontSize: 13 }}
             />
           )}
