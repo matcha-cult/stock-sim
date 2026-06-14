@@ -18,7 +18,7 @@
  * - 买卖都复用 `stockMarketRules` 与现有精确货币入口，手续费和灵石扣增不会散落。
  *
  * 关键边界条件与坑点：
- * 1. 买入只校验数量合法性和灵石是否足够，持仓上限不在股市服务层限制。
+ * 1. 买入校验持仓上限（`STOCK_MAX_HOLDING_QUANTITY`），超出部分自动截断；已达上限时直接拒绝。
  * 2. AI 失败只更新 tick 状态，不触碰 quote/history，保证价格只由有效新闻驱动。
  */
 import { withTransaction, query } from '../../config/database.js';
@@ -372,6 +372,17 @@ const STOCK_MARKET_PRICE_SCALE_SQL = STOCK_MARKET_PRICE_SCALE.toString();
 const STOCK_MARKET_PRICE_SCALE_OFFSET_SQL = (STOCK_MARKET_PRICE_SCALE - 1n).toString();
 const STOCK_MARKET_NOISE_REASON = '市场正常起伏';
 const STOCK_MARKET_PRESSURE_REASON = '买卖压力';
+
+/**
+ * 单只股票单角色持仓上限（股）。超过此数量的买入会自动截断到上限，
+ * 已达上限时直接拒绝。可通过环境变量 `STOCK_MAX_HOLDING_QUANTITY` 覆盖。
+ */
+const STOCK_MAX_HOLDING_QUANTITY = (() => {
+  const raw = process.env.STOCK_MAX_HOLDING_QUANTITY;
+  if (!raw) return 100_000;
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 100_000;
+})();
 
 const normalizeTradeQuantity = (quantity: number): number | null => {
   if (!Number.isInteger(quantity) || quantity <= 0) return null;
@@ -1008,13 +1019,19 @@ class StockMarketService {
   }): Promise<{ success: boolean; message: string }> {
     const definition = getEnabledStockDefinitionById(params.stockId);
     if (!definition) return { success: false, message: '股票不存在' };
-    const quantity = normalizeTradeQuantity(params.quantity);
-    if (quantity === null) return { success: false, message: '购买数量不合法' };
+    const requestedQuantity = normalizeTradeQuantity(params.quantity);
+    if (requestedQuantity === null) return { success: false, message: '购买数量不合法' };
 
     await this.ensureInitialQuotes();
     const quoteByStockId = await this.loadQuoteRowsForUpdate([definition.id]);
     const quote = quoteByStockId.get(definition.id);
     if (!quote) return { success: false, message: '股票报价不存在' };
+
+    const holding = await this.loadHoldingForUpdate(params.characterId, definition.id);
+    const currentQuantity = holding ? toIntValue(holding.quantity) : 0;
+    const maxBuyable = STOCK_MAX_HOLDING_QUANTITY - currentQuantity;
+    if (maxBuyable <= 0) return { success: false, message: '该股票持仓已达上限' };
+    const quantity = Math.min(requestedQuantity, maxBuyable);
 
     const price = toBigIntValue(quote.current_price_spirit_stones);
 
