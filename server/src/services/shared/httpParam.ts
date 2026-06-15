@@ -38,6 +38,12 @@ export const parsePositiveInt = (value: unknown): number | null => {
   return parsed;
 };
 
+export const parseNonNegativeInt = (value: unknown): number | null => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 0) return null;
+  return parsed;
+};
+
 export const parseNonEmptyText = (value: string | string[] | undefined | null): string | null => {
   const normalized = Array.isArray(value) ? value[0] : value;
   if (typeof normalized !== 'string') return null;

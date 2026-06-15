@@ -19,6 +19,8 @@ import ledgerRoutes from '../routes/ledgerRoutes.js';
 import scratchGameRoutes from '../routes/scratchGameRoutes.js';
 import monthCardRoutes from '../routes/monthCardRoutes.js';
 import gmMonthCardRoutes from '../routes/gmMonthCardRoutes.js';
+import farmRoutes from '../routes/farmRoutes.js';
+import serverConfigRoutes from '../routes/serverConfigRoutes.js';
 
 export function registerRoutes(app: express.Application): void {
   // 认证路由
@@ -47,4 +49,10 @@ export function registerRoutes(app: express.Application): void {
 
   // 月卡路由（GM 侧）
   app.use('/api/gm/month-card', gmMonthCardRoutes);
+
+  // 灵田路由
+  app.use('/api/farm', farmRoutes);
+
+  // 服务端全局配置（无需鉴权）
+  app.use('/api/server-config', serverConfigRoutes);
 }

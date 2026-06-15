@@ -28,6 +28,7 @@ import { StockStore } from './StockStore';
 import { ThemeStore } from './ThemeStore';
 import { ShopStore } from './ShopStore';
 import { MonthCardStore } from './MonthCardStore';
+import { FarmStore } from './FarmStore';
 
 export class RootStore {
   authStore: AuthStore;
@@ -35,6 +36,7 @@ export class RootStore {
   themeStore: ThemeStore;
   shopStore: ShopStore;
   monthCardStore: MonthCardStore;
+  farmStore: FarmStore;
 
   constructor() {
     this.themeStore = new ThemeStore();
@@ -42,6 +44,7 @@ export class RootStore {
     this.authStore = new AuthStore();
     this.shopStore = new ShopStore(this);
     this.monthCardStore = new MonthCardStore();
+    this.farmStore = new FarmStore(this);
     makeAutoObservable(this);
   }
 }

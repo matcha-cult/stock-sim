@@ -46,6 +46,12 @@ model characters {
   scratch_tickets              scratch_ticket[] @ignore
   month_card_ownerships        month_card_ownership[]
   month_card_daily_claims      month_card_daily_claim[]
+  farm_profile                 farm_profile?
+  farm_cells                   farm_cell[]
+  farm_seed_inventories        farm_seed_inventory[]
+  farm_harvest_inventories     farm_harvest_inventory[]
+  farm_decorations             farm_decoration[]
+  farm_activity_logs           farm_activity_log[]
 }
 
 // 股票报价表
@@ -312,5 +318,120 @@ model month_card_daily_claim {
 
   @@unique([character_id, claim_date], map: "uq_daily_claim_character_date")
   @@index([character_id, claim_date], map: "idx_daily_claim_character_date")
+}
+
+// ========== 灵田系统 V2 ==========
+
+// 角色灵田信息表
+model farm_profile {
+  id                     Int       @id @default(autoincrement())
+  character_id           Int       @unique
+  farm_tier              Int       @default(1) @db.SmallInt  // 等阶（1-4，对应黄/玄/地/天）
+  farm_level             Int       @default(0) @db.SmallInt  // 等级（0-100）
+  farm_exp               BigInt    @default(0)               // 当前等级经验
+  max_row                Int       @default(4) @db.SmallInt
+  total_harvest_count    Int       @default(0)
+  harvest_count_by_crop  Json      @default("{}")
+  initial_seeds_claimed  Boolean   @default(false)
+  created_at             DateTime  @default(now()) @db.Timestamp(6)
+  updated_at             DateTime  @updatedAt @db.Timestamp(6)
+
+  character              characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+}
+
+// 灵田格子表
+model farm_cell {
+  id                     Int        @id @default(autoincrement())
+  character_id           Int
+  row                    Int        @db.SmallInt
+  col                    Int        @db.SmallInt
+  unlocked               Boolean    @default(false)
+  crop_id                String?    @db.VarChar(64)
+  planted_at             DateTime?  @db.Timestamp(6)
+  mutated                Boolean    @default(false)
+  mutation_type          String?    @db.VarChar(32)
+  /// 待发放的杂交种子 itemId（种植时判定成功，进入第二阶段且金光变后实际发放）
+  pending_hybrid_seed    String?    @db.VarChar(64)
+  /// 种植的种子代数（用于计算收获产出的种子代数：parent.generation + 1）
+  planted_generation     Int        @default(0)
+  created_at             DateTime   @default(now()) @db.Timestamp(6)
+  updated_at             DateTime   @updatedAt @db.Timestamp(6)
+
+  character              characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, row, col])
+  @@index([character_id])
+  @@index([character_id, crop_id], map: "idx_farm_cell_crop")
+}
+
+// 种子背包表
+model farm_seed_inventory {
+  id              Int       @id @default(autoincrement())
+  character_id    Int
+  item_id         String    @db.VarChar(64)
+  quantity        Int       @default(0)
+  mutation_type   String?   @db.VarChar(32)
+  /// 种子代数（0=商店/初始种子，1=杂交产出，2+=后代）
+  generation      Int       @default(0)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime  @updatedAt @db.Timestamp(6)
+
+  character       characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  // 唯一约束由 COALESCE 唯一索引维护（处理 mutation_type 为 NULL 的聚合场景），见 fix_farm_seed_inventory_generation.sql
+  // 唯一约束包含 generation，让不同代数的种子分开存储
+  @@index([character_id, item_id, mutation_type, generation])
+  @@index([character_id])
+}
+
+// 灵材仓库表（按品质分别计数）
+model farm_harvest_inventory {
+  id              Int       @id @default(autoincrement())
+  character_id    Int
+  crop_id         String    @db.VarChar(64)
+  quantity        Int       @default(0)
+  quality         String    @default("normal") @db.VarChar(10)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+  updated_at      DateTime  @updatedAt @db.Timestamp(6)
+
+  character       characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, crop_id, quality])
+  @@index([character_id])
+}
+
+// 灵田装饰表
+model farm_decoration {
+  id                Int       @id @default(autoincrement())
+  character_id      Int
+  row               Int       @db.SmallInt
+  col               Int       @db.SmallInt
+  decoration_type   String    @db.VarChar(20)
+  placed_at         DateTime  @default(now()) @db.Timestamp(6)
+
+  character         characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, row, col])
+  @@index([character_id])
+}
+
+// 灵田活动日志表（播种/收获/铲除/枯萎/杂交/变异记录）
+model farm_activity_log {
+  id              BigInt   @id @default(autoincrement())
+  character_id    Int
+  /// 活动类型：plant/harvest/remove/wither/hybrid/mutation
+  activity_type   String   @db.VarChar(20)
+  row             Int      @db.SmallInt
+  col             Int      @db.SmallInt
+  /// 作物 ID（枯萎/铲除时记录被处理的作物）
+  crop_id         String?  @db.VarChar(64)
+  /// 活动详情（JSON 格式，如产量、品质、变异类型、杂交配方等）
+  metadata        Json     @db.JsonB
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+
+  character       characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@index([character_id])
+  @@index([character_id, created_at])
 }
 

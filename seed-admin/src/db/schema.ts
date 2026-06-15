@@ -1,0 +1,80 @@
+import { sqliteTable, text, integer, real } from "drizzle-orm/sqlite-core";
+
+// Farm 模块表结构
+
+export const farmCrops = sqliteTable("farm_crops", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  cropId: text("crop_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  element: text("element"),
+  rarity: text("rarity").notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull(),
+  growthStageMinutes: text("growth_stage_minutes").notNull(),
+  stageLabels: text("stage_labels").notNull(),
+  witherAfterMinutes: integer("wither_after_minutes").notNull(),
+  yieldMin: integer("yield_min").notNull(),
+  yieldMax: integer("yield_max").notNull(),
+  sellPricePerUnit: integer("sell_price_per_unit").notNull(),
+  harvestTradeUnit: integer("harvest_trade_unit").notNull(),
+  expGain: integer("exp_gain").notNull(),
+  requiredTier: integer("required_tier").notNull(),
+  seedItemId: text("seed_item_id").notNull(),
+  seedUnit: text("seed_unit").notNull(),
+  harvestUnit: text("harvest_unit").notNull(),
+  seedFromYield: integer("seed_from_yield", { mode: "boolean" }).notNull(),
+});
+
+export const farmSeeds = sqliteTable("farm_seeds", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  itemId: text("item_id").notNull().unique(),
+  cropId: text("crop_id").notNull(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  buyPrice: integer("buy_price").notNull(),
+  sellPrice: integer("sell_price").notNull(),
+  stackable: integer("stackable", { mode: "boolean" }).notNull(),
+  maxStack: integer("max_stack").notNull(),
+  requiredTier: integer("required_tier").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  seedUnit: text("seed_unit").notNull(),
+});
+
+export const farmHybridRecipes = sqliteTable("farm_hybrid_recipes", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  recipeId: text("recipe_id").notNull().unique(),
+  name: text("name").notNull(),
+  description: text("description").notNull(),
+  enabled: integer("enabled", { mode: "boolean" }).notNull(),
+  sortOrder: integer("sort_order").notNull(),
+  baseCropId: text("base_crop_id").notNull(),
+  requiredCrops: text("required_crops").notNull(),
+  resultCropId: text("result_crop_id").notNull(),
+  resultSeedItemId: text("result_seed_item_id").notNull(),
+  resultQuantity: integer("result_quantity").notNull(),
+});
+
+export const farmGlobalConfig = sqliteTable("farm_global_config", {
+  id: integer("id").primaryKey().default(1),
+  initialRows: integer("initial_rows").notNull(),
+  initialCols: integer("initial_cols").notNull(),
+  maxRows: integer("max_rows").notNull(),
+  fixedCols: integer("fixed_cols").notNull(),
+  expansions: text("expansions").notNull(),
+  xiRangPrice: integer("xi_rang_price").notNull(),
+  cellReclaimSpiritStone: integer("cell_reclaim_spirit_stone").notNull(),
+  cellReclaimXiRang: integer("cell_reclaim_xi_rang").notNull(),
+  farmTiers: text("farm_tiers").notNull(),
+  initialSeeds: text("initial_seeds").notNull(),
+  mutationBaseRate: real("mutation_base_rate").notNull(),
+  mutationPositiveRate: real("mutation_positive_rate").notNull(),
+  mutationNeutralRate: real("mutation_neutral_rate").notNull(),
+  mutationNegativeRate: real("mutation_negative_rate").notNull(),
+  mutationInheritRate: real("mutation_inherit_rate").notNull(),
+  qualityHqRate: real("quality_hq_rate").notNull(),
+  qualityNormalRate: real("quality_normal_rate").notNull(),
+  qualityLqRate: real("quality_lq_rate").notNull(),
+  accelerationMultiplier: real("acceleration_multiplier").notNull(),
+});

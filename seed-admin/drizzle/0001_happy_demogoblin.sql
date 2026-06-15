@@ -1,0 +1,1 @@
+ALTER TABLE `farm_global_config` DROP COLUMN `hybrid_cooldown_minutes`;

@@ -42,6 +42,13 @@ export type SpiritStonesLedgerBizType =
   | 'gm_revoke_month_card'
   | 'scratch_prize'
   | 'month_card_daily'
+  | 'farm_buy_seed'
+  | 'farm_sell_seed'
+  | 'farm_sell_harvest'
+  | 'farm_reclaim'
+  | 'farm_expand_cell'
+  | 'farm_upgrade_tier'
+  | 'farm_place_decoration'
   | 'other';
 
 export interface RecordLedgerParams {
@@ -68,13 +75,22 @@ export interface LedgerRowDto {
   createdAt: number;
 }
 
+// ---- 灵田内测守卫 ----
+
+/** 灵田内测模式下跳过灵田相关流水记录，避免产生无意义的正式账目。 */
+const isFarmBetaWipeMode = (): boolean => process.env.FARM_BETA_WIPE_MODE === 'true';
+
+const FARM_BIZ_TYPE_PREFIX = 'farm_';
+
 // ---- 核心写入 ----
 
 /**
  * 记录一笔灵石流水。
  * 必须在事务内调用（由 @Transactional 或上层事务保证原子性）。
+ * 灵田内测模式下，灵田业务类型（farm_*）的流水直接跳过。
  */
 export const recordSpiritStones = async (params: RecordLedgerParams): Promise<void> => {
+  if (isFarmBetaWipeMode() && params.bizType.startsWith(FARM_BIZ_TYPE_PREFIX)) return;
   await query(
     `
     INSERT INTO spirit_stones_ledger
@@ -395,5 +411,12 @@ export const LEDGER_BIZ_TYPE_LABELS: Record<SpiritStonesLedgerBizType, string> =
   gm_revoke_month_card: 'GM 回收月卡',
   month_card_daily: '月卡每日领取',
   scratch_prize: '刮刮乐奖金',
+  farm_buy_seed: '灵田购买种子',
+  farm_sell_seed: '灵田出售种子',
+  farm_sell_harvest: '灵田出售灵材',
+  farm_reclaim: '灵田开垦',
+  farm_expand_cell: '灵田扩展格子',
+  farm_upgrade_tier: '灵田等阶突破',
+  farm_place_decoration: '灵田放置装饰物',
   other: '其他',
 };
