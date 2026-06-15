@@ -97,7 +97,7 @@ type SeedRow = {
   id: number;
   item_id: string;
   quantity: number;
-  mutation_type: string | null;
+  mutation_type: string;
   generation: number;
 };
 
@@ -148,12 +148,12 @@ async function grantInitialSeeds(characterId: number): Promise<void> {
   if (initialSeeds.length === 0) return;
 
   const seedValues = initialSeeds
-    .map((s) => `(${characterId}, '${s.itemId}', ${s.quantity}, NULL, 0, NOW())`)
+    .map((s) => `(${characterId}, '${s.itemId}', ${s.quantity}, '', 0, NOW())`)
     .join(', ');
   await query(
     `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
      VALUES ${seedValues}
-     ON CONFLICT (character_id, item_id, COALESCE(mutation_type, ''), generation) DO UPDATE
+     ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
      SET quantity = farm_seed_inventory.quantity + EXCLUDED.quantity,
          updated_at = CURRENT_TIMESTAMP`,
     [],
@@ -332,8 +332,8 @@ export async function buySeed(
 
     await query(
       `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-       VALUES ($1, $2, $3, NULL, 0, NOW())
-       ON CONFLICT (character_id, item_id, COALESCE(mutation_type, ''), generation) DO UPDATE
+       VALUES ($1, $2, $3, '', 0, NOW())
+       ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
        SET quantity = farm_seed_inventory.quantity + $3,
            updated_at = CURRENT_TIMESTAMP`,
       [characterId, itemId, quantity],
@@ -354,12 +354,13 @@ export async function sellSeed(
     if (!seedConfig) return { success: false, message: '种子不存在' };
     if (quantity <= 0) return { success: false, message: '数量无效' };
 
+    const dbMutationType = mutationType ?? '';
     const result = await query(
       `UPDATE farm_seed_inventory SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP
        WHERE character_id = $2 AND item_id = $3 AND quantity >= $1
-         AND (($4::text IS NULL AND mutation_type IS NULL) OR mutation_type = $4::text)
+         AND mutation_type = $4
        RETURNING id`,
-      [quantity, characterId, itemId, mutationType],
+      [quantity, characterId, itemId, dbMutationType],
     );
     if (result.rowCount === 0) return { success: false, message: '种子数量不足' };
 
@@ -403,7 +404,7 @@ export async function plantCrop(
       id: number;
       item_id: string;
       quantity: number;
-      mutation_type: string | null;
+      mutation_type: string;
       generation: number;
     }>(
       `SELECT id, item_id, quantity, mutation_type, generation
@@ -632,8 +633,8 @@ export async function harvestCrop(
         const newSeedGeneration = cell.planted_generation + 1;
         await query(
           `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, NULL, $3, NOW())
-           ON CONFLICT (character_id, item_id, COALESCE(mutation_type, ''), generation) DO UPDATE
+           VALUES ($1, $2, 1, '', $3, NOW())
+           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
            SET quantity = farm_seed_inventory.quantity + 1,
                updated_at = CURRENT_TIMESTAMP`,
           [characterId, witheredSeedItemId, newSeedGeneration],
@@ -746,7 +747,7 @@ export async function harvestCrop(
         await query(
           `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
            VALUES ($1, $2, 1, $3, $4, NOW())
-           ON CONFLICT (character_id, item_id, COALESCE(mutation_type, ''), generation) DO UPDATE
+           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
            SET quantity = farm_seed_inventory.quantity + 1,
                updated_at = CURRENT_TIMESTAMP`,
           [characterId, seedItemId, seedMutationType, newSeedGeneration],
@@ -754,8 +755,8 @@ export async function harvestCrop(
       } else {
         await query(
           `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, NULL, $3, NOW())
-           ON CONFLICT (character_id, item_id, COALESCE(mutation_type, ''), generation) DO UPDATE
+           VALUES ($1, $2, 1, '', $3, NOW())
+           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
            SET quantity = farm_seed_inventory.quantity + 1,
                updated_at = CURRENT_TIMESTAMP`,
           [characterId, seedItemId, newSeedGeneration],
@@ -774,8 +775,8 @@ export async function harvestCrop(
         // 发放杂交种子（第 1 代）
         await query(
           `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, NULL, 1, NOW())
-           ON CONFLICT (character_id, item_id, COALESCE(mutation_type, ''), generation) DO UPDATE
+           VALUES ($1, $2, 1, '', 1, NOW())
+           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
            SET quantity = farm_seed_inventory.quantity + 1,
                updated_at = CURRENT_TIMESTAMP`,
           [characterId, hybridSeedItemId],
@@ -1530,7 +1531,7 @@ function buildSeedInventoryDto(rows: SeedRow[]): SeedInventoryItem[] {
       id: row.id,
       itemId: row.item_id,
       quantity: row.quantity,
-      mutationType: row.mutation_type as MutationType | null,
+      mutationType: (row.mutation_type || null) as MutationType | null,
       generation: row.generation,
     }));
 }

@@ -370,7 +370,7 @@ model farm_seed_inventory {
   character_id    Int
   item_id         String    @db.VarChar(64)
   quantity        Int       @default(0)
-  mutation_type   String?   @db.VarChar(32)
+  mutation_type   String    @default("") @db.VarChar(32)
   /// 种子代数（0=商店/初始种子，1=杂交产出，2+=后代）
   generation      Int       @default(0)
   created_at      DateTime  @default(now()) @db.Timestamp(6)
@@ -378,9 +378,7 @@ model farm_seed_inventory {
 
   character       characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
 
-  // 唯一约束由 COALESCE 唯一索引维护（处理 mutation_type 为 NULL 的聚合场景），见 fix_farm_seed_inventory_generation.sql
-  // 唯一约束包含 generation，让不同代数的种子分开存储
-  @@index([character_id, item_id, mutation_type, generation])
+  @@unique([character_id, item_id, mutation_type, generation])
   @@index([character_id])
 }
 
