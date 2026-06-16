@@ -272,6 +272,13 @@ export interface SellAllResult {
   totalEarn: number;
 }
 
+export interface HarvestAllResult {
+  success: boolean;
+  message: string;
+  harvestedCount: number;
+  results: Array<{ row: number; col: number; success: boolean; message: string }>;
+}
+
 // ==================== API 请求 ====================
 
 export const getFarmOverview = (config?: AxiosRequestConfig) =>
@@ -292,6 +299,9 @@ export const plantCrop = (row: number, col: number, seedId: number) =>
 
 export const harvestCrop = (row: number, col: number) =>
   api.post<HarvestResult>('/api/farm/harvest', { row, col });
+
+export const harvestAll = () =>
+  api.post<HarvestAllResult>('/api/farm/harvest-all');
 
 export const removeCrop = (row: number, col: number) =>
   api.post<ActionResult & { hybridRevoked?: boolean }>('/api/farm/remove', { row, col });

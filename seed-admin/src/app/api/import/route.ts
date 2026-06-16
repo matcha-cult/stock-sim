@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
               cropId: crop.cropId,
               name: crop.name,
               description: crop.description,
-              element: crop.element,
+              element: JSON.stringify(crop.element),
               rarity: crop.rarity,
               sortOrder: crop.sortOrder,
               enabled: crop.enabled,
@@ -87,6 +87,7 @@ export async function POST(request: NextRequest) {
               sortOrder: recipe.sortOrder,
               baseCropId: recipe.baseCropId,
               requiredCrops: JSON.stringify(recipe.requiredCrops),
+              minRequired: recipe.minRequired ?? null,
               resultCropId: recipe.resultCropId,
               resultSeedItemId: recipe.resultSeedItemId,
               resultQuantity: recipe.resultQuantity,
@@ -122,6 +123,7 @@ export async function POST(request: NextRequest) {
             qualityHqRate: plotsData.quality.hqRate,
             qualityNormalRate: plotsData.quality.normalRate,
             qualityLqRate: plotsData.quality.lqRate,
+            qualityHqSeedRate: plotsData.quality.hqSeedRate ?? 0,
             accelerationMultiplier: plotsData.accelerationMultiplier,
           })
           .run();

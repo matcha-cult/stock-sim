@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Table, Space, Tag, Switch, Modal, Form, Input, InputNumber, Select, App, Popconfirm } from "antd";
+import { Button, Table, Space, Tag, Switch, Modal, Form, Input, InputNumber, Select, App, Popconfirm, Flex, Typography } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 
@@ -9,12 +9,12 @@ interface Crop {
   cropId: string;
   name: string;
   description: string;
-  element: string | null;
+  element: string[] | null;
   rarity: string;
   sortOrder: number;
   enabled: boolean;
-  growthStageMinutes: string;
-  stageLabels: string;
+  growthStageMinutes: number[];
+  stageLabels: string[];
   witherAfterMinutes: number;
   yieldMin: number;
   yieldMax: number;
@@ -58,7 +58,7 @@ export default function CropsPage() {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(30);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingCrop, setEditingCrop] = useState<Crop | null>(null);
   const [form] = Form.useForm();
@@ -84,6 +84,9 @@ export default function CropsPage() {
       seedFromYield: false,
       sortOrder: 0,
       requiredTier: 1,
+      element: [],
+      growthStageMinutes: [],
+      stageLabels: [],
     });
     setModalVisible(true);
   };
@@ -92,8 +95,7 @@ export default function CropsPage() {
     setEditingCrop(record);
     form.setFieldsValue({
       ...record,
-      growthStageMinutes: JSON.parse(record.growthStageMinutes),
-      stageLabels: JSON.parse(record.stageLabels),
+      growthStageMinutes: record.growthStageMinutes.map(String),
     });
     setModalVisible(true);
   };
@@ -108,8 +110,7 @@ export default function CropsPage() {
     const values = await form.validateFields();
     const payload = {
       ...values,
-      growthStageMinutes: JSON.stringify(values.growthStageMinutes),
-      stageLabels: JSON.stringify(values.stageLabels),
+      growthStageMinutes: values.growthStageMinutes.map(Number),
     };
 
     if (editingCrop) {
@@ -140,8 +141,17 @@ export default function CropsPage() {
       title: "元素",
       dataIndex: "element",
       key: "element",
-      width: 80,
-      render: (val: string | null) => val || "-",
+      width: 120,
+      render: (val: string[] | null) =>
+        val && val.length > 0 ? (
+          <Space wrap>
+            {val.map((el) => (
+              <Tag key={el} color="cyan">{el}</Tag>
+            ))}
+          </Space>
+        ) : (
+          "-"
+        ),
     },
     {
       title: "稀有度",
@@ -193,12 +203,12 @@ export default function CropsPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>作物管理</h1>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>作物管理</Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           新增作物
         </Button>
-      </div>
+      </Flex>
 
       <Table
         columns={columns}
@@ -211,6 +221,7 @@ export default function CropsPage() {
           pageSize,
           total,
           showSizeChanger: true,
+          pageSizeOptions: [10, 30, 50, 100, 500],
           showTotal: (total) => `共 ${total} 条`,
           onChange: (page, pageSize) => {
             setPage(page);
@@ -238,7 +249,7 @@ export default function CropsPage() {
           </Form.Item>
           <Space size="large">
             <Form.Item name="element" label="元素">
-              <Select options={elementOptions} allowClear style={{ width: 120 }} />
+              <Select mode="multiple" options={elementOptions} allowClear style={{ minWidth: 180 }} placeholder="可选择多个元素" />
             </Form.Item>
             <Form.Item name="rarity" label="稀有度" rules={[{ required: true }]}>
               <Select options={rarityOptions} style={{ width: 120 }} />

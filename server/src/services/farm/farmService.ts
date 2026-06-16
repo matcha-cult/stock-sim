@@ -625,24 +625,27 @@ export async function harvestCrop(
     }
 
     if (state.stage === 'withered') {
-      // 金光变枯萎留种：枯萎后自然掉落 1 颗种子（不带变异）
-      // 种子代数 = 种植时的种子代数 + 1
+      // 金光变枯萎留种：枯萎后自然掉落 1 颗种子，50% 概率遗传金光变
       let witheredSeedItemId: string | null = null;
+      let witheredSeedMutationType: string | null = null;
       if (mutationType === 'gold' && cropConfig.seedFromYield) {
         witheredSeedItemId = cropConfig.seedItemId;
         const newSeedGeneration = cell.planted_generation + 1;
+        if (rollMutationInheritance()) {
+          witheredSeedMutationType = 'gold';
+        }
         await query(
           `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, '', $3, NOW())
+           VALUES ($1, $2, 1, $3, $4, NOW())
            ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
            SET quantity = farm_seed_inventory.quantity + 1,
                updated_at = CURRENT_TIMESTAMP`,
-          [characterId, witheredSeedItemId, newSeedGeneration],
+          [characterId, witheredSeedItemId, witheredSeedMutationType ?? '', newSeedGeneration],
         );
-        // 枯萎但有种子掉落：+1 经验
+        // 枯萎但有种子掉落：发放经验（根据作物配置的 expGain，缺省为 1）
         await query(
-          `UPDATE farm_profile SET farm_exp = farm_exp + 1, updated_at = CURRENT_TIMESTAMP WHERE character_id = $1`,
-          [characterId],
+          `UPDATE farm_profile SET farm_exp = farm_exp + $2, updated_at = CURRENT_TIMESTAMP WHERE character_id = $1`,
+          [characterId, cropConfig.expGain ?? 1],
         );
         await checkAndLevelUp(characterId);
       }
@@ -667,6 +670,7 @@ export async function harvestCrop(
           mutationType,
           generation: cell.planted_generation,
           seedDropped: witheredSeedItemId != null,
+          seedMutationType: witheredSeedMutationType,
         },
       });
 
@@ -785,10 +789,10 @@ export async function harvestCrop(
       }
     }
 
-    // 发放经验（V3：每次收获固定 +1 经验）
+    // 发放经验（根据作物配置的 expGain，缺省为 1）
     await query(
       `UPDATE farm_profile SET
-         farm_exp = farm_exp + 1,
+         farm_exp = farm_exp + $3,
          total_harvest_count = total_harvest_count + 1,
          harvest_count_by_crop = jsonb_set(
            COALESCE(harvest_count_by_crop, '{}')::jsonb,
@@ -797,7 +801,7 @@ export async function harvestCrop(
          ),
          updated_at = CURRENT_TIMESTAMP
        WHERE character_id = $2`,
-      [cropConfig.cropId, characterId],
+      [cropConfig.cropId, characterId, cropConfig.expGain ?? 1],
     );
 
     // 检查等级升级（自动升级）
@@ -845,6 +849,96 @@ export async function harvestCrop(
       hybridSeedItemId,
     };
   });
+}
+
+/** 一键收菜结果 */
+export interface HarvestAllResult {
+  success: boolean;
+  message: string;
+  harvestedCount: number;
+  results: Array<{ row: number; col: number; success: boolean; message: string }>;
+}
+
+/** 一键收获所有成熟作物 */
+export async function harvestAll(characterId: number): Promise<HarvestAllResult> {
+  // 查询所有有作物的格子
+  const cellRows = await query<{
+    row: number;
+    col: number;
+    crop_id: string;
+    planted_at_epoch: number;
+    mutation_type: string | null;
+  }>(
+    `SELECT row, col, crop_id,
+            EXTRACT(EPOCH FROM planted_at) * 1000 AS planted_at_epoch,
+            mutation_type
+     FROM farm_cell
+     WHERE character_id = $1 AND crop_id IS NOT NULL`,
+    [characterId],
+  );
+
+  if (cellRows.rows.length === 0) {
+    return { success: true, message: '没有可收获的作物', harvestedCount: 0, results: [] };
+  }
+
+  // 查询装饰物索引（用于计算生长状态）
+  const decoRows = await query<{ row: number; col: number; decoration_type: string }>(
+    `SELECT row, col, decoration_type FROM farm_decoration WHERE character_id = $1`,
+    [characterId],
+  );
+  const decoByCell = new Map<string, string>();
+  for (const d of decoRows.rows) {
+    decoByCell.set(`${d.row},${d.col}`, d.decoration_type);
+  }
+
+  const gridConfig = getGridConfig();
+  const accelMul = getAccelerationMultiplier();
+  const now = Date.now();
+
+  // 筛选可收获的格子
+  const harvestableCells: Array<{ row: number; col: number }> = [];
+  for (const cell of cellRows.rows) {
+    const cropConfig = getCropConfig(cell.crop_id);
+    if (!cropConfig) continue;
+
+    const plantedAt = Math.floor(Number(cell.planted_at_epoch));
+    const mutationType = cell.mutation_type as MutationType | null;
+
+    // 计算相邻灵泉数量（速熟变加成）
+    let springCount = 0;
+    const adjacent = getHybridAdjacentCells(cell.row, cell.col, gridConfig.maxRows, gridConfig.fixedCols);
+    for (const adj of adjacent) {
+      if (decoByCell.get(`${adj.row},${adj.col}`) === 'spring') springCount++;
+    }
+
+    const speedMul = computeSpeedMultiplier(mutationType, springCount);
+    const witherMul = computeWitherMultiplier(mutationType);
+    const state = computeCropState(cropConfig, plantedAt, now, speedMul, witherMul, accelMul);
+
+    if (state.stage === 'harvestable') {
+      harvestableCells.push({ row: cell.row, col: cell.col });
+    }
+  }
+
+  if (harvestableCells.length === 0) {
+    return { success: true, message: '没有成熟的作物', harvestedCount: 0, results: [] };
+  }
+
+  // 逐个收获
+  const results: Array<{ row: number; col: number; success: boolean; message: string }> = [];
+  let harvestedCount = 0;
+  for (const { row, col } of harvestableCells) {
+    const result = await harvestCrop(characterId, row, col);
+    results.push({ row, col, success: result.success, message: result.message });
+    if (result.success) harvestedCount++;
+  }
+
+  return {
+    success: true,
+    message: `收获 ${harvestedCount} 块作物`,
+    harvestedCount,
+    results,
+  };
 }
 
 // ==================== 灵材出售 ====================

@@ -1,6 +1,6 @@
 "use client";
 
-import { Card, Col, Row, Statistic, Button, Space, App } from "antd";
+import { Card, Col, Row, Statistic, Button, Space, App, Flex, Typography } from "antd";
 import {
   ExperimentOutlined,
   ShoppingOutlined,
@@ -29,23 +29,24 @@ export default function HomePage() {
 
   useEffect(() => {
     const fetchStats = async () => {
-      const [cropsRes, seedsRes, recipesRes] = await Promise.all([
-        fetch("/api/farm/crops?pageSize=1"),
-        fetch("/api/farm/seeds?pageSize=1"),
-        fetch("/api/farm/hybrid-recipes?pageSize=1"),
+      const fetchTotal = async (url: string): Promise<number> => {
+        try {
+          const res = await fetch(url);
+          if (!res.ok) return 0;
+          const data = await res.json();
+          return data.total || 0;
+        } catch {
+          return 0;
+        }
+      };
+
+      const [crops, seeds, hybridRecipes] = await Promise.all([
+        fetchTotal("/api/farm/crops?pageSize=1"),
+        fetchTotal("/api/farm/seeds?pageSize=1"),
+        fetchTotal("/api/farm/hybrid-recipes?pageSize=1"),
       ]);
 
-      const [cropsData, seedsData, recipesData] = await Promise.all([
-        cropsRes.json(),
-        seedsRes.json(),
-        recipesRes.json(),
-      ]);
-
-      setStats({
-        crops: cropsData.total || 0,
-        seeds: seedsData.total || 0,
-        hybridRecipes: recipesData.total || 0,
-      });
+      setStats({ crops, seeds, hybridRecipes });
     };
 
     fetchStats();
@@ -89,8 +90,8 @@ export default function HomePage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 24, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <h1 style={{ margin: 0 }}>仪表盘</h1>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 24 }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>仪表盘</Typography.Title>
         <Space>
           <Button icon={<ImportOutlined />} onClick={handleImport} loading={importing}>
             从文件导入
@@ -99,7 +100,7 @@ export default function HomePage() {
             导出到文件
           </Button>
         </Space>
-      </div>
+      </Flex>
       <Row gutter={[16, 16]}>
         <Col xs={24} sm={12} lg={6}>
           <Card>

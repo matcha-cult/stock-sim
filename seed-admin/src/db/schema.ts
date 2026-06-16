@@ -51,6 +51,7 @@ export const farmHybridRecipes = sqliteTable("farm_hybrid_recipes", {
   sortOrder: integer("sort_order").notNull(),
   baseCropId: text("base_crop_id").notNull(),
   requiredCrops: text("required_crops").notNull(),
+  minRequired: integer("min_required"),
   resultCropId: text("result_crop_id").notNull(),
   resultSeedItemId: text("result_seed_item_id").notNull(),
   resultQuantity: integer("result_quantity").notNull(),
@@ -76,5 +77,6 @@ export const farmGlobalConfig = sqliteTable("farm_global_config", {
   qualityHqRate: real("quality_hq_rate").notNull(),
   qualityNormalRate: real("quality_normal_rate").notNull(),
   qualityLqRate: real("quality_lq_rate").notNull(),
+  qualityHqSeedRate: real("quality_hq_seed_rate").notNull(),
   accelerationMultiplier: real("acceleration_multiplier").notNull(),
 });

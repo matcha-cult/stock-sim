@@ -32,7 +32,7 @@
     "positiveRate": 0.70,
     "neutralRate": 0.20,
     "negativeRate": 0.10,
-    "inheritRate": 0.50
+    "inheritRate": 0.99
   },
   "quality": {
     "hqRate": 0.30,

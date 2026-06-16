@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get("page") || "1");
-  const pageSize = parseInt(searchParams.get("pageSize") || "10");
+  const pageSize = parseInt(searchParams.get("pageSize") || "30");
   const search = searchParams.get("search") || "";
 
   let query = db.select().from(farmCrops);
@@ -17,8 +17,15 @@ export async function GET(request: NextRequest) {
     ) as typeof query;
   }
 
-  const items = query.limit(pageSize).offset((page - 1) * pageSize).all();
+  const rawItems = query.limit(pageSize).offset((page - 1) * pageSize).all();
   const total = db.select().from(farmCrops).all().length;
+
+  const items = rawItems.map((item) => ({
+    ...item,
+    element: item.element ? JSON.parse(item.element) : null,
+    growthStageMinutes: JSON.parse(item.growthStageMinutes),
+    stageLabels: JSON.parse(item.stageLabels),
+  }));
 
   return NextResponse.json({
     items,
@@ -35,6 +42,7 @@ export async function POST(request: NextRequest) {
     .insert(farmCrops)
     .values({
       ...body,
+      element: JSON.stringify(body.element),
       growthStageMinutes: JSON.stringify(body.growthStageMinutes),
       stageLabels: JSON.stringify(body.stageLabels),
     })
@@ -52,6 +60,7 @@ export async function PUT(request: NextRequest) {
     .update(farmCrops)
     .set({
       ...data,
+      element: JSON.stringify(data.element),
       growthStageMinutes: JSON.stringify(data.growthStageMinutes),
       stageLabels: JSON.stringify(data.stageLabels),
     })

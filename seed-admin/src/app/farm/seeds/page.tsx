@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Table, Tag, Switch, Modal, Form, Input, InputNumber, Select, App, Popconfirm, Space } from "antd";
+import { Button, Table, Tag, Switch, Modal, Form, Input, InputNumber, Select, App, Popconfirm, Space, Flex, Typography } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 
@@ -26,7 +26,7 @@ export default function SeedsPage() {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(30);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingSeed, setEditingSeed] = useState<Seed | null>(null);
   const [form] = Form.useForm();
@@ -147,12 +147,12 @@ export default function SeedsPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>种子管理</h1>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>种子管理</Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           新增种子
         </Button>
-      </div>
+      </Flex>
 
       <Table
         columns={columns}
@@ -165,6 +165,7 @@ export default function SeedsPage() {
           pageSize,
           total,
           showSizeChanger: true,
+          pageSizeOptions: [10, 30, 50, 100, 500],
           showTotal: (total) => `共 ${total} 条`,
           onChange: (page, pageSize) => {
             setPage(page);

@@ -9,7 +9,7 @@ export default function AntdProvider({ children }: { children: ReactNode }) {
     <ConfigProvider
       locale={zhCN}
       theme={{
-        algorithm: theme.defaultAlgorithm,
+        algorithm: theme.compactAlgorithm,
       }}
     >
       <App>

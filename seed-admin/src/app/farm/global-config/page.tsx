@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Form, InputNumber, Card, App, Table, Space } from "antd";
+import { Button, Form, InputNumber, Card, App, Table, Space, Flex, Typography } from "antd";
 import { SaveOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 
@@ -99,12 +99,12 @@ export default function GlobalConfigPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>灵田全局配置</h1>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>灵田全局配置</Typography.Title>
         <Button type="primary" icon={<SaveOutlined />} onClick={handleSubmit}>
           保存配置
         </Button>
-      </div>
+      </Flex>
 
       <Form form={form} layout="vertical">
         <Card title="网格配置" style={{ marginBottom: 16 }}>

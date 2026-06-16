@@ -163,6 +163,21 @@ router.post(
       return;
     }
     const result = await farmService.harvestCrop(characterId, row, col);
+    if (result.success) safePushCharacterUpdate(characterId);
+    sendSuccess(res, result);
+  }),
+);
+
+const harvestAllQpsLimit = createFarmQpsLimit('harvestAll', 2);
+
+router.post(
+  '/harvest-all',
+  requireCharacter,
+  harvestAllQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const result = await farmService.harvestAll(characterId);
+    if (result.success) safePushCharacterUpdate(characterId);
     sendSuccess(res, result);
   }),
 );

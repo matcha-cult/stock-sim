@@ -275,6 +275,21 @@ export class FarmStore {
     }
   }
 
+  /** 一键收获所有成熟作物 */
+  async harvestAll(): Promise<number> {
+    if (!this.dedup.enter('farm-harvest-all')) return 0;
+    try {
+      const response = await farmApi.harvestAll();
+      if (response.success && response.data?.success) {
+        await this.fetchOverview(true);
+        return response.data.harvestedCount;
+      }
+      return 0;
+    } finally {
+      this.dedup.complete('farm-harvest-all');
+    }
+  }
+
   /** 铲除作物（萌芽阶段铲除会撤销已判定的杂交种子） */
   async remove(row: number, col: number): Promise<{ success: boolean; hybridRevoked?: boolean } | null> {
     if (!this.dedup.enter('farm-remove')) return null;

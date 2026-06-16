@@ -20,10 +20,10 @@
  * 3. 未开垦玩家（reclaimed=false）显示开垦界面。
  */
 
-import { useContext, useEffect, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
-  Card, Row, Col, Button, Tag, Flex, Typography, Radio, Popover,
+  Card, Row, Col, Button, Tag, Flex, Typography, Popover, Segmented,
   Descriptions, Tooltip, Empty, App, Drawer, Tabs, theme, Statistic,
 } from 'antd';
 import {
@@ -40,6 +40,7 @@ import FarmHarvestBag from './FarmHarvestBag';
 import FarmHybridGuide from './FarmHybridGuide';
 import FarmActivityLog from './FarmActivityLog';
 import { ELEMENT_COLORS, MUTATION_LABELS } from './farmConstants';
+import { ElementTag } from './ElementTag';
 
 const { Text } = Typography;
 
@@ -111,6 +112,7 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
 
   const [plantModal, setPlantModal] = useState<{ row: number; col: number } | null>(null);
   const [selectedSeedId, setSelectedSeedId] = useState<number | null>(null);
+  const [elementFilter, setElementFilter] = useState<string>('all');
   const [transplantMode, setTransplantMode] = useState<{ fromRow: number; fromCol: number } | null>(null);
   const [bagModalOpen, setBagModalOpen] = useState(false);
   const [bagModalTab, setBagModalTab] = useState('seeds');
@@ -242,6 +244,33 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
 
   const availableSeeds = farmStore.seedBagWithConfig.filter((s) => s.quantity > 0 && s.enabled);
 
+  // 元素筛选
+  const ELEMENT_FILTERS = [
+    { key: 'all', label: '全' },
+    { key: 'none', label: '无' },
+    { key: '金', label: '金' },
+    { key: '木', label: '木' },
+    { key: '水', label: '水' },
+    { key: '火', label: '火' },
+    { key: '土', label: '土' },
+    { key: '金水', label: '金水' },
+    { key: '水木', label: '水木' },
+    { key: '木火', label: '木火' },
+    { key: '火土', label: '火土' },
+    { key: '土金', label: '土金' },
+  ];
+
+  const filteredSeeds = useMemo(() => {
+    if (elementFilter === 'all') return availableSeeds;
+    if (elementFilter === 'none') return availableSeeds.filter((s) => s.element.length === 0);
+    // 单属性或双属性
+    const filterElements = elementFilter.split('');
+    return availableSeeds.filter((s) => {
+      if (s.element.length !== filterElements.length) return false;
+      return filterElements.every((e) => s.element.includes(e as never));
+    });
+  }, [availableSeeds, elementFilter]);
+
   // 按行分组格子
   const gridRows: FarmCellDto[][] = [];
   for (const cell of farmStore.cells) {
@@ -303,12 +332,11 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
         <Descriptions.Item label="经验">
           {farmInfo.farmExp}{farmInfo.nextLevelExpRequired > 0 ? ` / ${farmInfo.nextLevelExpRequired}` : '（满级）'}
         </Descriptions.Item>
-        <Descriptions.Item label="网格">{farmInfo.maxRow}×4</Descriptions.Item>
         {farmInfo.nextTier && (
           <Descriptions.Item label="下一级等阶" span={2}>
             <Flex align="center" gap={8}>
-              <Tooltip title={`息壤 x${farmInfo.nextTier.xiRangCost}，单价 ${farmInfo.xiRangPricePerUnit}`}>
-                <Text>{farmInfo.nextTier.displayName}（需要 Lv.{farmInfo.nextTier.minLevel} + {farmInfo.nextTier.totalSpiritStoneCost} 灵石）</Text>
+              <Tooltip title={`总消耗 ${farmInfo.nextTier.totalSpiritStoneCost} 灵石（息壤 ×${farmInfo.nextTier.xiRangCost} 单价 ${farmInfo.xiRangPricePerUnit}）`}>
+                <Text>{farmInfo.nextTier.displayName}（需要 Lv.{farmInfo.nextTier.minLevel} + {farmInfo.nextTier.xiRangCost} 息壤）</Text>
               </Tooltip>
               <Button
                 size="small"
@@ -318,10 +346,44 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
               >
                 突破
               </Button>
+              <Button
+                size="small"
+                icon={<CheckOutlined />}
+                onClick={async () => {
+                  const count = await farmStore.harvestAll();
+                  if (count > 0) {
+                    messageApi.success(`收获 ${count} 块作物`);
+                  } else {
+                    messageApi.info('没有成熟的作物');
+                  }
+                }}
+              >
+                一键收菜
+              </Button>
             </Flex>
           </Descriptions.Item>
         )}
       </Descriptions>
+
+      {/* 已达最高等阶时，单独显示一键收菜按钮 */}
+      {!farmInfo.nextTier && (
+        <Flex justify="flex-end" style={{ marginBottom: 12 }}>
+          <Button
+            size="small"
+            icon={<CheckOutlined />}
+            onClick={async () => {
+              const count = await farmStore.harvestAll();
+              if (count > 0) {
+                messageApi.success(`收获 ${count} 块作物`);
+              } else {
+                messageApi.info('没有成熟的作物');
+              }
+            }}
+          >
+            一键收菜
+          </Button>
+        </Flex>
+      )}
 
       {/* 灵田网格 */}
       {gridRows.map((rowCells, rowIdx) => (
@@ -403,54 +465,105 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
       <ResponsiveModal
         title={`播种 ${plantModal ? `${plantModal.row + 1}-${plantModal.col + 1}` : ''}`}
         open={plantModal != null}
-        onClose={() => { setPlantModal(null); setSelectedSeedId(null); }}
+        onClose={() => { setPlantModal(null); setSelectedSeedId(null); setElementFilter('all'); }}
         onOk={handlePlant}
         okButtonProps={{ disabled: !selectedSeedId }}
       >
         {availableSeeds.length === 0 ? (
           <Empty description="种子袋为空，请先购买种子" />
         ) : (
-          <Radio.Group
-            value={selectedSeedId}
-            onChange={(e) => setSelectedSeedId(e.target.value)}
-            style={{ width: '100%' }}
-          >
-            <Flex vertical gap={8}>
-              {availableSeeds.map((seed) => (
-                <Radio
+          <Flex vertical gap={8}>
+            <Segmented
+              block
+              size="small"
+              options={ELEMENT_FILTERS.map((f) => ({ label: f.label, value: f.key }))}
+              value={elementFilter}
+              onChange={(v) => setElementFilter(v as string)}
+            />
+            {filteredSeeds.length === 0 ? (
+              <Empty description="无符合条件的种子" image={Empty.PRESENTED_IMAGE_SIMPLE} />
+            ) : (
+              <div
+                style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
+                  gap: 8,
+                }}
+              >
+                {filteredSeeds.map((seed) => {
+              const isSelected = selectedSeedId === seed.id;
+              return (
+                <div
                   key={seed.id}
-                  value={seed.id}
+                  onClick={() => setSelectedSeedId(seed.id)}
                   style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: `1px solid ${token.colorBorder}`,
+                    position: 'relative',
+                    padding: '8px 6px',
+                    border: `1px solid ${isSelected ? token.colorPrimary : token.colorBorder}`,
                     borderRadius: 6,
-                    margin: 0,
+                    cursor: 'pointer',
+                    backgroundColor: isSelected ? token.colorPrimaryBg : undefined,
+                    minHeight: 60,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'center',
+                    alignItems: 'center',
                   }}
                 >
-                  <Flex justify="space-between" align="center">
-                    <Text strong>{seed.name}</Text>
-                    <Flex align="center" gap={8}>
-                      <Text type="secondary">×{seed.quantity}</Text>
-                      {seed.mutationType && (
-                        <Tag
-                          color={MUTATION_LABELS[seed.mutationType]?.color}
-                          style={{ fontSize: 11, margin: 0 }}
-                        >
-                          {MUTATION_LABELS[seed.mutationType]?.label ?? seed.mutationType}
-                        </Tag>
-                      )}
-                      {seed.generation > 0 && (
-                        <Tag color="blue" style={{ fontSize: 11, margin: 0 }}>
-                          G{seed.generation}
-                        </Tag>
-                      )}
-                    </Flex>
-                  </Flex>
-                </Radio>
-              ))}
-            </Flex>
-          </Radio.Group>
+                  {/* 左上角：变异 */}
+                  {seed.mutationType && (
+                    <Tag
+                      color={MUTATION_LABELS[seed.mutationType]?.color}
+                      style={{
+                        position: 'absolute',
+                        top: 2,
+                        left: 2,
+                        fontSize: 10,
+                        margin: 0,
+                        padding: '0 4px',
+                        lineHeight: '16px',
+                        transform: 'scale(0.9)',
+                        transformOrigin: 'top left',
+                      }}
+                    >
+                      {MUTATION_LABELS[seed.mutationType]?.label ?? seed.mutationType}
+                    </Tag>
+                  )}
+                  {/* 右上角：代数 */}
+                  {seed.generation > 0 && (
+                    <Tag
+                      color={seed.generation >= 3 ? 'red' : 'blue'}
+                      style={{
+                        position: 'absolute',
+                        top: 2,
+                        right: 2,
+                        fontSize: 10,
+                        margin: 0,
+                        padding: '0 4px',
+                        lineHeight: '16px',
+                        transform: 'scale(0.9)',
+                        transformOrigin: 'top right',
+                      }}
+                    >
+                      G{seed.generation}
+                    </Tag>
+                  )}
+                  {/* 名称 */}
+                  <Text strong style={{ fontSize: 12, textAlign: 'center' }}>{seed.name}</Text>
+                  {/* 左下角：元素 */}
+                  {seed.element.length > 0 && (
+                    <div style={{ position: 'absolute', bottom: 2, left: 2, transform: 'scale(0.9)', transformOrigin: 'bottom left' }}>
+                      <ElementTag elements={seed.element} />
+                    </div>
+                  )}
+                  {/* 右下角：数量 */}
+                  <Text type="secondary" style={{ fontSize: 11, position: 'absolute', bottom: 2, right: 4 }}>×{seed.quantity}</Text>
+                </div>
+              );
+            })}
+              </div>
+            )}
+          </Flex>
         )}
       </ResponsiveModal>
 

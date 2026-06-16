@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get("page") || "1");
-  const pageSize = parseInt(searchParams.get("pageSize") || "10");
+  const pageSize = parseInt(searchParams.get("pageSize") || "30");
 
   const items = db
     .select()

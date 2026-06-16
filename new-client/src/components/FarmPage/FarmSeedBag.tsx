@@ -228,7 +228,7 @@ const FarmSeedBag = observer(function FarmSeedBag() {
           dataSource={seedBagItems}
           columns={seedBagColumns}
           rowKey={(record) => `${record.itemId}-${record.mutationType ?? 'normal'}-${record.generation}`}
-          pagination={false}
+          pagination={{ pageSize: 20, showSizeChanger: false }}
           size="small"
           scroll={{ x: 'max-content' }}
         />

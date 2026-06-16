@@ -1,6 +1,6 @@
 "use client";
 
-import { Button, Table, Tag, Modal, Form, Input, InputNumber, Select, App, Popconfirm, Space } from "antd";
+import { Button, Table, Tag, Modal, Form, Input, InputNumber, Select, App, Popconfirm, Space, Flex, Typography } from "antd";
 import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import { useEffect, useState } from "react";
 
@@ -13,6 +13,7 @@ interface HybridRecipe {
   sortOrder: number;
   baseCropId: string;
   requiredCrops: string[];
+  minRequired: number | null;
   resultCropId: string;
   resultSeedItemId: string;
   resultQuantity: number;
@@ -24,7 +25,7 @@ export default function HybridRecipesPage() {
   const [loading, setLoading] = useState(false);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(30);
   const [modalVisible, setModalVisible] = useState(false);
   const [editingRecipe, setEditingRecipe] = useState<HybridRecipe | null>(null);
   const [form] = Form.useForm();
@@ -50,6 +51,7 @@ export default function HybridRecipesPage() {
       sortOrder: 0,
       resultQuantity: 1,
       requiredCrops: [],
+      minRequired: null,
     });
     setModalVisible(true);
   };
@@ -112,6 +114,13 @@ export default function HybridRecipesPage() {
         </Space>
       ),
     },
+    {
+      title: "最少数量",
+      dataIndex: "minRequired",
+      key: "minRequired",
+      width: 100,
+      render: (val: number | null) => (val != null ? val : "全部"),
+    },
     { title: "产物作物", dataIndex: "resultCropId", key: "resultCropId", width: 180 },
     {
       title: "状态",
@@ -144,24 +153,25 @@ export default function HybridRecipesPage() {
 
   return (
     <div>
-      <div style={{ marginBottom: 16, display: "flex", justifyContent: "space-between" }}>
-        <h1 style={{ margin: 0 }}>杂交配方</h1>
+      <Flex justify="space-between" align="center" style={{ marginBottom: 16 }}>
+        <Typography.Title level={3} style={{ margin: 0 }}>杂交配方</Typography.Title>
         <Button type="primary" icon={<PlusOutlined />} onClick={handleAdd}>
           新增配方
         </Button>
-      </div>
+      </Flex>
 
       <Table
         columns={columns}
         dataSource={data}
         rowKey="id"
         loading={loading}
-        scroll={{ x: 1200 }}
+        scroll={{ x: 1300 }}
         pagination={{
           current: page,
           pageSize,
           total,
           showSizeChanger: true,
+          pageSizeOptions: [10, 30, 50, 100, 500],
           showTotal: (total) => `共 ${total} 条`,
           onChange: (page, pageSize) => {
             setPage(page);
@@ -195,6 +205,9 @@ export default function HybridRecipesPage() {
               <Select mode="tags" tokenSeparators={[","]} placeholder="输入作物ID，回车确认" style={{ minWidth: 300 }} />
             </Form.Item>
           </Space>
+          <Form.Item name="minRequired" label="最少满足数量（留空=全部）">
+            <InputNumber style={{ width: 200 }} min={1} placeholder="留空表示需全部满足" />
+          </Form.Item>
           <Form.Item name="resultCropId" label="产物作物ID" rules={[{ required: true }]}>
             <Input />
           </Form.Item>
