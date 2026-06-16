@@ -31,6 +31,29 @@ type LedgerMeta = {
   memo?: string;
 };
 
+// ---- 灵田内测模式守卫 ----
+
+/**
+ * 灵田内测模式下，灵田相关货币操作（farm_*）应完全跳过：
+ * 既不实际扣/加灵石，也不记录流水。
+ * 避免产生"余额已变但无流水"的坏账。
+ */
+const isFarmBetaWipeMode = (): boolean => process.env.FARM_BETA_WIPE_MODE === 'true';
+
+const FARM_BIZ_TYPE_PREFIX = 'farm_';
+
+/**
+ * 判断是否应在内测模式下跳过货币操作。
+ * 条件：开关开启 + 业务类型属于灵田。
+ */
+const shouldSkipForFarmBetaWipe = (ledgerMeta?: LedgerMeta): boolean => {
+  return (
+    isFarmBetaWipeMode() &&
+    ledgerMeta != null &&
+    ledgerMeta.bizType.startsWith(FARM_BIZ_TYPE_PREFIX)
+  );
+};
+
 type ConsumeSpiritStonesResult =
   | { success: true; message: string; remaining?: bigint }
   | { success: false; message: string };
@@ -41,6 +64,7 @@ type AddSpiritStonesResult =
 
 /**
  * 扣除灵石。
+ * 灵田内测模式下，灵田业务类型（farm_*）直接跳过，不执行扣款也不记流水。
  */
 export const consumeSpiritStones = async (
   characterId: number,
@@ -49,6 +73,11 @@ export const consumeSpiritStones = async (
 ): Promise<ConsumeSpiritStonesResult> => {
   if (amount < 0) {
     return { success: false, message: '扣除数量不能为负数' };
+  }
+
+  // 灵田内测模式：跳过扣款和流水，避免产生坏账
+  if (shouldSkipForFarmBetaWipe(ledgerMeta)) {
+    return { success: true, message: '内测模式跳过扣款' };
   }
 
   const result = await query(
@@ -88,6 +117,7 @@ export const consumeSpiritStones = async (
 
 /**
  * 增加灵石。
+ * 灵田内测模式下，灵田业务类型（farm_*）直接跳过，不执行加款也不记流水。
  */
 export const addSpiritStones = async (
   characterId: number,
@@ -96,6 +126,11 @@ export const addSpiritStones = async (
 ): Promise<AddSpiritStonesResult> => {
   if (amount < 0) {
     return { success: false, message: '增加数量不能为负数' };
+  }
+
+  // 灵田内测模式：跳过加款和流水，避免产生坏账
+  if (shouldSkipForFarmBetaWipe(ledgerMeta)) {
+    return { success: true, message: '内测模式跳过加款' };
   }
 
   const result = await query(

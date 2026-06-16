@@ -173,10 +173,14 @@ const FarmSeedBag = observer(function FarmSeedBag() {
       align: 'center',
       render: (_, record) => {
         if (!record.crop) return <Text type="secondary">—</Text>;
+        const { stageLabels, growthStageMinutes } = record.crop;
+        // 最后一个阶段（如"成熟"）是收获点，持续时间由 witherAfterMinutes 决定，不在此展示
+        const tooltipParts = stageLabels.map((label, i) => {
+          if (i === stageLabels.length - 1) return label;
+          return `${label}: ${formatGrowthTime(growthStageMinutes[i])}`;
+        });
         return (
-          <Tooltip title={record.crop.stageLabels.map((label, i) =>
-            `${label}: ${formatGrowthTime(record.crop!.growthStageMinutes[i])}`,
-          ).join(' → ')}>
+          <Tooltip title={tooltipParts.join(' → ')}>
             <Text>{formatGrowthTime(record.crop.totalGrowthMinutes)}</Text>
           </Tooltip>
         );

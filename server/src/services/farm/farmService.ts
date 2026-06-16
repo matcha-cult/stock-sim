@@ -1585,7 +1585,9 @@ export function getFarmStaticConfig(): FarmStaticConfigDto {
       growthStageMinutes: c.growthStageMinutes,
       stageLabels: c.stageLabels,
       witherAfterMinutes: c.witherAfterMinutes,
-      totalGrowthMinutes: c.growthStageMinutes.reduce((sum, m) => sum + m, 0),
+      // 总生长时间 = 前 (n-1) 个阶段的总和，最后一个阶段（如"成熟"）是收获点，
+      // 实际持续时间由 witherAfterMinutes 决定，不计入总生长时间
+      totalGrowthMinutes: c.growthStageMinutes.slice(0, -1).reduce((sum, m) => sum + m, 0),
     }));
 
   const hybridRecipes: HybridRecipeConfigDto[] = getAllRecipes()

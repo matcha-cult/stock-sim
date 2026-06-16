@@ -28,15 +28,15 @@
     { "itemId": "seed_rice_basic", "quantity":100 }
   ],
   "mutation": {
-    "baseRate": 0.15,
+    "baseRate": 0.3,
     "positiveRate": 0.70,
     "neutralRate": 0.20,
     "negativeRate": 0.10,
     "inheritRate": 0.50
   },
   "quality": {
-    "hqRate": 0.20,
-    "normalRate": 0.70,
+    "hqRate": 0.30,
+    "normalRate": 0.60,
     "lqRate": 0.10
   },
   "accelerationMultiplier": 1.0
