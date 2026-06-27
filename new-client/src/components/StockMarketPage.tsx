@@ -969,6 +969,8 @@ interface StockListItemProps {
 }
 
 function StockListItem({ stockView, onClick }: StockListItemProps): React.ReactNode {
+  const hasLimitStatus = stockView.limitStatus !== 'none';
+
   return (
     <Button
       type="text"
@@ -980,7 +982,7 @@ function StockListItem({ stockView, onClick }: StockListItemProps): React.ReactN
       onClick={onClick}
     >
       <Flex vertical gap={4} style={{ width: '100%' }}>
-        {/* 主行：左侧名称+代码行业，右侧价格+涨跌 */}
+        {/* 主行：左侧名称+代码行业，右侧价格+涨跌+涨跌停标签 */}
         <Flex justify="space-between" align="flex-start" style={{ minWidth: 0 }}>
           <Flex vertical style={{ flex: 1, minWidth: 0 }}>
             <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{stockView.name}</span>
@@ -989,7 +991,23 @@ function StockListItem({ stockView, onClick }: StockListItemProps): React.ReactN
             </span>
           </Flex>
           <Flex vertical align="flex-end" style={{ flexShrink: 0 }}>
-            <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{stockView.priceText}</span>
+            <Flex align="center" gap={4}>
+              <span style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{stockView.priceText}</span>
+              {hasLimitStatus && (
+                <span
+                  style={{
+                    fontSize: 10,
+                    fontWeight: 600,
+                    padding: '1px 4px',
+                    borderRadius: 2,
+                    background: stockView.limitStatus === 'up' ? 'var(--color-error, #ff4d4f)' : 'var(--color-success, #52c41a)',
+                    color: '#fff',
+                  }}
+                >
+                  {stockView.limitStatusText}
+                </span>
+              )}
+            </Flex>
             <span className={getStockMarketToneClassName(stockView.changeTone)} style={{ fontSize: 12 }}>
               {stockView.changeText}
             </span>
@@ -1071,6 +1089,14 @@ function StockDetailContent({
             <Flex gap={8} align="center">
               <span style={{ fontWeight: 600, fontSize: 16, color: 'var(--text-primary)' }}>{selectedStock.name}</span>
               <Tag>{selectedStock.code}</Tag>
+              {selectedStockView.limitStatus !== 'none' && (
+                <Tag
+                  color={selectedStockView.limitStatus === 'up' ? 'error' : 'success'}
+                  style={{ fontWeight: 600 }}
+                >
+                  {selectedStockView.limitStatusText}
+                </Tag>
+              )}
             </Flex>
             <div style={{ color: 'var(--text-tertiary)', fontSize: 12, marginTop: 2 }}>{selectedStock.description}</div>
           </div>

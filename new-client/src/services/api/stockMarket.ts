@@ -20,6 +20,9 @@ export interface StockMarketStockDto {
   description: string;
   priceSpiritStones: number;
   lastChangeBps: number;
+  limitUpPriceSpiritStones: number;
+  limitDownPriceSpiritStones: number;
+  limitStatus: 'up' | 'down' | 'none';
   updatedAt: number;
   holdingQty: number;
   holdingCostSpiritStones: number;
@@ -58,6 +61,9 @@ export interface StockMarketTradeRulesDto {
   stampDutyRate: number;
   transferFeeRate: number;
   minPriceSpiritStones: number;
+  limitUpPercent: number;
+  limitDownPercent: number;
+  limitEnabled: boolean;
 }
 
 export interface StockMarketOverviewDto {

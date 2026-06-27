@@ -34,6 +34,8 @@ export interface StockMarketStockView {
   changeTone: StockMarketTone;
   priceText: string;
   changeText: string;
+  limitStatus: 'up' | 'down' | 'none';
+  limitStatusText: string;
   holdingQtyText: string;
   holdingMarketValueText: string;
   holdingSummaryText: string;

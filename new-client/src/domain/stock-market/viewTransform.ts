@@ -261,6 +261,12 @@ const buildStockMarketMovingAverageViews = (
   });
 };
 
+const buildLimitStatusText = (status: 'up' | 'down' | 'none'): string => {
+  if (status === 'up') return '涨停';
+  if (status === 'down') return '跌停';
+  return '';
+};
+
 const buildStockView = (
   stock: StockMarketStockDto,
   selectedStockId: string,
@@ -283,6 +289,8 @@ const buildStockView = (
     changeTone: resolveStockMarketTone(stock.lastChangeBps),
     priceText: formatStockMarketPrice(stock.priceSpiritStones),
     changeText: formatStockMarketBps(stock.lastChangeBps),
+    limitStatus: stock.limitStatus,
+    limitStatusText: buildLimitStatusText(stock.limitStatus),
     holdingQtyText,
     holdingMarketValueText: holdingValueText,
     holdingSummaryText: hasHolding ? `持有 ${holdingQtyText} · 市值 ${holdingValueText}` : '未持有',

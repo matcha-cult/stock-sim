@@ -68,6 +68,9 @@ import {
   isStockMarketNoiseEnabled,
   stockMarketPriceToStorageUnits,
   stockMarketPriceUnitsToSpiritStones,
+  calculateStockMarketLimitPrices,
+  applyStockMarketLimitPrice,
+  detectStockMarketLimitStatus,
 } from './stockMarketRules.js';
 import {
   floorStockMarketTickTime,
@@ -236,6 +239,9 @@ export type StockMarketStockDto = {
   description: string;
   priceSpiritStones: number;
   lastChangeBps: number;
+  limitUpPriceSpiritStones: number;
+  limitDownPriceSpiritStones: number;
+  limitStatus: 'up' | 'down' | 'none';
   updatedAt: number;
   holdingQty: number;
   holdingCostSpiritStones: number;
@@ -1370,6 +1376,10 @@ class StockMarketService {
     holdingCost: bigint;
     marketValue: bigint;
   }): StockMarketStockDto {
+    const initialPrice = stockMarketPriceToStorageUnits(params.definition.initial_price_spirit_stones);
+    const { limitUpPrice, limitDownPrice } = calculateStockMarketLimitPrices(initialPrice);
+    const limitStatus = detectStockMarketLimitStatus(params.price, limitUpPrice, limitDownPrice);
+
     return {
       stockId: params.definition.id,
       code: params.definition.code,
@@ -1379,6 +1389,9 @@ class StockMarketService {
       description: params.definition.description ?? '',
       priceSpiritStones: toDtoStockMarketPrice(params.price),
       lastChangeBps: params.lastChangeBps,
+      limitUpPriceSpiritStones: toDtoStockMarketPrice(limitUpPrice),
+      limitDownPriceSpiritStones: toDtoStockMarketPrice(limitDownPrice),
+      limitStatus,
       updatedAt: toTimestamp(params.updatedAt),
       holdingQty: params.quantity,
       holdingCostSpiritStones: toDtoNumber(params.holdingCost),
@@ -1908,9 +1921,32 @@ class StockMarketService {
         const quote = quoteByStockId.get(impact.stockId);
         if (!quote) continue;
         const currentPrice = toBigIntValue(quote.current_price_spirit_stones);
-        const changeBps = impact.changeBps;
-        const nextPrice = applyStockMarketPriceChange(currentPrice, changeBps);
-        const direction = buildStockMarketDirection(changeBps);
+        let changeBps = impact.changeBps;
+
+        // 涨跌停冻结机制：如果价格已经触及涨跌停线且方向一致，不再应用价格变化
+        const definition = getEnabledStockDefinitionById(impact.stockId);
+        const initialPrice = definition
+          ? stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones)
+          : currentPrice;
+        const { limitUpPrice, limitDownPrice } = calculateStockMarketLimitPrices(initialPrice);
+
+        if (currentPrice >= limitUpPrice && changeBps > 0) {
+          console.log(`[涨跌停] ${impact.stockId} 已在涨停线（当前价格 ${currentPrice}，涨停价 ${limitUpPrice}），涨幅 ${changeBps} bps 归零`);
+          changeBps = 0;
+        } else if (currentPrice <= limitDownPrice && changeBps < 0) {
+          console.log(`[涨跌停] ${impact.stockId} 已在跌停线（当前价格 ${currentPrice}，跌停价 ${limitDownPrice}），跌幅 ${changeBps} bps 归零`);
+          changeBps = 0;
+        }
+
+        const theoreticalPrice = applyStockMarketPriceChange(currentPrice, changeBps);
+        const nextPrice = applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
+
+        // 计算实际涨跌幅（基于截断后的价格）
+        const actualChangeBps = currentPrice > 0n
+          ? Math.round(Number((nextPrice - currentPrice) * 10000n / currentPrice))
+          : changeBps;
+        const direction = buildStockMarketDirection(actualChangeBps);
+
         await query(
           `
             UPDATE stock_market_quote
@@ -1920,7 +1956,7 @@ class StockMarketService {
                 updated_at = NOW()
             WHERE stock_id = $1
           `,
-          [impact.stockId, nextPrice.toString(), changeBps, params.tickId.toString()],
+          [impact.stockId, nextPrice.toString(), actualChangeBps, params.tickId.toString()],
         );
         await query(
           `
@@ -1933,7 +1969,7 @@ class StockMarketService {
             impact.stockId,
             params.tickId.toString(),
             nextPrice.toString(),
-            changeBps,
+            actualChangeBps,
             direction,
             impact.reason,
             params.tickHour,
@@ -1981,8 +2017,30 @@ class StockMarketService {
             reason = STOCK_MARKET_PRESSURE_REASON;
           }
 
-          const nextPrice = applyStockMarketPriceChange(currentPrice, changeBps);
-          const direction = buildStockMarketDirection(changeBps);
+          // 涨跌停冻结机制：如果价格已经触及涨跌停线且方向一致，不再应用价格变化
+          const definition = getEnabledStockDefinitionById(stockId);
+          const initialPrice = definition
+            ? stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones)
+            : currentPrice;
+          const { limitUpPrice, limitDownPrice } = calculateStockMarketLimitPrices(initialPrice);
+
+          if (currentPrice >= limitUpPrice && changeBps > 0) {
+            console.log(`[涨跌停] ${stockId} 已在涨停线（当前价格 ${currentPrice}，涨停价 ${limitUpPrice}），涨幅 ${changeBps} bps 归零`);
+            changeBps = 0;
+          } else if (currentPrice <= limitDownPrice && changeBps < 0) {
+            console.log(`[涨跌停] ${stockId} 已在跌停线（当前价格 ${currentPrice}，跌停价 ${limitDownPrice}），跌幅 ${changeBps} bps 归零`);
+            changeBps = 0;
+          }
+
+          const theoreticalPrice = applyStockMarketPriceChange(currentPrice, changeBps);
+          const nextPrice = applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
+
+          // 计算实际涨跌幅（基于截断后的价格）
+          const actualChangeBps = currentPrice > 0n
+            ? Math.round(Number((nextPrice - currentPrice) * 10000n / currentPrice))
+            : changeBps;
+          const direction = buildStockMarketDirection(actualChangeBps);
+
           await query(
             `
               UPDATE stock_market_quote
@@ -1992,7 +2050,7 @@ class StockMarketService {
                   updated_at = NOW()
               WHERE stock_id = $1
             `,
-            [stockId, nextPrice.toString(), changeBps, params.tickId.toString()],
+            [stockId, nextPrice.toString(), actualChangeBps, params.tickId.toString()],
           );
           await query(
             `
@@ -2005,7 +2063,7 @@ class StockMarketService {
               stockId,
               params.tickId.toString(),
               nextPrice.toString(),
-              changeBps,
+              actualChangeBps,
               direction,
               reason,
               params.tickHour,

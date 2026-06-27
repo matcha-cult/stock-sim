@@ -51,7 +51,7 @@
       "short_name": "无极院",
       "sector": "功法",
       "description": "经营功法拓印、古籍修复与讲经会，受秘卷出土和门派交流影响。",
-      "initial_price_spirit_stones": 298,
+      "initial_price_spirit_stones": 15,
       "sort_weight": 50,
       "enabled": true
     },

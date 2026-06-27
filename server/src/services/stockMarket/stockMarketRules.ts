@@ -361,7 +361,87 @@ export const buildStockMarketTradeRulesDto = () => ({
   stampDutyRate: STOCK_MARKET_STAMP_DUTY_RATE,
   transferFeeRate: STOCK_MARKET_TRANSFER_FEE_RATE,
   minPriceSpiritStones: Number(STOCK_MARKET_MIN_PRICE_SPIRIT_STONES),
+  limitUpPercent: STOCK_MARKET_LIMIT_UP_PERCENT,
+  limitDownPercent: STOCK_MARKET_LIMIT_DOWN_PERCENT,
+  limitEnabled: STOCK_MARKET_LIMIT_ENABLED,
 });
+
+// ---- 涨跌停计算 ----
+
+import {
+  STOCK_MARKET_LIMIT_UP_BPS,
+  STOCK_MARKET_LIMIT_DOWN_BPS,
+  STOCK_MARKET_LIMIT_ENABLED,
+  STOCK_MARKET_LIMIT_UP_PERCENT,
+  STOCK_MARKET_LIMIT_DOWN_PERCENT,
+} from './stockMarketLimitConfig.js';
+
+/**
+ * 计算涨停价和跌停价（基于初始发行价）。
+ *
+ * @param initialPrice 股票初始发行价（分单位）
+ * @returns { limitUpPrice, limitDownPrice } 涨跌停价格（分单位）
+ */
+export const calculateStockMarketLimitPrices = (
+  initialPrice: bigint,
+): { limitUpPrice: bigint; limitDownPrice: bigint } => {
+  const limitUpPrice = ceilDiv(
+    initialPrice * BigInt(10000 + STOCK_MARKET_LIMIT_UP_BPS),
+    10000n,
+  );
+  const limitDownPrice = (
+    initialPrice * BigInt(10000 - STOCK_MARKET_LIMIT_DOWN_BPS)
+  ) / 10000n;
+  return { limitUpPrice, limitDownPrice };
+};
+
+/**
+ * 应用涨跌停截断。
+ *
+ * @param theoreticalPrice 理论新价格（未截断）
+ * @param limitUpPrice 涨停价
+ * @param limitDownPrice 跌停价
+ * @returns 截断后的最终价格
+ */
+export const applyStockMarketLimitPrice = (
+  theoreticalPrice: bigint,
+  limitUpPrice: bigint,
+  limitDownPrice: bigint,
+): bigint => {
+  if (!STOCK_MARKET_LIMIT_ENABLED) {
+    return theoreticalPrice;
+  }
+  return theoreticalPrice >= limitUpPrice
+    ? limitUpPrice
+    : theoreticalPrice <= limitDownPrice
+      ? limitDownPrice
+      : theoreticalPrice;
+};
+
+/**
+ * 判断是否触发涨跌停。
+ *
+ * @param finalPrice 最终价格（已截断）
+ * @param limitUpPrice 涨停价
+ * @param limitDownPrice 跌停价
+ * @returns 'up' | 'down' | 'none'
+ */
+export const detectStockMarketLimitStatus = (
+  finalPrice: bigint,
+  limitUpPrice: bigint,
+  limitDownPrice: bigint,
+): 'up' | 'down' | 'none' => {
+  if (!STOCK_MARKET_LIMIT_ENABLED) {
+    return 'none';
+  }
+  if (finalPrice >= limitUpPrice) {
+    return 'up';
+  }
+  if (finalPrice <= limitDownPrice) {
+    return 'down';
+  }
+  return 'none';
+};
 
 
 
