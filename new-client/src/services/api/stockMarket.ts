@@ -143,7 +143,10 @@ export type StockMarketTradesResponse = StockMarketApiResponse<{
   pageSize: number;
 }>;
 export type StockMarketProfitDetailResponse = StockMarketApiResponse<StockMarketProfitDetailDto>;
-export type StockMarketTradeResponse = StockMarketApiResponse<never>;
+export type StockMarketTradeResponse = StockMarketApiResponse<{
+  filledQuantity: number;
+  remainingSpiritStones?: number;
+}>;
 
 export const getStockMarketOverview = (
   requestConfig?: AxiosRequestConfig,

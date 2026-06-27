@@ -275,14 +275,19 @@ export class StockStore {
     side: StockMarketTradeSide,
     stockId: string,
     quantity: number,
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{ success: boolean; message: string; remainingSpiritStones?: number }> {
     this.actionKey = side;
     try {
       const response = side === 'buy'
         ? await buyStockMarketStock({ stockId, quantity })
         : await sellStockMarketStock({ stockId, quantity });
       if (response.success) {
-        return { success: true, message: response.message ?? (side === 'buy' ? '买入成功' : '卖出成功') };
+        const remainingSpiritStones = response.data?.remainingSpiritStones;
+        return {
+          success: true,
+          message: response.message ?? (side === 'buy' ? '买入成功' : '卖出成功'),
+          remainingSpiritStones,
+        };
       }
       return { success: false, message: response.message ?? '交易失败' };
     } catch (error: unknown) {
@@ -293,12 +298,16 @@ export class StockStore {
     }
   }
 
-  async executeClear(stockId?: string): Promise<{ success: boolean; message: string }> {
+  async executeClear(stockId?: string): Promise<{ success: boolean; message: string; remainingSpiritStones?: number }> {
     this.actionKey = stockId ? 'clear-stock' : 'clear-all';
     try {
       const response = await clearStockMarketPosition({ stockId });
       if (response.success) {
-        return { success: true, message: response.message ?? '清仓成功' };
+        return {
+          success: true,
+          message: response.message ?? '清仓成功',
+          remainingSpiritStones: response.data?.remainingSpiritStones,
+        };
       }
       return { success: false, message: response.message ?? '清仓失败' };
     } catch (error: unknown) {

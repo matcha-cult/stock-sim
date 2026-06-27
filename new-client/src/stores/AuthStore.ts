@@ -126,6 +126,14 @@ export class AuthStore {
     return this.character?.spiritStones ?? 0;
   }
 
+  updateSpiritStones(value: number): void {
+    if (this.character) {
+      runInAction(() => {
+        this.character = { ...this.character!, spiritStones: value };
+      });
+    }
+  }
+
   private async checkInitialAuth(): Promise<void> {
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
     if (!token) {

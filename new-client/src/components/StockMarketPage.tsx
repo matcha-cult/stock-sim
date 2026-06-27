@@ -263,14 +263,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   // 后台刷新联动
   const refreshAfterTrade = useCallback(async () => {
     await stockStore.refreshOverview(true);
-    await authStore.refreshCharacter();
     if (stockSubTab === 'records') {
       await stockStore.refreshTrades(stockStore.tradePage, true);
     }
     if (stockSubTab === 'profit') {
       await stockStore.refreshProfitDetail(true);
     }
-  }, [stockSubTab, authStore, stockStore]);
+  }, [stockSubTab, stockStore]);
 
   const handleTrade = useCallback(async (
     side: 'buy' | 'sell',
@@ -289,6 +288,9 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
       const result = await stockStore.executeTrade(side, selectedStockDto.stockId, tradeQuantity);
       if (result.success) {
         message.success(result.message);
+        if (result.remainingSpiritStones !== undefined) {
+          authStore.updateSpiritStones(result.remainingSpiritStones);
+        }
         await refreshAfterTrade();
       } else {
         message.error(result.message);
@@ -296,7 +298,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
     } finally {
       setLocalActionKey('');
     }
-  }, [selectedStockDto, tradePreview, stockStore, message, refreshAfterTrade]);
+  }, [selectedStockDto, tradePreview, stockStore, message, refreshAfterTrade, authStore]);
 
   const handleClearPosition = useCallback((scope: 'stock' | 'all') => {
     if (scope === 'stock' && (!selectedStockDto || !tradePreview || tradePreview.maxSellQty <= 0)) return;
@@ -324,6 +326,9 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
           );
           if (result.success) {
             message.success(result.message);
+            if (result.remainingSpiritStones !== undefined) {
+              authStore.updateSpiritStones(result.remainingSpiritStones);
+            }
             await refreshAfterTrade();
           } else {
             message.error(result.message);
@@ -333,7 +338,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
         }
       },
     });
-  }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade]);
+  }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade, authStore]);
 
   const handleTabChange = useCallback((key: string) => {
     if (key === 'stock-market' || key === 'pending-orders' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'farm' || key === 'gm-online-ops') {

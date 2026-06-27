@@ -1085,7 +1085,7 @@ class StockMarketService {
     characterId: number;
     stockId: string;
     quantity: number;
-  }): Promise<{ success: boolean; message: string; data?: { filledQuantity: number } }> {
+  }): Promise<{ success: boolean; message: string; data?: { filledQuantity: number; remainingSpiritStones: number } }> {
     const definition = getEnabledStockDefinitionById(params.stockId);
     if (!definition) return { success: false, message: '股票不存在' };
     const quantity = normalizeTradeQuantity(params.quantity);
@@ -1114,14 +1114,15 @@ class StockMarketService {
     ]);
     if (!executionResult.success) return executionResult;
 
-    return { success: true, message: '卖出成功', data: { filledQuantity: quantity } };
+    const remainingSpiritStones = Number(executionResult.remainingSpiritStones ?? 0n) / 100;
+    return { success: true, message: '卖出成功', data: { filledQuantity: quantity, remainingSpiritStones } };
   }
 
   @Transactional
   async clearPosition(params: {
     characterId: number;
     stockId: string | null;
-  }): Promise<{ success: boolean; message: string }> {
+  }): Promise<{ success: boolean; message: string; data?: { remainingSpiritStones: number } }> {
     await this.ensureInitialQuotes();
 
     let definitions: readonly StockMarketDefinition[];
@@ -1172,11 +1173,13 @@ class StockMarketService {
     const executionResult = await this.executeSellPlans(params.characterId, plans);
     if (!executionResult.success) return executionResult;
 
+    const remainingSpiritStones = Number(executionResult.remainingSpiritStones ?? 0n) / 100;
     return {
       success: true,
       message: params.stockId === null
         ? `清仓完成，卖出 ${executionResult.soldStockCount} 支股票 ${executionResult.soldQuantity} 股，到账 ${executionResult.netAmount.toString()} 灵石`
         : `清仓完成，卖出 ${executionResult.soldQuantity} 股，到账 ${executionResult.netAmount.toString()} 灵石`,
+      data: { remainingSpiritStones },
     };
   }
 
@@ -1214,6 +1217,7 @@ class StockMarketService {
     soldStockCount: number;
     soldQuantity: number;
     netAmount: bigint;
+    remainingSpiritStones?: bigint;
   }> {
     let soldQuantity = 0;
     let netAmount = 0n;
@@ -1239,6 +1243,14 @@ class StockMarketService {
           netAmount: 0n,
         };
       }
+      return {
+        success: true,
+        message: '卖出成功',
+        soldStockCount: plans.length,
+        soldQuantity,
+        netAmount,
+        remainingSpiritStones: addResult.remaining,
+      };
     }
 
     for (const plan of plans) {
