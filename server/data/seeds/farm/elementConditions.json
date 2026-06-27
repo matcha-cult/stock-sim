@@ -1,0 +1,23 @@
+{
+  "conditions": [
+    {
+      "conditionId": "single_element_invasion",
+      "name": "元素入侵",
+      "description": "受单一元素影响，配方中动态指定元素类型",
+      "target": "single"
+    },
+    {
+      "conditionId": "dual_element_generation",
+      "name": "元素相生",
+      "description": "受两个相生元素影响，配方中动态指定元素类型（如水生木）",
+      "target": "generation"
+    },
+    {
+      "conditionId": "wu_xing_gui_yuan",
+      "name": "五行归元",
+      "description": "金木水火土五行相克，最终抵消归零",
+      "requiredElements": ["金", "木", "水", "火", "土"],
+      "target": "empty"
+    }
+  ]
+}

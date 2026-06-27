@@ -41,7 +41,6 @@ let seedByItemId: Map<string, SeedConfig> | null = null;
 let recipesByBaseCrop: Map<string, HybridRecipeConfig[]> | null = null;
 let plotsConfig: PlotsConfig | null = null;
 let tierByTier: Map<number, FarmTierConfig> | null = null;
-let cropIdsByElement: Map<CropElement, string[]> | null = null;
 
 const SEED_DIR = join(process.cwd(), 'data/seeds/farm');
 
@@ -84,18 +83,6 @@ export async function initFarmConfig(): Promise<void> {
 
   plotsConfig = plotsRaw;
   tierByTier = new Map(plotsRaw.farmTiers.map((t) => [t.tier, t]));
-
-  // 按灵根元素分组索引（用于杂交配方查找时快速获取同元素作物列表）
-  const elementMap = new Map<CropElement, string[]>();
-  for (const c of crops) {
-    // 一个作物可能有多个元素（如双属性杂交产物）
-    for (const elem of c.element) {
-      const list = elementMap.get(elem) ?? [];
-      list.push(c.cropId);
-      elementMap.set(elem, list);
-    }
-  }
-  cropIdsByElement = elementMap;
 
   validateConfig(crops, seeds, recipes, plotsRaw);
 }
@@ -153,19 +140,22 @@ function validateConfig(
     if (!cropById!.has(r.baseCropId)) {
       errors.push(`recipe ${r.recipeId}: baseCropId ${r.baseCropId} 不存在`);
     }
-    // requiredCrops 中的每个 cropId 必须存在
-    for (const reqCrop of r.requiredCrops) {
-      if (!cropById!.has(reqCrop)) {
-        errors.push(`recipe ${r.recipeId}: requiredCrops 中的 ${reqCrop} 不存在`);
-      }
-    }
-    // minRequired 校验（如果设置）
-    if (r.minRequired !== undefined) {
-      if (r.minRequired < 1) {
-        errors.push(`recipe ${r.recipeId}: minRequired(${r.minRequired}) 必须 >= 1`);
-      }
-      if (r.minRequired > r.requiredCrops.length) {
-        errors.push(`recipe ${r.recipeId}: minRequired(${r.minRequired}) 不能大于 requiredCrops.length(${r.requiredCrops.length})`);
+    // requiredAdjacent 校验（新格式）
+    for (const req of r.requiredAdjacent) {
+      if (req.type === 'elementCondition') {
+        // elementCondition 类型：检查 conditionId 是否合法
+        const validConditions = ['single_element_invasion', 'dual_element_generation', 'wu_xing_gui_yuan'];
+        if (!validConditions.includes(req.conditionId)) {
+          errors.push(`recipe ${r.recipeId}: 未知的 conditionId ${req.conditionId}`);
+        }
+        // 单元素条件必须有 element 参数
+        if (req.conditionId === 'single_element_invasion' && !req.element) {
+          errors.push(`recipe ${r.recipeId}: single_element_invasion 必须指定 element`);
+        }
+        // 双元素条件必须有 elements 参数
+        if (req.conditionId === 'dual_element_generation' && (!req.elements || req.elements.length !== 2)) {
+          errors.push(`recipe ${r.recipeId}: dual_element_generation 必须指定 2 个元素`);
+        }
       }
     }
     // resultCropId 必须存在
@@ -227,82 +217,6 @@ export function getSeedConfig(itemId: string): SeedConfig | undefined {
 export function findHybridRecipe(elementA: CropElement, elementB: CropElement): HybridRecipeConfig | undefined {
   // 此函数已废弃，使用 findMatchingRecipe 代替
   return undefined;
-}
-
-/**
- * 根据基础作物和相邻作物集合，查找匹配的杂交配方。
- * 匹配逻辑：
- * - 如果配方设置了 minRequired：相邻作物中满足 requiredCrops 的数量 >= minRequired
- * - 如果配方未设置 minRequired：requiredCrops 是 adjacentCropIds 的子集（全部满足）
- * 多配方匹配时，按产物 rarity 降序排序，选择优先级最高的。
- *
- * @param baseCropId 新种作物的 cropId
- * @param adjacentCropIds 相邻作物的 cropId 集合
- * @returns 匹配的配方，或 undefined
- */
-export function findMatchingRecipe(
-  baseCropId: string,
-  adjacentCropIds: Set<string>,
-): HybridRecipeConfig | undefined {
-  const recipes = recipesByBaseCrop?.get(baseCropId);
-  if (!recipes || recipes.length === 0) return undefined;
-
-  // 筛选出匹配的配方
-  const matchingRecipes: HybridRecipeConfig[] = [];
-  for (const recipe of recipes) {
-    // 计算相邻作物中有多少个在 requiredCrops 中
-    let matchCount = 0;
-    for (const req of recipe.requiredCrops) {
-      if (adjacentCropIds.has(req)) {
-        matchCount++;
-      }
-    }
-    // 判断是否满足配方要求
-    const minRequired = recipe.minRequired ?? recipe.requiredCrops.length;
-    if (matchCount >= minRequired) {
-      matchingRecipes.push(recipe);
-    }
-  }
-
-  if (matchingRecipes.length === 0) return undefined;
-
-  // 多配方匹配时，按产物 rarity 降序排序
-  const rarityOrder: Record<string, number> = {
-    legendary: 5,
-    epic: 4,
-    rare: 3,
-    uncommon: 2,
-    common: 1,
-  };
-
-  matchingRecipes.sort((a, b) => {
-    const cropA = cropById?.get(a.resultCropId);
-    const cropB = cropById?.get(b.resultCropId);
-    const rarityA = cropA ? (rarityOrder[cropA.rarity] ?? 0) : 0;
-    const rarityB = cropB ? (rarityOrder[cropB.rarity] ?? 0) : 0;
-    // 降序：rarity 高的优先
-    if (rarityA !== rarityB) return rarityB - rarityA;
-    // rarity 相同，按 sortOrder 升序
-    return a.sortOrder - b.sortOrder;
-  });
-
-  return matchingRecipes[0];
-}
-
-/**
- * 根据基础作物和相邻作物集合，查找最佳匹配配方（稀有度最高）。
- * 与 findMatchingRecipe 相同，但显式返回稀有度最高的配方。
- *
- * @param baseCropId 基础作物的 cropId
- * @param adjacentCropIds 相邻作物的 cropId 集合
- * @returns 最佳匹配配方，或 undefined
- */
-export function findBestMatchingRecipe(
-  baseCropId: string,
-  adjacentCropIds: Set<string>,
-): HybridRecipeConfig | undefined {
-  // 复用 findMatchingRecipe 的逻辑，它已经返回稀有度最高的配方
-  return findMatchingRecipe(baseCropId, adjacentCropIds);
 }
 
 /** 获取等阶配置（V3：替代原 getFarmLevelConfig） */
@@ -376,10 +290,6 @@ export function getAllRecipes(): readonly HybridRecipeConfig[] {
     all.push(...list);
   }
   return all.sort((a, b) => a.sortOrder - b.sortOrder);
-}
-
-export function getCropIdsByElement(element: CropElement): readonly string[] {
-  return cropIdsByElement?.get(element) ?? [];
 }
 
 /** 获取所有等阶配置（按 tier 升序） */

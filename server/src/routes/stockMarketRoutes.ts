@@ -40,6 +40,8 @@ const router: RouterType = Router();
 const STOCK_MARKET_QPS_WINDOW_MS = 1000;
 const STOCK_MARKET_QUERY_QPS_LIMIT = 5;
 const STOCK_MARKET_MUTATION_QPS_LIMIT = 2;
+// 玩家买入限流放宽到 5 次/秒，与查询类接口对齐（快速下单场景）
+const STOCK_MARKET_BUY_QPS_LIMIT = 5;
 const STOCK_MARKET_QPS_LIMIT_MESSAGE = '股市请求过于频繁，请稍后再试';
 
 type StockMarketTradeBody = {
@@ -63,7 +65,7 @@ const stockMarketOverviewQpsLimit = createStockMarketQpsLimit('overview', STOCK_
 const stockMarketHistoryQpsLimit = createStockMarketQpsLimit('history', STOCK_MARKET_QUERY_QPS_LIMIT);
 const stockMarketTradesQpsLimit = createStockMarketQpsLimit('trades', STOCK_MARKET_QUERY_QPS_LIMIT);
 const stockMarketProfitDetailQpsLimit = createStockMarketQpsLimit('profit-detail', STOCK_MARKET_QUERY_QPS_LIMIT);
-const stockMarketBuyQpsLimit = createStockMarketQpsLimit('buy', STOCK_MARKET_MUTATION_QPS_LIMIT);
+const stockMarketBuyQpsLimit = createStockMarketQpsLimit('buy', STOCK_MARKET_BUY_QPS_LIMIT);
 const stockMarketSellQpsLimit = createStockMarketQpsLimit('sell', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketClearQpsLimit = createStockMarketQpsLimit('clear', STOCK_MARKET_MUTATION_QPS_LIMIT);
 const stockMarketNewsEventListQpsLimit = createStockMarketQpsLimit('news-event-list', STOCK_MARKET_QUERY_QPS_LIMIT);

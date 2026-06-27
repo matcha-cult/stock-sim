@@ -46,6 +46,8 @@ export interface CropConfig {
   cropId: string;
   name: string;
   description: string;
+  /** 作物特性标签数组（如 ["禾本"]、["灵根", "金灵"]） */
+  traits: string[];
   /** 作物元素数组（单属性如 ["金"]，双属性如 ["水", "木"]，无属性如 []） */
   element: CropElement[];
   rarity: string;
@@ -88,6 +90,41 @@ export interface SeedConfig {
   seedUnit: string;
 }
 
+/** 相邻条件类型：特性条件 */
+export interface TraitAdjacentCondition {
+  type: 'trait';
+  /** 特性名称（如 "禾本"、"金灵"） */
+  value: string;
+  /** 最少需要满足的数量 */
+  minCount: number;
+}
+
+/** 相邻条件类型：元素条件 */
+export interface ElementAdjacentCondition {
+  type: 'element';
+  /** 元素名称（如 "金"、"木"） */
+  value: CropElement;
+  /** 最少需要满足的数量 */
+  minCount: number;
+}
+
+/** 相邻条件类型：元素条件引用 */
+export interface ElementConditionAdjacentCondition {
+  type: 'elementCondition';
+  /** 条件 ID（如 "single_element_invasion"、"dual_element_generation"、"wu_xing_gui_yuan"） */
+  conditionId: string;
+  /** 单元素条件时的元素参数 */
+  element?: CropElement;
+  /** 多元素条件时的元素参数数组 */
+  elements?: CropElement[];
+}
+
+/** 相邻条件联合类型 */
+export type RequiredAdjacentCondition =
+  | TraitAdjacentCondition
+  | ElementAdjacentCondition
+  | ElementConditionAdjacentCondition;
+
 export interface HybridRecipeConfig {
   recipeId: string;
   name: string;
@@ -96,10 +133,8 @@ export interface HybridRecipeConfig {
   sortOrder: number;
   /** 基础作物 cropId（种植时触发作物的 cropId） */
   baseCropId: string;
-  /** 所需相邻作物的 cropId 集合 */
-  requiredCrops: string[];
-  /** 最少需要满足的数量（可选，默认等于 requiredCrops.length 即全部满足） */
-  minRequired?: number;
+  /** 相邻条件数组（支持特性、元素、元素条件三种类型） */
+  requiredAdjacent: RequiredAdjacentCondition[];
   resultCropId: string;
   resultSeedItemId: string;
   resultQuantity: number;
@@ -111,10 +146,8 @@ export interface HybridRecipeConfigDto {
   name: string;
   /** 基础作物 cropId */
   baseCropId: string;
-  /** 所需相邻作物的 cropId 集合 */
-  requiredCrops: string[];
-  /** 最少需要满足的数量（可选） */
-  minRequired?: number;
+  /** 相邻条件数组 */
+  requiredAdjacent: RequiredAdjacentCondition[];
   /** 结果作物名称 */
   resultCropName: string;
 }

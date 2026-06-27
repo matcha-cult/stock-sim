@@ -21,6 +21,7 @@ import monthCardRoutes from '../routes/monthCardRoutes.js';
 import gmMonthCardRoutes from '../routes/gmMonthCardRoutes.js';
 import farmRoutes from '../routes/farmRoutes.js';
 import serverConfigRoutes from '../routes/serverConfigRoutes.js';
+import marketDataRoutes from '../routes/marketDataRoutes.js';
 
 export function registerRoutes(app: express.Application): void {
   // 认证路由
@@ -55,4 +56,7 @@ export function registerRoutes(app: express.Application): void {
 
   // 服务端全局配置（无需鉴权）
   app.use('/api/server-config', serverConfigRoutes);
+
+  // 行情数据路由（sk- API key 鉴权）
+  app.use('/api/market-data', marketDataRoutes);
 }

@@ -38,7 +38,6 @@ import {
   getAllSeeds,
   getAllRecipes,
   getAccelerationMultiplier,
-  findMatchingRecipe,
 } from './farmConfigLoader.js';
 import {
   computeCropState,
@@ -70,7 +69,7 @@ import {
   computeSellPriceMultiplier,
   rollMutationInheritance,
 } from './farmMutationService.js';
-import { tryHybridOnPlant } from './farmHybridService.js';
+import { tryHybridOnPlant, checkHybridRevocation } from './farmHybridService.js';
 import { logActivity } from './farmActivityLogService.js';
 
 // ==================== 类型定义 ====================
@@ -1045,9 +1044,9 @@ export async function removeCrop(
       const adjCell = adjCellResult.rows[0];
       if (!adjCell.crop_id || !adjCell.pending_hybrid_seed) continue;
 
-      // 查询该相邻格子的四方向相邻作物（不包括当前被铲除的格子）
+      // 查询该相邻格子的四方向相邻作物配置（不包括当前被铲除的格子）
       const adjAdjacent = getHybridAdjacentCells(adj.row, adj.col, gridConfig.maxRows, gridConfig.fixedCols);
-      const adjAdjacentCropIds = new Set<string>();
+      const adjAdjacentCropConfigs: Array<{ cropId: string }> = [];
       for (const adjAdj of adjAdjacent) {
         // 跳过当前被铲除的格子
         if (adjAdj.row === row && adjAdj.col === col) continue;
@@ -1056,14 +1055,20 @@ export async function removeCrop(
           [characterId, adjAdj.row, adjAdj.col],
         );
         if ((adjAdjCellResult.rowCount ?? 0) > 0 && adjAdjCellResult.rows[0].crop_id) {
-          adjAdjacentCropIds.add(adjAdjCellResult.rows[0].crop_id!);
+          const cropConfig = getCropConfig(adjAdjCellResult.rows[0].crop_id!);
+          if (cropConfig) {
+            adjAdjacentCropConfigs.push(cropConfig);
+          }
         }
       }
 
-      // 查找匹配的杂交配方
-      const recipe = findMatchingRecipe(adjCell.crop_id, adjAdjacentCropIds);
-      // 如果没有匹配的配方，或者匹配的配方不是原来的 pending_hybrid_seed，则撤销
-      if (!recipe || recipe.resultSeedItemId !== adjCell.pending_hybrid_seed) {
+      // 检查是否需要撤销杂交
+      const shouldRevoke = checkHybridRevocation(
+        adjCell.crop_id,
+        adjAdjacentCropConfigs as any,
+        adjCell.pending_hybrid_seed,
+      );
+      if (shouldRevoke) {
         await query(
           `UPDATE farm_cell SET pending_hybrid_seed = NULL, updated_at = CURRENT_TIMESTAMP
            WHERE character_id = $1 AND row = $2 AND col = $3`,
@@ -1692,8 +1697,7 @@ export function getFarmStaticConfig(): FarmStaticConfigDto {
         recipeId: r.recipeId,
         name: r.name,
         baseCropId: r.baseCropId,
-        requiredCrops: r.requiredCrops,
-        minRequired: r.minRequired,
+        requiredAdjacent: r.requiredAdjacent,
         resultCropName: resultSeed?.name ?? r.resultSeedItemId,
       };
     });

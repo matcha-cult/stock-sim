@@ -1016,7 +1016,7 @@ class StockMarketService {
     characterId: number;
     stockId: string;
     quantity: number;
-  }): Promise<{ success: boolean; message: string }> {
+  }): Promise<{ success: boolean; message: string; data?: { filledQuantity: number } }> {
     const definition = getEnabledStockDefinitionById(params.stockId);
     if (!definition) return { success: false, message: '股票不存在' };
     const requestedQuantity = normalizeTradeQuantity(params.quantity);
@@ -1069,7 +1069,7 @@ class StockMarketService {
       realizedPnl: null,
     });
 
-    return { success: true, message: '买入成功' };
+    return { success: true, message: '买入成功', data: { filledQuantity: quantity } };
   }
 
   @Transactional
@@ -1077,7 +1077,7 @@ class StockMarketService {
     characterId: number;
     stockId: string;
     quantity: number;
-  }): Promise<{ success: boolean; message: string }> {
+  }): Promise<{ success: boolean; message: string; data?: { filledQuantity: number } }> {
     const definition = getEnabledStockDefinitionById(params.stockId);
     if (!definition) return { success: false, message: '股票不存在' };
     const quantity = normalizeTradeQuantity(params.quantity);
@@ -1106,7 +1106,7 @@ class StockMarketService {
     ]);
     if (!executionResult.success) return executionResult;
 
-    return { success: true, message: '卖出成功' };
+    return { success: true, message: '卖出成功', data: { filledQuantity: quantity } };
   }
 
   @Transactional
