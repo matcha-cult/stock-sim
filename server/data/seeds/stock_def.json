@@ -7,7 +7,7 @@
       "short_name": "琼玉丹",
       "sector": "丹药",
       "description": "大陆第一丹坊，从低阶丹药到高阶药引应有尽有，行情受丹方突破和药材收成影响。",
-      "initial_price_spirit_stones": 128,
+      "initial_price_spirit_stones": 168,
       "sort_weight": 10,
       "enabled": true
     },
@@ -18,7 +18,7 @@
       "short_name": "星钛矿",
       "sector": "矿材",
       "description": "北大陆最大矿业联盟，价格随矿脉产量、矿物需求和运输风险波动。",
-      "initial_price_spirit_stones": 96,
+      "initial_price_spirit_stones": 196,
       "sort_weight": 20,
       "enabled": true
     },
@@ -62,7 +62,7 @@
       "short_name": "云梦畦",
       "sector": "灵植",
       "description": "培育灵草、灵果和药田阵法，行情随节气、虫害、药材需求与炼丹需求变化。",
-      "initial_price_spirit_stones": 88,
+      "initial_price_spirit_stones": 188,
       "sort_weight": 60,
       "enabled": true
     },
@@ -117,7 +117,7 @@
       "short_name": "乌商",
       "sector": "商贸",
       "description": "跨州跨国贸易枢纽，经营灵石汇兑、珍奇物资交易，行情受商路安全和各地物价差影响。",
-      "initial_price_spirit_stones": 156,
+      "initial_price_spirit_stones": 186,
       "sort_weight": 110,
       "enabled": true
     },
