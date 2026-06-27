@@ -1931,15 +1931,18 @@ class StockMarketService {
         const { limitUpPrice, limitDownPrice } = calculateStockMarketLimitPrices(initialPrice);
 
         if (currentPrice >= limitUpPrice && changeBps > 0) {
-          console.log(`[涨跌停] ${impact.stockId} 已在涨停线（当前价格 ${currentPrice}，涨停价 ${limitUpPrice}），涨幅 ${changeBps} bps 归零`);
+          console.log(`[涨跌停] ${impact.stockId} 已在涨停线外（当前价格 ${currentPrice}，涨停价 ${limitUpPrice}），涨幅 ${changeBps} bps 归零，价格维持不变`);
           changeBps = 0;
         } else if (currentPrice <= limitDownPrice && changeBps < 0) {
-          console.log(`[涨跌停] ${impact.stockId} 已在跌停线（当前价格 ${currentPrice}，跌停价 ${limitDownPrice}），跌幅 ${changeBps} bps 归零`);
+          console.log(`[涨跌停] ${impact.stockId} 已在跌停线外（当前价格 ${currentPrice}，跌停价 ${limitDownPrice}），跌幅 ${changeBps} bps 归零，价格维持不变`);
           changeBps = 0;
         }
 
         const theoreticalPrice = applyStockMarketPriceChange(currentPrice, changeBps);
-        const nextPrice = applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
+        // 如果 changeBps 被归零（价格已在涨跌停之外），跳过截断，维持当前价格
+        const nextPrice = changeBps === 0 && (currentPrice >= limitUpPrice || currentPrice <= limitDownPrice)
+          ? currentPrice
+          : applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
 
         // 计算实际涨跌幅（基于截断后的价格）
         const actualChangeBps = currentPrice > 0n
@@ -2025,15 +2028,18 @@ class StockMarketService {
           const { limitUpPrice, limitDownPrice } = calculateStockMarketLimitPrices(initialPrice);
 
           if (currentPrice >= limitUpPrice && changeBps > 0) {
-            console.log(`[涨跌停] ${stockId} 已在涨停线（当前价格 ${currentPrice}，涨停价 ${limitUpPrice}），涨幅 ${changeBps} bps 归零`);
+            console.log(`[涨跌停] ${stockId} 已在涨停线外（当前价格 ${currentPrice}，涨停价 ${limitUpPrice}），涨幅 ${changeBps} bps 归零，价格维持不变`);
             changeBps = 0;
           } else if (currentPrice <= limitDownPrice && changeBps < 0) {
-            console.log(`[涨跌停] ${stockId} 已在跌停线（当前价格 ${currentPrice}，跌停价 ${limitDownPrice}），跌幅 ${changeBps} bps 归零`);
+            console.log(`[涨跌停] ${stockId} 已在跌停线外（当前价格 ${currentPrice}，跌停价 ${limitDownPrice}），跌幅 ${changeBps} bps 归零，价格维持不变`);
             changeBps = 0;
           }
 
           const theoreticalPrice = applyStockMarketPriceChange(currentPrice, changeBps);
-          const nextPrice = applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
+          // 如果 changeBps 被归零（价格已在涨跌停之外），跳过截断，维持当前价格
+          const nextPrice = changeBps === 0 && (currentPrice >= limitUpPrice || currentPrice <= limitDownPrice)
+            ? currentPrice
+            : applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
 
           // 计算实际涨跌幅（基于截断后的价格）
           const actualChangeBps = currentPrice > 0n
