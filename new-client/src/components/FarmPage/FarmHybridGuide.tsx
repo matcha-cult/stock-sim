@@ -1,5 +1,5 @@
 /**
- * 灵田系统 V3 — 杂交指南组件。
+ * 灵田系统 V4 — 杂交指南组件。
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：展示杂交规则和现有杂交配方表，分为两个 tab。
@@ -12,10 +12,11 @@
  * - 杂交规则从设计文档提取，前端静态展示。
  * - 杂交配方表从后端 staticConfig.hybridRecipes 获取。
  * - 作物名称通过 cropId 从 staticConfig.crops 查找。
+ * - V4：条件从 requiredCrops 改为 requiredAdjacent（特性/元素/元素条件）。
  *
  * 关键边界条件与坑点：
  * 1. 配方表可能为空（未加载或无配方）。
- * 2. requiredCrops 需要转换为作物名称，无元素的显示 "—"。
+ * 2. requiredAdjacent 需要转换为可读文本描述。
  */
 
 import { useContext, useMemo } from 'react';
@@ -23,7 +24,7 @@ import { observer } from 'mobx-react-lite';
 import { Card, Typography, Table, Tag, Alert, Descriptions, Tabs } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { RootStoreContext } from '../../stores/RootStore';
-import type { HybridRecipeDto, CropConfigDto } from '../../services/api/farm';
+import type { HybridRecipeDto, CropConfigDto, RequiredAdjacentConditionDto } from '../../services/api/farm';
 import { ElementTag } from './ElementTag';
 
 const { Title, Paragraph, Text } = Typography;
@@ -73,11 +74,41 @@ const HybridRules = () => (
   </div>
 );
 
-/** 扩展的配方行类型（包含解析后的作物名称） */
+/** 扩展的配方行类型（包含解析后的条件描述） */
 type HybridRecipeRow = HybridRecipeDto & {
   baseCropName: string;
-  requiredCropNames: string[];
+  /** 解析后的条件描述数组 */
+  conditionDescriptions: string[];
 };
+
+/** 元素条件 ID 到名称的映射 */
+const ELEMENT_CONDITION_NAMES: Record<string, string> = {
+  single_element_invasion: '单元素入侵',
+  dual_element_generation: '元素相生',
+  wu_xing_gui_yuan: '五行归元',
+};
+
+/** 解析单个条件为可读文本 */
+function parseCondition(condition: RequiredAdjacentConditionDto): string {
+  switch (condition.type) {
+    case 'trait':
+      return `特性"${condition.value}" ×${condition.minCount}`;
+    case 'element':
+      return `元素"${condition.value}" ×${condition.minCount}`;
+    case 'elementCondition': {
+      const condName = ELEMENT_CONDITION_NAMES[condition.conditionId] ?? condition.conditionId;
+      if (condition.element) {
+        return `${condName}（${condition.element}）`;
+      }
+      if (condition.elements && condition.elements.length > 0) {
+        return `${condName}（${condition.elements.join('+')}）`;
+      }
+      return condName;
+    }
+    default:
+      return '未知条件';
+  }
+}
 
 /** 杂交配方表 */
 const HybridRecipesTable = observer(function HybridRecipesTable() {
@@ -100,12 +131,11 @@ const HybridRecipesTable = observer(function HybridRecipesTable() {
     if (!farmStore.staticConfig) return [];
     return farmStore.staticConfig.hybridRecipes.map((recipe) => {
       const baseCrop = cropMap.get(recipe.baseCropId);
-      const requiredCropNames = recipe.requiredCrops
-        .map((cropId) => cropMap.get(cropId)?.name ?? cropId);
+      const conditionDescriptions = recipe.requiredAdjacent.map(parseCondition);
       return {
         ...recipe,
         baseCropName: baseCrop?.name ?? recipe.baseCropId,
-        requiredCropNames,
+        conditionDescriptions,
       };
     });
   }, [farmStore.staticConfig, cropMap]);
@@ -124,27 +154,13 @@ const HybridRecipesTable = observer(function HybridRecipesTable() {
       width: 100,
     },
     {
-      title: '所需作物',
-      dataIndex: 'requiredCropNames',
-      key: 'requiredCropNames',
-      width: 200,
-      render: (names: string[]) => (
-        <span>{names.join('、')}</span>
+      title: '相邻条件',
+      dataIndex: 'conditionDescriptions',
+      key: 'conditionDescriptions',
+      width: 300,
+      render: (descriptions: string[]) => (
+        <span>{descriptions.join(' + ')}</span>
       ),
-    },
-    {
-      title: '最少满足',
-      dataIndex: 'minRequired',
-      key: 'minRequired',
-      width: 80,
-      align: 'center',
-      render: (minRequired: number | undefined, record) => {
-        if (minRequired === undefined) return <Text>{record.requiredCropNames.length}</Text>;
-        if (minRequired < record.requiredCropNames.length) {
-          return <Text type="warning">{minRequired}/{record.requiredCropNames.length}</Text>;
-        }
-        return <Text>{minRequired}</Text>;
-      },
     },
     {
       title: '产物',
