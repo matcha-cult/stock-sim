@@ -1939,9 +1939,9 @@ class StockMarketService {
         }
 
         const theoreticalPrice = applyStockMarketPriceChange(currentPrice, changeBps);
-        // 如果 changeBps 被归零（价格已在涨跌停之外），跳过截断，维持当前价格
-        const nextPrice = changeBps === 0 && (currentPrice >= limitUpPrice || currentPrice <= limitDownPrice)
-          ? currentPrice
+        // 如果价格已在涨跌停之外，跳过截断，维持当前价格（只允许向范围内方向变化）
+        const nextPrice = currentPrice >= limitUpPrice || currentPrice <= limitDownPrice
+          ? theoreticalPrice
           : applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
 
         // 计算实际涨跌幅（基于截断后的价格）
@@ -2036,9 +2036,9 @@ class StockMarketService {
           }
 
           const theoreticalPrice = applyStockMarketPriceChange(currentPrice, changeBps);
-          // 如果 changeBps 被归零（价格已在涨跌停之外），跳过截断，维持当前价格
-          const nextPrice = changeBps === 0 && (currentPrice >= limitUpPrice || currentPrice <= limitDownPrice)
-            ? currentPrice
+          // 如果价格已在涨跌停之外，跳过截断，维持当前价格（只允许向范围内方向变化）
+          const nextPrice = currentPrice >= limitUpPrice || currentPrice <= limitDownPrice
+            ? theoreticalPrice
             : applyStockMarketLimitPrice(theoreticalPrice, limitUpPrice, limitDownPrice);
 
           // 计算实际涨跌幅（基于截断后的价格）
