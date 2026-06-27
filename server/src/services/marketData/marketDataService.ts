@@ -47,8 +47,11 @@ import {
 } from '../stockMarket/stockMarketDefinitions.js';
 import {
   stockMarketPriceUnitsToSpiritStones,
+  stockMarketPriceToStorageUnits,
   buildStockMarketTradeRulesDto,
   calculateStockMarketMarketValue,
+  calculateStockMarketLimitPrices,
+  detectStockMarketLimitStatus,
 } from '../stockMarket/stockMarketRules.js';
 import { getNextStockMarketRefreshAt } from '../stockMarket/stockMarketTime.js';
 
@@ -68,6 +71,7 @@ export type MarketDataStockDto = {
   description: string;
   priceSpiritStones: number;
   lastChangeBps: number;
+  limitStatus: 'up' | 'down' | 'none';
   updatedAt: number;
 };
 
@@ -168,6 +172,9 @@ const buildStockDto = (
   const priceUnits = row
     ? toBigIntValue(row.current_price_spirit_stones)
     : BigInt(Math.round(definition.initial_price_spirit_stones * 100));
+  const initialPriceUnits = stockMarketPriceToStorageUnits(definition.initial_price_spirit_stones);
+  const { limitUpPrice, limitDownPrice } = calculateStockMarketLimitPrices(initialPriceUnits);
+  const limitStatus = detectStockMarketLimitStatus(priceUnits, limitUpPrice, limitDownPrice);
   return {
     stockId: definition.id,
     code: definition.code,
@@ -177,6 +184,7 @@ const buildStockDto = (
     description: definition.description ?? '',
     priceSpiritStones: stockMarketPriceUnitsToSpiritStones(priceUnits),
     lastChangeBps: row ? Number(row.last_change_bps) : 0,
+    limitStatus,
     updatedAt: row ? toTimestampMillis(row.updated_at) : 0,
   };
 };
