@@ -1022,7 +1022,7 @@ class StockMarketService {
     characterId: number;
     stockId: string;
     quantity: number;
-  }): Promise<{ success: boolean; message: string; data?: { filledQuantity: number } }> {
+  }): Promise<{ success: boolean; message: string; data?: { filledQuantity: number; remainingSpiritStones: number } }> {
     const definition = getEnabledStockDefinitionById(params.stockId);
     if (!definition) return { success: false, message: '股票不存在' };
     const requestedQuantity = normalizeTradeQuantity(params.quantity);
@@ -1048,6 +1048,8 @@ class StockMarketService {
       memo: `买入 ${definition.name} x${quantity}`,
     });
     if (!consumeResult.success) return { success: false, message: consumeResult.message };
+
+    const remainingSpiritStones = Number(consumeResult.remaining ?? 0n) / 100;
 
     await query(
       `
@@ -1075,7 +1077,7 @@ class StockMarketService {
       realizedPnl: null,
     });
 
-    return { success: true, message: '买入成功', data: { filledQuantity: quantity } };
+    return { success: true, message: '买入成功', data: { filledQuantity: quantity, remainingSpiritStones } };
   }
 
   @Transactional
