@@ -50,7 +50,6 @@ interface FarmCellAssignment {
   cropName: string;
   seedItemId: string;
   mutationType: MutationType | null;
-  generation: number;
   /** 是否选中（参与提交） */
   selected: boolean;
 }
@@ -151,7 +150,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
         cropName: seedRecord.name,
         seedItemId: seedRecord.itemId,
         mutationType: seedRecord.mutationType,
-        generation: seedRecord.generation,
         selected: true,
       });
       return next;
@@ -199,7 +197,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
           cropName: cell.cropName ?? '作物',
           seedItemId: seed.itemId,
           mutationType: cell.mutationType,
-          generation: cell.plantedGeneration ?? 0,
           selected: true,
         });
       }
@@ -240,7 +237,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
         cropName: seedConfig?.name ?? '未知作物',
         seedItemId: item.seedItemId,
         mutationType: item.mutationType as MutationType | null,
-        generation: item.generation ?? 0,
         selected: true,
       });
     }
@@ -265,7 +261,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
         cropName: seedConfig?.name ?? '未知作物',
         seedItemId: item.seedItemId,
         mutationType: item.mutationType as MutationType | null,
-        generation: item.generation ?? 0,
         selected: true,
       });
     }
@@ -303,7 +298,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
         colOffset,
         seedItemId: assignment.seedItemId,
         mutationType: assignment.mutationType,
-        generation: assignment.generation > 0 ? assignment.generation : null,
       });
     }
 
@@ -492,7 +486,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
                                   cropName: cell.cropName ?? '作物',
                                   seedItemId: seed.itemId,
                                   mutationType: cell.mutationType,
-                                  generation: cell.plantedGeneration ?? 0,
                                   selected: true,
                                 });
                                 setTemplateAssignments(newAssignments);
@@ -507,7 +500,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
                               cropName: '待选择',
                               seedItemId: '',
                               mutationType: null,
-                              generation: 0,
                               selected: true,
                             });
                             setTemplateAssignments(newAssignments);
@@ -604,26 +596,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
                             </Tag>
                           </div>
                         </Popover>
-                      )}
-
-                      {/* 右下角：代数 */}
-                      {assignment && assignment.generation > 0 && (
-                        <Tag
-                          color={assignment!.generation >= 3 ? 'red' : 'blue'}
-                          style={{
-                            position: 'absolute',
-                            bottom: 2,
-                            right: 2,
-                            fontSize: 9,
-                            margin: 0,
-                            padding: '0 3px',
-                            lineHeight: '14px',
-                            transform: 'scale(0.85)',
-                            transformOrigin: 'bottom right',
-                          }}
-                        >
-                          G{assignment!.generation}
-                        </Tag>
                       )}
                     </>
                   )}

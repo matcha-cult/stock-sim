@@ -397,7 +397,6 @@ export interface PlantTemplateItemDto {
   colOffset: number;
   seedItemId: string;
   mutationType: string | null;
-  generation: number | null;
 }
 
 /** 模板 DTO */
@@ -416,7 +415,6 @@ export interface CreateTemplateItemRequest {
   colOffset: number;
   seedItemId: string;
   mutationType: string | null;
-  generation: number | null;
 }
 
 /** 模板列表响应 */

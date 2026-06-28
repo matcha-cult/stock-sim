@@ -36,7 +36,6 @@ export interface PlantTemplateItemDto {
   colOffset: number;
   seedItemId: string;
   mutationType: string | null;
-  generation: number | null;
 }
 
 export interface PlantTemplateDto {
@@ -63,7 +62,6 @@ interface TemplateItemRow {
   col_offset: number;
   seed_item_id: string;
   mutation_type: string | null;
-  generation: number | null;
 }
 
 interface SeedInventoryRow {
@@ -112,7 +110,6 @@ export async function createTemplate(
     colOffset: number;
     seedItemId: string;
     mutationType: string | null;
-    generation: number | null;
   }>,
 ): Promise<{ success: boolean; message: string; templateId?: number }> {
   if (!name.trim()) {
@@ -164,11 +161,11 @@ export async function createTemplate(
       const itemValues = items
         .map(
           (item) =>
-            `(${templateId}, ${item.rowOffset}, ${item.colOffset}, '${item.seedItemId}', ${item.mutationType ? `'${item.mutationType}'` : 'NULL'}, ${item.generation ?? 'NULL'})`,
+            `(${templateId}, ${item.rowOffset}, ${item.colOffset}, '${item.seedItemId}', ${item.mutationType ? `'${item.mutationType}'` : 'NULL'})`,
         )
         .join(', ');
       await query(
-        `INSERT INTO farm_plant_template_item (template_id, row_offset, col_offset, seed_item_id, mutation_type, generation)
+        `INSERT INTO farm_plant_template_item (template_id, row_offset, col_offset, seed_item_id, mutation_type)
          VALUES ${itemValues}`,
         [],
       );
@@ -191,7 +188,7 @@ export async function getTemplates(characterId: number): Promise<PlantTemplateDt
       [characterId],
     ),
     query<TemplateItemRow>(
-      `SELECT id, template_id, row_offset, col_offset, seed_item_id, mutation_type, generation
+      `SELECT id, template_id, row_offset, col_offset, seed_item_id, mutation_type
        FROM farm_plant_template_item
        WHERE template_id IN (SELECT id FROM farm_plant_template WHERE character_id = $1)
        ORDER BY template_id, row_offset, col_offset`,
@@ -209,7 +206,6 @@ export async function getTemplates(characterId: number): Promise<PlantTemplateDt
       colOffset: item.col_offset,
       seedItemId: item.seed_item_id,
       mutationType: item.mutation_type,
-      generation: item.generation,
     });
     itemsByTemplate.set(item.template_id, list);
   }
@@ -241,7 +237,7 @@ export async function getTemplateDetail(
 
   const t = templateResult.rows[0];
   const itemRows = await query<TemplateItemRow>(
-    `SELECT id, template_id, row_offset, col_offset, seed_item_id, mutation_type, generation
+    `SELECT id, template_id, row_offset, col_offset, seed_item_id, mutation_type
      FROM farm_plant_template_item
      WHERE template_id = $1
      ORDER BY row_offset, col_offset`,
@@ -258,7 +254,6 @@ export async function getTemplateDetail(
       colOffset: item.col_offset,
       seedItemId: item.seed_item_id,
       mutationType: item.mutation_type,
-      generation: item.generation,
     })),
     createdAt: Math.floor(Number(t.created_at_epoch)),
     updatedAt: Math.floor(Number(t.updated_at_epoch)),
@@ -291,7 +286,6 @@ export async function updateTemplate(
     colOffset: number;
     seedItemId: string;
     mutationType: string | null;
-    generation: number | null;
   }>,
 ): Promise<{ success: boolean; message: string }> {
   if (!name.trim()) {
@@ -347,11 +341,11 @@ export async function updateTemplate(
       const itemValues = items
         .map(
           (item) =>
-            `(${templateId}, ${item.rowOffset}, ${item.colOffset}, '${item.seedItemId}', ${item.mutationType ? `'${item.mutationType}'` : 'NULL'}, ${item.generation ?? 'NULL'})`,
+            `(${templateId}, ${item.rowOffset}, ${item.colOffset}, '${item.seedItemId}', ${item.mutationType ? `'${item.mutationType}'` : 'NULL'})`,
         )
         .join(', ');
       await query(
-        `INSERT INTO farm_plant_template_item (template_id, row_offset, col_offset, seed_item_id, mutation_type, generation)
+        `INSERT INTO farm_plant_template_item (template_id, row_offset, col_offset, seed_item_id, mutation_type)
          VALUES ${itemValues}`,
         [],
       );
@@ -401,7 +395,6 @@ export async function applyPlantTemplate(
       col: startCol + item.colOffset,
       seedItemId: item.seedItemId,
       requiredMutationType: item.mutationType,
-      requiredGeneration: item.generation,
     }));
 
     // 校验目标坐标在灵田范围内
@@ -511,7 +504,6 @@ async function validateCells(
 interface SeedRequirement {
   seedItemId: string;
   mutationType: string | null;
-  generation: number | null;
   quantity: number;
 }
 
@@ -519,13 +511,12 @@ function calculateSeedRequirements(
   targets: Array<{
     seedItemId: string;
     requiredMutationType: string | null;
-    requiredGeneration: number | null;
   }>,
 ): SeedRequirement[] {
   // 按条件分组统计
   const reqMap = new Map<string, SeedRequirement>();
   for (const target of targets) {
-    const key = `${target.seedItemId}|${target.requiredMutationType ?? ''}|${target.requiredGeneration ?? ''}`;
+    const key = `${target.seedItemId}|${target.requiredMutationType ?? ''}`;
     const existing = reqMap.get(key);
     if (existing) {
       existing.quantity += 1;
@@ -533,7 +524,6 @@ function calculateSeedRequirements(
       reqMap.set(key, {
         seedItemId: target.seedItemId,
         mutationType: target.requiredMutationType,
-        generation: target.requiredGeneration,
         quantity: 1,
       });
     }
@@ -568,7 +558,7 @@ async function lockAndValidateSeeds(
   // 按条件分组种子记录
   const seedMap = new Map<string, LockedSeedInfo[]>();
   for (const seed of seedResult.rows) {
-    const key = `${seed.item_id}|${seed.mutation_type}|${seed.generation}`;
+    const key = `${seed.item_id}|${seed.mutation_type}`;
     const list = seedMap.get(key) ?? [];
     list.push({
       seedInventoryId: seed.id,
@@ -583,44 +573,23 @@ async function lockAndValidateSeeds(
   // 校验每个需求是否有足够的种子
   for (const req of requirements) {
     const mutationKey = req.mutationType ?? '';
-    const generationKey = req.generation?.toString() ?? '';
 
-    // 如果指定了 mutationType 和 generation，精确匹配
-    if (req.mutationType !== null && req.generation !== null) {
-      const key = `${req.seedItemId}|${mutationKey}|${generationKey}`;
-      const seeds = seedMap.get(key) ?? [];
-      const totalAvailable = seeds.reduce((sum, s) => sum + s.availableQuantity, 0);
-      if (totalAvailable < req.quantity) {
-        const seedConfig = getSeedConfig(req.seedItemId);
-        const seedName = seedConfig?.name ?? req.seedItemId;
-        return {
-          success: false,
-          message: `种子 "${seedName}" 数量不足（需要 ${req.quantity}，可用 ${totalAvailable}）`,
-        };
-      }
-    } else {
-      // 未指定变异/代数：查找所有匹配的种子
-      const matchingSeeds: LockedSeedInfo[] = [];
-      for (const [key, seeds] of seedMap.entries()) {
-        const [itemId] = key.split('|');
-        if (itemId !== req.seedItemId) continue;
-        for (const seed of seeds) {
-          // 检查变异类型匹配
-          if (req.mutationType !== null && seed.mutationType !== req.mutationType) continue;
-          // 检查代数匹配
-          if (req.generation !== null && seed.generation !== req.generation) continue;
-          matchingSeeds.push(seed);
-        }
-      }
-      const totalAvailable = matchingSeeds.reduce((sum, s) => sum + s.availableQuantity, 0);
-      if (totalAvailable < req.quantity) {
-        const seedConfig = getSeedConfig(req.seedItemId);
-        const seedName = seedConfig?.name ?? req.seedItemId;
-        return {
-          success: false,
-          message: `种子 "${seedName}" 数量不足（需要 ${req.quantity}，可用 ${totalAvailable}）`,
-        };
-      }
+    // 查找所有匹配的种子（按 seedItemId + mutationType）
+    const matchingSeeds: LockedSeedInfo[] = [];
+    for (const [key, seeds] of seedMap.entries()) {
+      const [itemId, mutation] = key.split('|');
+      if (itemId !== req.seedItemId) continue;
+      if ((req.mutationType ?? '') !== mutation) continue;
+      matchingSeeds.push(...seeds);
+    }
+    const totalAvailable = matchingSeeds.reduce((sum, s) => sum + s.availableQuantity, 0);
+    if (totalAvailable < req.quantity) {
+      const seedConfig = getSeedConfig(req.seedItemId);
+      const seedName = seedConfig?.name ?? req.seedItemId;
+      return {
+        success: false,
+        message: `种子 "${seedName}" 数量不足（需要 ${req.quantity}，可用 ${totalAvailable}）`,
+      };
     }
   }
 
@@ -665,7 +634,6 @@ function buildPlantPlans(
     col: number;
     seedItemId: string;
     requiredMutationType: string | null;
-    requiredGeneration: number | null;
   }>,
   seedMap: Map<string, LockedSeedInfo[]>,
 ): PlantPlanItem[] {
@@ -675,35 +643,16 @@ function buildPlantPlans(
   const allocated = new Map<number, number>(); // seedInventoryId -> allocated count
 
   for (const target of targets) {
-    // 查找可用的种子
+    // 查找可用的种子（按 seedItemId + mutationType 匹配，不限制 generation）
     let selectedSeed: LockedSeedInfo | null = null;
-
-    if (target.requiredMutationType !== null && target.requiredGeneration !== null) {
-      // 精确匹配
-      const key = `${target.seedItemId}|${target.requiredMutationType}|${target.requiredGeneration}`;
-      const seeds = seedMap.get(key) ?? [];
-      for (const seed of seeds) {
-        const used = allocated.get(seed.seedInventoryId) ?? 0;
-        if (seed.availableQuantity - used > 0) {
-          selectedSeed = seed;
-          break;
-        }
-      }
-    } else {
-      // 模糊匹配
-      for (const [key, seeds] of seedMap.entries()) {
-        const [itemId] = key.split('|');
-        if (itemId !== target.seedItemId) continue;
-        for (const seed of seeds) {
-          if (target.requiredMutationType !== null && seed.mutationType !== target.requiredMutationType) continue;
-          if (target.requiredGeneration !== null && seed.generation !== target.requiredGeneration) continue;
-          const used = allocated.get(seed.seedInventoryId) ?? 0;
-          if (seed.availableQuantity - used > 0) {
-            selectedSeed = seed;
-            break;
-          }
-        }
-        if (selectedSeed) break;
+    const mutationKey = target.requiredMutationType ?? '';
+    const key = `${target.seedItemId}|${mutationKey}`;
+    const seeds = seedMap.get(key) ?? [];
+    for (const seed of seeds) {
+      const used = allocated.get(seed.seedInventoryId) ?? 0;
+      if (seed.availableQuantity - used > 0) {
+        selectedSeed = seed;
+        break;
       }
     }
 

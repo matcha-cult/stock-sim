@@ -201,6 +201,208 @@
       "resultCropId": "qi_xing_rice",
       "resultSeedItemId": "seed_qi_xing_rice",
       "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_jin_ling_hu",
+      "name": "金灵葫",
+      "description": "灵葫受金灵根影响，孕育金灵葫",
+      "enabled": true,
+      "sortOrder": 20,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "金"
+        }
+      ],
+      "resultCropId": "jin_ling_hu",
+      "resultSeedItemId": "seed_jin_ling_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_mu_ling_hu",
+      "name": "木灵葫",
+      "description": "灵葫受木灵根影响，孕育木灵葫",
+      "enabled": true,
+      "sortOrder": 21,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "木"
+        }
+      ],
+      "resultCropId": "mu_ling_hu",
+      "resultSeedItemId": "seed_mu_ling_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_shui_ling_hu",
+      "name": "水灵葫",
+      "description": "灵葫受水灵根影响，孕育水灵葫",
+      "enabled": true,
+      "sortOrder": 22,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "水"
+        }
+      ],
+      "resultCropId": "shui_ling_hu",
+      "resultSeedItemId": "seed_shui_ling_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_huo_ling_hu",
+      "name": "火灵葫",
+      "description": "灵葫受火灵根影响，孕育火灵葫",
+      "enabled": true,
+      "sortOrder": 23,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "火"
+        }
+      ],
+      "resultCropId": "huo_ling_hu",
+      "resultSeedItemId": "seed_huo_ling_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_tu_ling_hu",
+      "name": "土灵葫",
+      "description": "灵葫受土灵根影响，孕育土灵葫",
+      "enabled": true,
+      "sortOrder": 24,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "土"
+        }
+      ],
+      "resultCropId": "tu_ling_hu",
+      "resultSeedItemId": "seed_tu_ling_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_bi_man_hu",
+      "name": "碧蔓葫",
+      "description": "水木相生，孕育碧蔓葫",
+      "enabled": true,
+      "sortOrder": 25,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "dual_element_generation",
+          "elements": ["水", "木"]
+        }
+      ],
+      "resultCropId": "bi_man_hu",
+      "resultSeedItemId": "seed_bi_man_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_cui_yan_hu",
+      "name": "翠焰葫",
+      "description": "木火相生，孕育翠焰葫",
+      "enabled": true,
+      "sortOrder": 26,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "dual_element_generation",
+          "elements": ["木", "火"]
+        }
+      ],
+      "resultCropId": "cui_yan_hu",
+      "resultSeedItemId": "seed_cui_yan_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_chi_tao_hu",
+      "name": "赤陶葫",
+      "description": "火土相生，孕育赤陶葫",
+      "enabled": true,
+      "sortOrder": 27,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "dual_element_generation",
+          "elements": ["火", "土"]
+        }
+      ],
+      "resultCropId": "chi_tao_hu",
+      "resultSeedItemId": "seed_chi_tao_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_zi_jin_hu",
+      "name": "紫金葫",
+      "description": "土生金，孕育紫金葫",
+      "enabled": true,
+      "sortOrder": 28,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "dual_element_generation",
+          "elements": ["土", "金"]
+        }
+      ],
+      "resultCropId": "zi_jin_hu",
+      "resultSeedItemId": "seed_zi_jin_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_xuan_lu_hu",
+      "name": "玄露葫",
+      "description": "金水相生，孕育玄露葫",
+      "enabled": true,
+      "sortOrder": 29,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "dual_element_generation",
+          "elements": ["金", "水"]
+        }
+      ],
+      "resultCropId": "xuan_lu_hu",
+      "resultSeedItemId": "seed_xuan_lu_hu",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_taixu_hu",
+      "name": "太虚葫",
+      "description": "葫芦汇聚，五行归元",
+      "enabled": true,
+      "sortOrder": 30,
+      "baseCropId": "ling_hu",
+      "requiredAdjacent": [
+        {
+          "type": "trait",
+          "value": "葫芦科",
+          "minCount": 4
+        },
+        {
+          "type": "elementCondition",
+          "conditionId": "wu_xing_gui_yuan"
+        }
+      ],
+      "resultCropId": "taixu_hu",
+      "resultSeedItemId": "seed_taixu_hu",
+      "resultQuantity": 1
     }
   ]
 }
