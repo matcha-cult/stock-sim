@@ -278,6 +278,8 @@ export interface SeedConfigDto {
   itemId: string;
   cropId: string;
   name: string;
+  /** 作物特性标签数组（如 ["禾本"]、["灵根", "金灵"]） */
+  traits: string[];
   /** 灵根元素数组（如 ["金"]、["水", "木"]），空数组表示无元素 */
   element: CropElement[];
   buyPrice: number;

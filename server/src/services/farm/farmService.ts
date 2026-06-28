@@ -1657,6 +1657,7 @@ export function getFarmStaticConfig(): FarmStaticConfigDto {
         itemId: s.itemId,
         cropId: s.cropId,
         name: s.name,
+        traits: cropConfig?.traits ?? [],
         element: cropConfig?.element ?? [],
         buyPrice: s.buyPrice,
         sellPrice: s.sellPrice,

@@ -20,7 +20,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { RootStoreContext } from '../../stores/RootStore';
-import type { SeedConfigDto, SeedInventoryItem, CropConfigDto } from '../../services/api/farm';
+import type { SeedConfigDto, SeedInventoryItem, CropConfigDto, CropElement } from '../../services/api/farm';
 import ResponsiveModal from '../../shared/ResponsiveModal';
 import { MUTATION_LABELS, TIER_NAMES } from './farmConstants';
 import { ElementTag } from './ElementTag';
@@ -89,7 +89,7 @@ const FarmSeedBag = observer(function FarmSeedBag() {
       key: 'element',
       width: 70,
       align: 'center',
-      render: (element: string[]) => <ElementTag elements={element} />,
+      render: (element: CropElement[]) => <ElementTag elements={element} />,
     },
     {
       title: '变异',

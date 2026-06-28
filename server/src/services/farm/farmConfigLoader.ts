@@ -214,11 +214,6 @@ export function getSeedConfig(itemId: string): SeedConfig | undefined {
   return seedByItemId?.get(itemId);
 }
 
-export function findHybridRecipe(elementA: CropElement, elementB: CropElement): HybridRecipeConfig | undefined {
-  // 此函数已废弃，使用 findMatchingRecipe 代替
-  return undefined;
-}
-
 /** 获取等阶配置（V3：替代原 getFarmLevelConfig） */
 export function getFarmTierConfig(tier: number): FarmTierConfig | undefined {
   return tierByTier?.get(tier);
@@ -290,6 +285,14 @@ export function getAllRecipes(): readonly HybridRecipeConfig[] {
     all.push(...list);
   }
   return all.sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+/**
+ * 按 baseCropId 获取配方列表（O(1) 索引查询）。
+ * 返回的列表已按 sortOrder 升序排序。
+ */
+export function getRecipesByBaseCrop(baseCropId: string): readonly HybridRecipeConfig[] {
+  return recipesByBaseCrop?.get(baseCropId) ?? [];
 }
 
 /** 获取所有等阶配置（按 tier 升序） */

@@ -20,7 +20,7 @@ import {
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { RootStoreContext } from '../../stores/RootStore';
-import type { SeedConfigDto, CropConfigDto } from '../../services/api/farm';
+import type { SeedConfigDto, CropConfigDto, CropElement } from '../../services/api/farm';
 import ResponsiveModal from '../../shared/ResponsiveModal';
 import { TIER_NAMES } from './farmConstants';
 import { ElementTag } from './ElementTag';
@@ -101,7 +101,7 @@ const FarmSeedShop = observer(function FarmSeedShop() {
       key: 'element',
       width: 70,
       align: 'center',
-      render: (element: string[]) => <ElementTag elements={element} />,
+      render: (element: CropElement[]) => <ElementTag elements={element} />,
     },
     {
       title: '等阶',

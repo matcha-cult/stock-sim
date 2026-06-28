@@ -26,7 +26,7 @@ import {
 import type { ColumnsType } from 'antd/es/table';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import { RootStoreContext } from '../../stores/RootStore';
-import type { HarvestInventoryItem, CropConfigDto, CropQuality } from '../../services/api/farm';
+import type { HarvestInventoryItem, CropConfigDto, CropQuality, CropElement } from '../../services/api/farm';
 import ResponsiveModal from '../../shared/ResponsiveModal';
 import { TIER_NAMES } from './farmConstants';
 import { ElementTag } from './ElementTag';
@@ -84,7 +84,7 @@ const FarmHarvestBag = observer(function FarmHarvestBag() {
       key: 'element',
       width: 70,
       align: 'center',
-      render: (element: string[]) => <ElementTag elements={element} />,
+      render: (element: CropElement[]) => <ElementTag elements={element} />,
     },
     {
       title: '品质',

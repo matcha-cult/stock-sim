@@ -113,6 +113,8 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
   const [plantModal, setPlantModal] = useState<{ row: number; col: number } | null>(null);
   const [selectedSeedId, setSelectedSeedId] = useState<number | null>(null);
   const [elementFilter, setElementFilter] = useState<string>('all');
+  const [traitFilter, setTraitFilter] = useState<string>('all');
+  const [mutationFilter, setMutationFilter] = useState<string>('all');
   const [transplantMode, setTransplantMode] = useState<{ fromRow: number; fromCol: number } | null>(null);
   const [bagModalOpen, setBagModalOpen] = useState(false);
   const [bagModalTab, setBagModalTab] = useState('seeds');
@@ -244,7 +246,7 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
 
   const availableSeeds = farmStore.seedBagWithConfig.filter((s) => s.quantity > 0 && s.enabled);
 
-  // 元素筛选
+  // 元素筛选选项
   const ELEMENT_FILTERS = [
     { key: 'all', label: '全' },
     { key: 'none', label: '无' },
@@ -260,16 +262,54 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
     { key: '土金', label: '土金' },
   ];
 
+  // 特性筛选选项（后续可扩展）
+  const TRAIT_FILTERS = [
+    { key: 'all', label: '全' },
+    { key: '灵根', label: '灵根' },
+    { key: '禾本', label: '禾本' },
+  ];
+
+  // 变异筛选选项（仅正面变异 + 无变异，后续可扩展）
+  const MUTATION_FILTERS = [
+    { key: 'all', label: '全' },
+    { key: 'none', label: '无变异' },
+    { key: 'gold', label: '金光变' },
+    { key: 'double_yield', label: '丰收变' },
+    { key: 'speed_ripen', label: '速熟变' },
+  ];
+
   const filteredSeeds = useMemo(() => {
-    if (elementFilter === 'all') return availableSeeds;
-    if (elementFilter === 'none') return availableSeeds.filter((s) => s.element.length === 0);
-    // 单属性或双属性
-    const filterElements = elementFilter.split('');
-    return availableSeeds.filter((s) => {
-      if (s.element.length !== filterElements.length) return false;
-      return filterElements.every((e) => s.element.includes(e as never));
-    });
-  }, [availableSeeds, elementFilter]);
+    let result = availableSeeds;
+
+    // 元素筛选
+    if (elementFilter !== 'all') {
+      if (elementFilter === 'none') {
+        result = result.filter((s) => s.element.length === 0);
+      } else {
+        const filterElements = elementFilter.split('');
+        result = result.filter((s) => {
+          if (s.element.length !== filterElements.length) return false;
+          return filterElements.every((e) => s.element.includes(e as never));
+        });
+      }
+    }
+
+    // 特性筛选
+    if (traitFilter !== 'all') {
+      result = result.filter((s) => s.traits.includes(traitFilter));
+    }
+
+    // 变异筛选
+    if (mutationFilter !== 'all') {
+      if (mutationFilter === 'none') {
+        result = result.filter((s) => !s.mutationType);
+      } else {
+        result = result.filter((s) => s.mutationType === mutationFilter);
+      }
+    }
+
+    return result;
+  }, [availableSeeds, elementFilter, traitFilter, mutationFilter]);
 
   // 按行分组格子
   const gridRows: FarmCellDto[][] = [];
@@ -465,7 +505,7 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
       <ResponsiveModal
         title={`播种 ${plantModal ? `${plantModal.row + 1}-${plantModal.col + 1}` : ''}`}
         open={plantModal != null}
-        onClose={() => { setPlantModal(null); setSelectedSeedId(null); setElementFilter('all'); }}
+        onClose={() => { setPlantModal(null); setSelectedSeedId(null); setElementFilter('all'); setTraitFilter('all'); setMutationFilter('all'); }}
         onOk={handlePlant}
         okButtonProps={{ disabled: !selectedSeedId }}
       >
@@ -473,12 +513,29 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
           <Empty description="种子袋为空，请先购买种子" />
         ) : (
           <Flex vertical gap={8}>
+            {/* 第一排：元素筛选 */}
             <Segmented
               block
               size="small"
               options={ELEMENT_FILTERS.map((f) => ({ label: f.label, value: f.key }))}
               value={elementFilter}
               onChange={(v) => setElementFilter(v as string)}
+            />
+            {/* 第二排：特性筛选 */}
+            <Segmented
+              block
+              size="small"
+              options={TRAIT_FILTERS.map((f) => ({ label: f.label, value: f.key }))}
+              value={traitFilter}
+              onChange={(v) => setTraitFilter(v as string)}
+            />
+            {/* 第三排：变异筛选 */}
+            <Segmented
+              block
+              size="small"
+              options={MUTATION_FILTERS.map((f) => ({ label: f.label, value: f.key }))}
+              value={mutationFilter}
+              onChange={(v) => setMutationFilter(v as string)}
             />
             {filteredSeeds.length === 0 ? (
               <Empty description="无符合条件的种子" image={Empty.PRESENTED_IMAGE_SIMPLE} />
