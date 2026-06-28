@@ -96,6 +96,20 @@ const FarmSeedShop = observer(function FarmSeedShop() {
       width: 100,
     },
     {
+      title: '科属',
+      dataIndex: 'traits',
+      key: 'traits',
+      width: 80,
+      align: 'center',
+      render: (traits: string[]) => (
+        <Space size={2} wrap>
+          {traits.map((trait) => (
+            <Tag key={trait} style={{ fontSize: 11, margin: 0 }}>{trait}</Tag>
+          ))}
+        </Space>
+      ),
+    },
+    {
       title: '元素',
       dataIndex: 'element',
       key: 'element',

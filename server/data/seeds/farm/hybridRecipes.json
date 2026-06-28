@@ -403,6 +403,82 @@
       "resultCropId": "taixu_hu",
       "resultSeedItemId": "seed_taixu_hu",
       "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_qi_xing_lian",
+      "name": "七星莲",
+      "description": "莲科汇聚，五行归元",
+      "enabled": true,
+      "sortOrder": 40,
+      "baseCropId": "ling_lian",
+      "requiredAdjacent": [
+        {
+          "type": "trait",
+          "value": "莲科",
+          "minCount": 3
+        },
+        {
+          "type": "elementCondition",
+          "conditionId": "wu_xing_gui_yuan"
+        }
+      ],
+      "resultCropId": "qi_xing_lian",
+      "resultSeedItemId": "seed_qi_xing_lian",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_bing_po_lian",
+      "name": "冰魄莲",
+      "description": "灵莲受水灵根影响，孕育冰魄莲",
+      "enabled": true,
+      "sortOrder": 35,
+      "baseCropId": "ling_lian",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "水"
+        }
+      ],
+      "resultCropId": "bing_po_lian",
+      "resultSeedItemId": "seed_bing_po_lian",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_long_xue_hua",
+      "name": "龙血花",
+      "description": "灵莲受火灵根影响，孕育龙血花",
+      "enabled": true,
+      "sortOrder": 36,
+      "baseCropId": "ling_lian",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "火"
+        }
+      ],
+      "resultCropId": "long_xue_hua",
+      "resultSeedItemId": "seed_long_xue_hua",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_hou_tu_lian",
+      "name": "厚土莲",
+      "description": "灵莲受土灵根影响，孕育厚土莲",
+      "enabled": true,
+      "sortOrder": 37,
+      "baseCropId": "ling_lian",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "土"
+        }
+      ],
+      "resultCropId": "hou_tu_lian",
+      "resultSeedItemId": "seed_hou_tu_lian",
+      "resultQuantity": 1
     }
   ]
 }

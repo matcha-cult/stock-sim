@@ -16,7 +16,7 @@ import { useContext, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   Button, Tag, Flex, Typography, InputNumber,
-  Descriptions, Empty, App, Table, Tooltip,
+  Descriptions, Empty, App, Table, Tooltip, Space,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { RootStoreContext } from '../../stores/RootStore';
@@ -82,6 +82,20 @@ const FarmSeedBag = observer(function FarmSeedBag() {
       dataIndex: 'name',
       key: 'name',
       width: 100,
+    },
+    {
+      title: '科属',
+      dataIndex: 'traits',
+      key: 'traits',
+      width: 80,
+      align: 'center',
+      render: (traits: string[]) => (
+        <Space size={2} wrap>
+          {traits.map((trait) => (
+            <Tag key={trait} style={{ fontSize: 11, margin: 0 }}>{trait}</Tag>
+          ))}
+        </Space>
+      ),
     },
     {
       title: '元素',

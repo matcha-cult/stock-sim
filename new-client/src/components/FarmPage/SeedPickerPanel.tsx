@@ -58,6 +58,8 @@ const TRAIT_FILTERS = [
   { key: '灵根', label: '灵根' },
   { key: '禾本', label: '禾本' },
   { key: '葫芦科', label: '葫芦科' },
+  { key: '藤本', label: '藤本' },
+  { key: '莲科', label: '莲科' },
 ];
 
 // 变异筛选选项（仅正面变异 + 无变异）
