@@ -208,6 +208,8 @@ export interface FarmCellDto {
   mutated: boolean;
   mutationType: MutationType | null;
   plantedAt: number | null;
+  /** 种植时种子的代数（0=商店/初始种子，1=杂交产出，2+=后代） */
+  plantedGeneration: number;
   hasDecoration: boolean;
   decorationType: DecorationType | null;
   /** 待发放的杂交种子 itemId（种植时判定成功，收获时发放） */
@@ -385,3 +387,90 @@ export const expandCell = (row: number, col: number) =>
 /** 等阶突破（黄→玄→地→天） */
 export const upgradeTier = () =>
   api.post<ActionResult & { newTier?: number }>('/api/farm/upgrade-tier');
+
+// ==================== 种植模板 ====================
+
+/** 模板项 DTO */
+export interface PlantTemplateItemDto {
+  id: number;
+  rowOffset: number;
+  colOffset: number;
+  seedItemId: string;
+  mutationType: string | null;
+  generation: number | null;
+}
+
+/** 模板 DTO */
+export interface PlantTemplateDto {
+  id: number;
+  name: string;
+  description: string | null;
+  items: PlantTemplateItemDto[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+/** 创建模板请求项 */
+export interface CreateTemplateItemRequest {
+  rowOffset: number;
+  colOffset: number;
+  seedItemId: string;
+  mutationType: string | null;
+  generation: number | null;
+}
+
+/** 模板列表响应 */
+export interface TemplateListResult {
+  templates: PlantTemplateDto[];
+}
+
+/** 模板详情响应 */
+export interface TemplateDetailResult {
+  template: PlantTemplateDto;
+}
+
+/** 创建模板响应 */
+export interface CreateTemplateResult {
+  success: boolean;
+  message: string;
+  templateId?: number;
+}
+
+/** 应用模板种植结果 */
+export interface ApplyTemplateResult {
+  success: boolean;
+  message: string;
+  plantedCount: number;
+  results: PlantResult[];
+}
+
+/** 创建种植模板 */
+export const createPlantTemplate = (
+  name: string,
+  description: string | null,
+  items: CreateTemplateItemRequest[],
+) => api.post<CreateTemplateResult>('/api/farm/template', { name, description, items });
+
+/** 获取模板列表 */
+export const getPlantTemplates = (config?: AxiosRequestConfig) =>
+  api.get<TemplateListResult>('/api/farm/template', config);
+
+/** 获取模板详情 */
+export const getPlantTemplateDetail = (templateId: number, config?: AxiosRequestConfig) =>
+  api.get<TemplateDetailResult>(`/api/farm/template/${templateId}`, config);
+
+/** 删除模板 */
+export const deletePlantTemplate = (templateId: number) =>
+  api.delete<ActionResult>(`/api/farm/template/${templateId}`);
+
+/** 更新模板 */
+export const updatePlantTemplate = (
+  templateId: number,
+  name: string,
+  description: string | null,
+  items: CreateTemplateItemRequest[],
+) => api.put<ActionResult>(`/api/farm/template/${templateId}`, { name, description, items });
+
+/** 应用模板种植 */
+export const applyPlantTemplate = (templateId: number, startRow: number, startCol: number) =>
+  api.post<ApplyTemplateResult>('/api/farm/template/apply', { templateId, startRow, startCol });

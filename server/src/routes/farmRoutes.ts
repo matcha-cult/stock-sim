@@ -30,6 +30,7 @@ import {
   parseNonEmptyText,
 } from '../services/shared/httpParam.js';
 import * as farmService from '../services/farm/farmService.js';
+import * as farmTemplateService from '../services/farm/farmTemplateService.js';
 import type { CropQuality } from '../services/farm/farmTypes.js';
 
 const router: RouterType = Router();
@@ -300,6 +301,118 @@ router.post(
   asyncHandler(async (req, res) => {
     const characterId = req.characterId!;
     const result = await farmService.upgradeTier(characterId);
+    if (result.success) safePushCharacterUpdate(characterId);
+    sendSuccess(res, result);
+  }),
+);
+
+// ==================== 种植模板 ====================
+
+const templateQpsLimit = createFarmQpsLimit('template', 5);
+const applyTemplateQpsLimit = createFarmQpsLimit('apply-template', 2);
+
+router.post(
+  '/template',
+  requireCharacter,
+  templateQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const name = parseNonEmptyText(req.body?.name);
+    const description = parseNonEmptyText(req.body?.description);
+    const items = req.body?.items;
+    if (!name || !Array.isArray(items)) {
+      res.status(400).json({ success: false, message: '参数不完整' });
+      return;
+    }
+    const result = await farmTemplateService.createTemplate(characterId, name, description, items);
+    sendSuccess(res, result);
+  }),
+);
+
+router.get(
+  '/template',
+  requireCharacter,
+  templateQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const templates = await farmTemplateService.getTemplates(characterId);
+    sendSuccess(res, { templates });
+  }),
+);
+
+router.get(
+  '/template/:id',
+  requireCharacter,
+  templateQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const templateId = parsePositiveInt(req.params?.id);
+    if (!templateId) {
+      res.status(400).json({ success: false, message: '模板 ID 无效' });
+      return;
+    }
+    const template = await farmTemplateService.getTemplateDetail(templateId, characterId);
+    if (!template) {
+      res.status(404).json({ success: false, message: '模板不存在' });
+      return;
+    }
+    sendSuccess(res, { template });
+  }),
+);
+
+router.delete(
+  '/template/:id',
+  requireCharacter,
+  templateQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const templateId = parsePositiveInt(req.params?.id);
+    if (!templateId) {
+      res.status(400).json({ success: false, message: '模板 ID 无效' });
+      return;
+    }
+    const result = await farmTemplateService.deleteTemplate(templateId, characterId);
+    sendSuccess(res, result);
+  }),
+);
+
+router.put(
+  '/template/:id',
+  requireCharacter,
+  templateQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const templateId = parsePositiveInt(req.params?.id);
+    if (!templateId) {
+      res.status(400).json({ success: false, message: '模板 ID 无效' });
+      return;
+    }
+    const name = parseNonEmptyText(req.body?.name);
+    const description = parseNonEmptyText(req.body?.description);
+    const items = req.body?.items;
+    if (!name || !Array.isArray(items)) {
+      res.status(400).json({ success: false, message: '参数不完整' });
+      return;
+    }
+    const result = await farmTemplateService.updateTemplate(templateId, characterId, name, description, items);
+    sendSuccess(res, result);
+  }),
+);
+
+router.post(
+  '/template/apply',
+  requireCharacter,
+  applyTemplateQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const templateId = parsePositiveInt(req.body?.templateId);
+    const startRow = parseNonNegativeInt(req.body?.startRow);
+    const startCol = parseNonNegativeInt(req.body?.startCol);
+    if (templateId == null || startRow == null || startCol == null) {
+      res.status(400).json({ success: false, message: '参数不完整' });
+      return;
+    }
+    const result = await farmTemplateService.applyPlantTemplate(characterId, templateId, startRow, startCol);
     if (result.success) safePushCharacterUpdate(characterId);
     sendSuccess(res, result);
   }),

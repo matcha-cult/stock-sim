@@ -52,6 +52,7 @@ model characters {
   farm_harvest_inventories     farm_harvest_inventory[]
   farm_decorations             farm_decoration[]
   farm_activity_logs           farm_activity_log[]
+  farm_plant_templates         farm_plant_template[]
 }
 
 // 股票报价表
@@ -431,5 +432,35 @@ model farm_activity_log {
 
   @@index([character_id])
   @@index([character_id, created_at])
+}
+
+// 灵田种植模板表
+model farm_plant_template {
+  id              Int      @id @default(autoincrement())
+  character_id    Int
+  name            String   @db.VarChar(100)
+  description     String?  @db.VarChar(255)
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+  updated_at      DateTime @default(now()) @db.Timestamp(6)
+
+  character       characters               @relation(fields: [character_id], references: [id], onDelete: Cascade)
+  items           farm_plant_template_item[]
+
+  @@index([character_id])
+}
+
+// 灵田种植模板项表
+model farm_plant_template_item {
+  id              Int      @id @default(autoincrement())
+  template_id     Int
+  row_offset      Int      @db.SmallInt
+  col_offset      Int      @db.SmallInt
+  seed_item_id    String   @db.VarChar(64)
+  mutation_type   String?  @db.VarChar(32)
+  generation      Int?
+
+  template        farm_plant_template @relation(fields: [template_id], references: [id], onDelete: Cascade)
+
+  @@index([template_id])
 }
 

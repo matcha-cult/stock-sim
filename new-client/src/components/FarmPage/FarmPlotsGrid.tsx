@@ -39,8 +39,9 @@ import FarmSeedShop from './FarmSeedShop';
 import FarmHarvestBag from './FarmHarvestBag';
 import FarmHybridGuide from './FarmHybridGuide';
 import FarmActivityLog from './FarmActivityLog';
+import FarmTemplatePanel from './FarmTemplatePanel';
 import { ELEMENT_COLORS, MUTATION_LABELS } from './farmConstants';
-import { ElementTag } from './ElementTag';
+import { SeedPickerPanel } from './SeedPickerPanel';
 
 const { Text } = Typography;
 
@@ -112,9 +113,6 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
 
   const [plantModal, setPlantModal] = useState<{ row: number; col: number } | null>(null);
   const [selectedSeedId, setSelectedSeedId] = useState<number | null>(null);
-  const [elementFilter, setElementFilter] = useState<string>('all');
-  const [traitFilter, setTraitFilter] = useState<string>('all');
-  const [mutationFilter, setMutationFilter] = useState<string>('all');
   const [transplantMode, setTransplantMode] = useState<{ fromRow: number; fromCol: number } | null>(null);
   const [bagModalOpen, setBagModalOpen] = useState(false);
   const [bagModalTab, setBagModalTab] = useState('seeds');
@@ -122,6 +120,13 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
   const [seedDrawerOpen, setSeedDrawerOpen] = useState(false);
   const [harvestDrawerOpen, setHarvestDrawerOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+
+  // 切换到模板 tab 时加载模板列表
+  useEffect(() => {
+    if (pcTab === 'template' || bagModalTab === 'template') {
+      farmStore.fetchTemplates();
+    }
+  }, [pcTab, bagModalTab, farmStore]);
 
   // ── V3：未开垦状态，显示开垦界面 ──
   if (!farmStore.reclaimed) {
@@ -245,71 +250,6 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
   };
 
   const availableSeeds = farmStore.seedBagWithConfig.filter((s) => s.quantity > 0 && s.enabled);
-
-  // 元素筛选选项
-  const ELEMENT_FILTERS = [
-    { key: 'all', label: '全' },
-    { key: 'none', label: '无' },
-    { key: '金', label: '金' },
-    { key: '木', label: '木' },
-    { key: '水', label: '水' },
-    { key: '火', label: '火' },
-    { key: '土', label: '土' },
-    { key: '金水', label: '金水' },
-    { key: '水木', label: '水木' },
-    { key: '木火', label: '木火' },
-    { key: '火土', label: '火土' },
-    { key: '土金', label: '土金' },
-  ];
-
-  // 特性筛选选项（后续可扩展）
-  const TRAIT_FILTERS = [
-    { key: 'all', label: '全' },
-    { key: '灵根', label: '灵根' },
-    { key: '禾本', label: '禾本' },
-  ];
-
-  // 变异筛选选项（仅正面变异 + 无变异，后续可扩展）
-  const MUTATION_FILTERS = [
-    { key: 'all', label: '全' },
-    { key: 'none', label: '无变异' },
-    { key: 'gold', label: '金光变' },
-    { key: 'double_yield', label: '丰收变' },
-    { key: 'speed_ripen', label: '速熟变' },
-  ];
-
-  const filteredSeeds = useMemo(() => {
-    let result = availableSeeds;
-
-    // 元素筛选
-    if (elementFilter !== 'all') {
-      if (elementFilter === 'none') {
-        result = result.filter((s) => s.element.length === 0);
-      } else {
-        const filterElements = elementFilter.split('');
-        result = result.filter((s) => {
-          if (s.element.length !== filterElements.length) return false;
-          return filterElements.every((e) => s.element.includes(e as never));
-        });
-      }
-    }
-
-    // 特性筛选
-    if (traitFilter !== 'all') {
-      result = result.filter((s) => s.traits.includes(traitFilter));
-    }
-
-    // 变异筛选
-    if (mutationFilter !== 'all') {
-      if (mutationFilter === 'none') {
-        result = result.filter((s) => !s.mutationType);
-      } else {
-        result = result.filter((s) => s.mutationType === mutationFilter);
-      }
-    }
-
-    return result;
-  }, [availableSeeds, elementFilter, traitFilter, mutationFilter]);
 
   // 按行分组格子
   const gridRows: FarmCellDto[][] = [];
@@ -492,6 +432,7 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
                   { key: 'seeds', label: '种子袋', children: <FarmSeedBag /> },
                   { key: 'shop', label: '种子商店', children: <FarmSeedShop /> },
                   { key: 'harvest', label: '灵材仓库', children: <FarmHarvestBag /> },
+                  { key: 'template', label: '种植模板', children: <FarmTemplatePanel /> },
                   { key: 'hybrid', label: '杂交指南', children: <FarmHybridGuide /> },
                   { key: 'log', label: '活动日志', children: <FarmActivityLog /> },
                 ]}
@@ -505,122 +446,18 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
       <ResponsiveModal
         title={`播种 ${plantModal ? `${plantModal.row + 1}-${plantModal.col + 1}` : ''}`}
         open={plantModal != null}
-        onClose={() => { setPlantModal(null); setSelectedSeedId(null); setElementFilter('all'); setTraitFilter('all'); setMutationFilter('all'); }}
+        onClose={() => { setPlantModal(null); setSelectedSeedId(null); }}
         onOk={handlePlant}
         okButtonProps={{ disabled: !selectedSeedId }}
       >
         {availableSeeds.length === 0 ? (
           <Empty description="种子袋为空，请先购买种子" />
         ) : (
-          <Flex vertical gap={8}>
-            {/* 第一排：元素筛选 */}
-            <Segmented
-              block
-              size="small"
-              options={ELEMENT_FILTERS.map((f) => ({ label: f.label, value: f.key }))}
-              value={elementFilter}
-              onChange={(v) => setElementFilter(v as string)}
-            />
-            {/* 第二排：特性筛选 */}
-            <Segmented
-              block
-              size="small"
-              options={TRAIT_FILTERS.map((f) => ({ label: f.label, value: f.key }))}
-              value={traitFilter}
-              onChange={(v) => setTraitFilter(v as string)}
-            />
-            {/* 第三排：变异筛选 */}
-            <Segmented
-              block
-              size="small"
-              options={MUTATION_FILTERS.map((f) => ({ label: f.label, value: f.key }))}
-              value={mutationFilter}
-              onChange={(v) => setMutationFilter(v as string)}
-            />
-            {filteredSeeds.length === 0 ? (
-              <Empty description="无符合条件的种子" image={Empty.PRESENTED_IMAGE_SIMPLE} />
-            ) : (
-              <div
-                style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))',
-                  gap: 8,
-                }}
-              >
-                {filteredSeeds.map((seed) => {
-              const isSelected = selectedSeedId === seed.id;
-              return (
-                <div
-                  key={seed.id}
-                  onClick={() => setSelectedSeedId(seed.id)}
-                  style={{
-                    position: 'relative',
-                    padding: '8px 6px',
-                    border: `1px solid ${isSelected ? token.colorPrimary : token.colorBorder}`,
-                    borderRadius: 6,
-                    cursor: 'pointer',
-                    backgroundColor: isSelected ? token.colorPrimaryBg : undefined,
-                    minHeight: 60,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                  }}
-                >
-                  {/* 左上角：变异 */}
-                  {seed.mutationType && (
-                    <Tag
-                      color={MUTATION_LABELS[seed.mutationType]?.color}
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        left: 2,
-                        fontSize: 10,
-                        margin: 0,
-                        padding: '0 4px',
-                        lineHeight: '16px',
-                        transform: 'scale(0.9)',
-                        transformOrigin: 'top left',
-                      }}
-                    >
-                      {MUTATION_LABELS[seed.mutationType]?.label ?? seed.mutationType}
-                    </Tag>
-                  )}
-                  {/* 右上角：代数 */}
-                  {seed.generation > 0 && (
-                    <Tag
-                      color={seed.generation >= 3 ? 'red' : 'blue'}
-                      style={{
-                        position: 'absolute',
-                        top: 2,
-                        right: 2,
-                        fontSize: 10,
-                        margin: 0,
-                        padding: '0 4px',
-                        lineHeight: '16px',
-                        transform: 'scale(0.9)',
-                        transformOrigin: 'top right',
-                      }}
-                    >
-                      G{seed.generation}
-                    </Tag>
-                  )}
-                  {/* 名称 */}
-                  <Text strong style={{ fontSize: 12, textAlign: 'center' }}>{seed.name}</Text>
-                  {/* 左下角：元素 */}
-                  {seed.element.length > 0 && (
-                    <div style={{ position: 'absolute', bottom: 2, left: 2, transform: 'scale(0.9)', transformOrigin: 'bottom left' }}>
-                      <ElementTag elements={seed.element} />
-                    </div>
-                  )}
-                  {/* 右下角：数量 */}
-                  <Text type="secondary" style={{ fontSize: 11, position: 'absolute', bottom: 2, right: 4 }}>×{seed.quantity}</Text>
-                </div>
-              );
-            })}
-              </div>
-            )}
-          </Flex>
+          <SeedPickerPanel
+            seeds={availableSeeds}
+            selectedId={selectedSeedId}
+            onSelect={setSelectedSeedId}
+          />
         )}
       </ResponsiveModal>
 
@@ -651,6 +488,7 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
               { key: 'seeds', label: '种子袋', children: <FarmSeedBag /> },
               { key: 'shop', label: '种子商店', children: <FarmSeedShop /> },
               { key: 'harvest', label: '灵材仓库', children: <FarmHarvestBag /> },
+              { key: 'template', label: '种植模板', children: <FarmTemplatePanel /> },
               { key: 'hybrid', label: '杂交指南', children: <FarmHybridGuide /> },
               { key: 'log', label: '活动日志', children: <FarmActivityLog /> },
             ]}

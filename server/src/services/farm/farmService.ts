@@ -1571,6 +1571,7 @@ function buildCellDto(
     mutated: row.mutated,
     mutationType: row.mutation_type as MutationType | null,
     plantedAt: row.planted_at_epoch != null ? Math.floor(Number(row.planted_at_epoch)) : null,
+    plantedGeneration: row.planted_generation,
     hasDecoration: deco != null,
     decorationType: deco ?? null,
     pendingHybridSeedItemId: row.pending_hybrid_seed,

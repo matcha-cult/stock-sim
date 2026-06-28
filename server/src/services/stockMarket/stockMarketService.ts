@@ -1049,7 +1049,7 @@ class StockMarketService {
     });
     if (!consumeResult.success) return { success: false, message: consumeResult.message };
 
-    const remainingSpiritStones = Number(consumeResult.remaining ?? 0n) / 100;
+    const remainingSpiritStones = Number(consumeResult.remaining ?? 0n);
 
     await query(
       `
@@ -1114,7 +1114,7 @@ class StockMarketService {
     ]);
     if (!executionResult.success) return executionResult;
 
-    const remainingSpiritStones = Number(executionResult.remainingSpiritStones ?? 0n) / 100;
+    const remainingSpiritStones = Number(executionResult.remainingSpiritStones ?? 0n);
     return { success: true, message: '卖出成功', data: { filledQuantity: quantity, remainingSpiritStones } };
   }
 
@@ -1173,7 +1173,7 @@ class StockMarketService {
     const executionResult = await this.executeSellPlans(params.characterId, plans);
     if (!executionResult.success) return executionResult;
 
-    const remainingSpiritStones = Number(executionResult.remainingSpiritStones ?? 0n) / 100;
+    const remainingSpiritStones = Number(executionResult.remainingSpiritStones ?? 0n);
     return {
       success: true,
       message: params.stockId === null
@@ -1226,33 +1226,7 @@ class StockMarketService {
       netAmount += plan.netAmount;
     }
 
-    if (netAmount > 0n) {
-      const sellTarget = plans.length === 1
-        ? (getEnabledStockDefinitionById(plans[0]?.stockId ?? '')?.name ?? plans[0]?.stockId)
-        : `${plans.length} 支股票`;
-      const addResult = await addSpiritStones(characterId, netAmount, {
-        bizType: 'stock_sell',
-        memo: `卖出 ${sellTarget}`,
-      });
-      if (!addResult.success) {
-        return {
-          success: false,
-          message: addResult.message,
-          soldStockCount: 0,
-          soldQuantity: 0,
-          netAmount: 0n,
-        };
-      }
-      return {
-        success: true,
-        message: '卖出成功',
-        soldStockCount: plans.length,
-        soldQuantity,
-        netAmount,
-        remainingSpiritStones: addResult.remaining,
-      };
-    }
-
+    // 先更新持仓数量和插入交易记录
     for (const plan of plans) {
       if (plan.quantity >= plan.holdingQuantity) {
         await query(
@@ -1287,6 +1261,34 @@ class StockMarketService {
         netAmount: plan.netAmount,
         realizedPnl: plan.realizedPnl,
       });
+    }
+
+    // 再增加灵石
+    if (netAmount > 0n) {
+      const sellTarget = plans.length === 1
+        ? (getEnabledStockDefinitionById(plans[0]?.stockId ?? '')?.name ?? plans[0]?.stockId)
+        : `${plans.length} 支股票`;
+      const addResult = await addSpiritStones(characterId, netAmount, {
+        bizType: 'stock_sell',
+        memo: `卖出 ${sellTarget}`,
+      });
+      if (!addResult.success) {
+        return {
+          success: false,
+          message: addResult.message,
+          soldStockCount: 0,
+          soldQuantity: 0,
+          netAmount: 0n,
+        };
+      }
+      return {
+        success: true,
+        message: '卖出成功',
+        soldStockCount: plans.length,
+        soldQuantity,
+        netAmount,
+        remainingSpiritStones: addResult.remaining,
+      };
     }
 
     return {

@@ -263,6 +263,8 @@ export interface FarmCellDto {
   mutated: boolean;
   mutationType: MutationType | null;
   plantedAt: number | null;
+  /** 种植时种子的代数（0=商店/初始种子，1=杂交产出，2+=后代） */
+  plantedGeneration: number;
   hasDecoration: boolean;
   decorationType: DecorationType | null;
   /** 待发放的杂交种子 itemId（种植时判定成功，收获时发放） */

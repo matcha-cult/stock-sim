@@ -32,6 +32,9 @@ import type {
   CropConfigDto,
   CropQuality,
   ActivityLogDto,
+  PlantTemplateDto,
+  CreateTemplateItemRequest,
+  ApplyTemplateResult,
 } from '../services/api/farm';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
 import type { RootStore } from './RootStore';
@@ -71,6 +74,11 @@ export class FarmStore {
   activityLogsPage: number = 1;
   activityLogsPageSize: number = 20;
   activityLogsLoading: boolean = false;
+
+  // ── 种植模板 ──
+  templates: PlantTemplateDto[] = [];
+  templatesLoading: boolean = false;
+  templatesLoaded: boolean = false;
 
   constructor(rootStore: RootStore) {
     this.rootStore = rootStore;
@@ -446,6 +454,112 @@ export class FarmStore {
         this.activityLogsLoading = false;
       });
       this.dedup.complete(`farm-log-${page}`);
+    }
+  }
+
+  // ==================== 种植模板 ====================
+
+  /** 获取模板列表 */
+  async fetchTemplates(): Promise<void> {
+    if (!this.dedup.enter('farm-templates')) return;
+    this.templatesLoading = true;
+    const promise = this.doFetchTemplates();
+    this.dedup.start('farm-templates', promise);
+    return promise;
+  }
+
+  private async doFetchTemplates(): Promise<void> {
+    try {
+      const response = await farmApi.getPlantTemplates(SILENT_API_REQUEST_CONFIG);
+      runInAction(() => {
+        if (response.success && response.data) {
+          this.templates = response.data.templates;
+          this.templatesLoaded = true;
+        }
+      });
+    } catch {
+      // 静默失败
+    } finally {
+      runInAction(() => {
+        this.templatesLoading = false;
+      });
+      this.dedup.complete('farm-templates');
+    }
+  }
+
+  /** 创建模板 */
+  async createTemplate(
+    name: string,
+    description: string | null,
+    items: CreateTemplateItemRequest[],
+  ): Promise<boolean> {
+    if (!this.dedup.enter('farm-create-template')) return false;
+    try {
+      const response = await farmApi.createPlantTemplate(name, description, items);
+      if (response.success && response.data?.success) {
+        await this.fetchTemplates();
+        return true;
+      }
+      return false;
+    } finally {
+      this.dedup.complete('farm-create-template');
+    }
+  }
+
+  /** 删除模板 */
+  async deleteTemplate(templateId: number): Promise<boolean> {
+    if (!this.dedup.enter('farm-delete-template')) return false;
+    try {
+      const response = await farmApi.deletePlantTemplate(templateId);
+      if (response.success && response.data?.success) {
+        runInAction(() => {
+          this.templates = this.templates.filter((t) => t.id !== templateId);
+        });
+        return true;
+      }
+      return false;
+    } finally {
+      this.dedup.complete('farm-delete-template');
+    }
+  }
+
+  /** 更新模板 */
+  async updateTemplate(
+    templateId: number,
+    name: string,
+    description: string | null,
+    items: CreateTemplateItemRequest[],
+  ): Promise<boolean> {
+    if (!this.dedup.enter('farm-update-template')) return false;
+    try {
+      const response = await farmApi.updatePlantTemplate(templateId, name, description, items);
+      if (response.success && response.data?.success) {
+        await this.fetchTemplates();
+        return true;
+      }
+      return false;
+    } finally {
+      this.dedup.complete('farm-update-template');
+    }
+  }
+
+  /** 应用模板种植（模板固定 4×4，从 (0,0) 开始） */
+  async applyTemplate(
+    templateId: number,
+  ): Promise<ApplyTemplateResult | null> {
+    if (!this.dedup.enter('farm-apply-template')) return null;
+    try {
+      const response = await farmApi.applyPlantTemplate(templateId, 0, 0);
+      if (response.success && response.data) {
+        if (response.data.success) {
+          await this.fetchOverview(true);
+          this.rootStore.authStore.refreshCharacter();
+        }
+        return response.data;
+      }
+      return null;
+    } finally {
+      this.dedup.complete('farm-apply-template');
     }
   }
 }
