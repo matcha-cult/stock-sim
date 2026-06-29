@@ -297,11 +297,14 @@ class ScratchTicketService {
     const newMask = scratchedMask | cellBit;
     const newCount = scratchCount + 1;
 
+    // 用 SQL 原子表达式：位掩码按位或、计数自增，避免依赖 JS 读到的旧值绝对值写回。
+    // 当前方法已有 @Transactional + FOR UPDATE 保护，此处改为原子写法是为了与 CLAUDE.md
+    // "数据库并发更新规范"严格对齐（防止未来有人拿走 FOR UPDATE 后埋下 lost update 隐患）。
     await query(
       `UPDATE scratch_ticket
-       SET scratched_mask = $1, scratch_count = $2, updated_at = now()
-       WHERE id = $3`,
-      [newMask, newCount, String(row.id)],
+       SET scratched_mask = scratched_mask | $1, scratch_count = scratch_count + 1, updated_at = now()
+       WHERE id = $2`,
+      [cellBit, String(row.id)],
     );
 
     // 构建更新后的 DTO

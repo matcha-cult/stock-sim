@@ -357,6 +357,11 @@ class ShopService {
 
   /**
    * 一键收取全部待收租金。
+   *
+   * 精度语义和 collectRent（单店领取）完全一致：每个店铺独立整除 100 取整灵石，
+   * 再累加到总数；而不是先把所有店铺的 pending 累加后再整除。
+   * 两种算法在存在余数时结果不同（批量整除可能多给或少给 ≤ shopCount-1 灵石），
+   * 必须统一为"单店整除再累加"，否则玩家前后端看到数字对不上。
    */
   @Transactional
   async collectAllRent(characterId: number): Promise<{
@@ -379,7 +384,7 @@ class ShopService {
       return { success: false, message: '没有可收取的租金', totalCollected: 0 };
     }
 
-    let totalRent = 0n;
+    let stonesToCollect = 0n;
     const shopUpdates: Array<{
       id: number;
       pendingRent: bigint;
@@ -389,7 +394,12 @@ class ShopService {
     for (const row of shopResult.rows) {
       const pending = toBigIntValue(row.pending_rent);
       if (pending <= 0n) continue;
-      totalRent += pending;
+      // 单店独立整除：和 collectRent 的 `pendingRent / 100n` 完全一致。
+      // 即使本店铺 stonesPerShop = 0（pending < 100 分），也加入 shopUpdates 参与清零，
+      // 避免 sub-100 分的尾数永远挂账。collectRent 里这种店会 return 失败保留 pending，
+      // 批量场景下则统一"算 0 灵石 + 清零"，下次 tick 再累积到可整除。
+      const stonesPerShop = pending / 100n;
+      stonesToCollect += stonesPerShop;
       shopUpdates.push({
         id: toIntValue(row.id),
         pendingRent: pending,
@@ -397,15 +407,14 @@ class ShopService {
       });
     }
 
-    if (totalRent <= 0n) {
+    if (stonesToCollect <= 0n) {
       return { success: false, message: '没有可收取的租金', totalCollected: 0 };
     }
 
-    // 转账（pending_rent 以分为单位，characters.spirit_stones 以整灵石为单位）
-    const stonesToAdd = totalRent / 100n;
-    const addResult = await addSpiritStones(characterId, stonesToAdd, {
+    // 转账（以"单店整除再累加"的灵石数入账，和单店领取语义一致）
+    const addResult = await addSpiritStones(characterId, stonesToCollect, {
       bizType: 'shop_rent',
-      memo: `收取店铺租金`,
+      memo: `一键收取店铺租金`,
     });
     if (!addResult.success) return { success: false, message: addResult.message, totalCollected: 0 };
 
@@ -427,8 +436,8 @@ class ShopService {
 
     return {
       success: true,
-      message: `一键收取成功，共获得 ${toDtoShopPrice(totalRent)} 灵石`,
-      totalCollected: toDtoShopPrice(totalRent),
+      message: `一键收取成功，共获得 ${stonesToCollect} 灵石`,
+      totalCollected: Number(stonesToCollect),
     };
   }
 
@@ -560,11 +569,11 @@ class ShopService {
       `
         UPDATE shop_detail
         SET space_expansion = space_expansion + 1,
-            area = $1,
+            area = area + $1,
             updated_at = NOW()
         WHERE id = $2 AND character_id = $3
       `,
-      [newArea, shopId, characterId],
+      [SPACE_EXPANSION_AREA_INCREMENT, shopId, characterId],
     );
 
     return {
@@ -759,21 +768,24 @@ class ShopService {
         upgradeLevel,
       });
 
-      const maxPendingRent = rentPerTick * BigInt(MAX_PENDING_RENT_TICKS);
-      const cappedPendingRent = toBigIntValue(row.pending_rent) + rentPerTick > maxPendingRent
-        ? maxPendingRent
-        : toBigIntValue(row.pending_rent) + rentPerTick;
-
+      // 原子增量：基于 DB 当前已提交的 pending_rent 做 + rentPerTick，再 LEAST 封顶。
+      // PostgreSQL 行锁会自动串行化同一行的并发 UPDATE，和 collectRent 的清零不会互相覆盖。
+      // 不再在 JS 里读旧值 + 算新值 + 写回（旧写法无事务/无 FOR UPDATE，会和领取操作 lost update）。
       await query(
         `
           UPDATE shop_detail
-          SET pending_rent = $1,
+          SET pending_rent = LEAST(pending_rent + $1, $2),
               rent_tick_count = rent_tick_count + 1,
-              last_rent_tick_id = $2,
+              last_rent_tick_id = $3,
               updated_at = NOW()
-          WHERE id = $3
+          WHERE id = $4
         `,
-        [cappedPendingRent.toString(), currentTickId.toString(), toIntValue(row.id)],
+        [
+          rentPerTick.toString(),
+          (rentPerTick * BigInt(MAX_PENDING_RENT_TICKS)).toString(),
+          currentTickId.toString(),
+          toIntValue(row.id),
+        ],
       );
 
       processed++;

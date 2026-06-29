@@ -12,6 +12,58 @@
 
 ---
 
+# 前端布局规范
+
+## 核心原则：优先使用 antd 组件布局
+
+前端布局**必须优先使用 antd 组件**（Row、Col、Flex、Card、Space、Divider 等），禁止过度使用原生 `<div>` + CSS 实现布局。
+
+## 为什么
+
+- 原生 `<div>` + inline style 无法自动适配暗黑模式（颜色、边框、背景等）
+- antd 组件内置主题适配，确保浅色/暗黑模式下都正常显示
+- antd 组件提供一致的间距、对齐、响应式行为
+- 减少 CSS 代码量，提升可维护性
+
+## 允许使用原生 div 的场景
+
+- 纯容器（无样式、仅用于 DOM 结构）
+- 需要特殊 CSS 特性（如 grid 的高级用法、CSS 动画等）且 antd 无法满足时
+- 性能敏感的热路径（如虚拟列表项）
+
+## 禁止的写法
+
+```tsx
+// ❌ 禁止：用 div + inline style 实现网格布局
+<div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+  {items.map(item => (
+    <div style={{ width: 40, height: 40, border: '1px solid #ccc' }}>...</div>
+  ))}
+</div>
+
+// ❌ 禁止：用 div + inline style 实现间距
+<div style={{ display: 'flex', gap: 16 }}>...</div>
+```
+
+## 正确的写法
+
+```tsx
+// ✅ 正确：使用 antd Row/Col 实现网格布局
+<Row gutter={[8, 8]}>
+  {items.map(item => (
+    <Col span={6}>
+      <Card size="small">...</Card>
+    </Col>
+  ))}
+</Row>
+
+// ✅ 正确：使用 antd Flex/Space 实现间距
+<Flex gap={16}>...</Flex>
+<Space size={16}>...</Space>
+```
+
+---
+
 # 请求去重设计规范
 
 ## 核心原则：仅用 in-flight 守卫，不用 TTL
@@ -142,6 +194,42 @@ API:   { createdAt: 1781011991 }  (UTC Unix timestamp)
         ↓
 前端:  Intl.DateTimeFormat + timeZone:'Asia/Shanghai' → "2026/06/09 21:33:11"
 ```
+
+---
+
+# 数据库并发更新规范
+
+## 核心规则：使用 SQL 原子表达式做增量更新，禁止"读旧值 → JS 计算 → 绝对值写回"
+
+当多个操作可能并发修改同一行同一列（如定时任务累加 vs 用户操作清零），必须在 SQL 里用 `column = column + $1`（或 `LEAST(column + $1, $max)` 等带封顶的表达式）直接基于**当前已提交值**计算。
+
+```sql
+-- ✅ 正确：PG 行锁自动串行化同一行并发 UPDATE，基于最新已提交值计算
+UPDATE shop_detail
+SET pending_rent = LEAST(pending_rent + $1, $2),
+    updated_at = NOW()
+WHERE id = $3;
+
+-- ❌ 错误：JS 读旧值 → JS 算新值 → 绝对值写回
+-- 若 SELECT 和 UPDATE 之间，另一事务（或无事务的另一条 SQL）清零了该列，
+-- 本次写回会基于过期值覆盖，导致丢失另一方的写入（lost update）。
+SELECT pending_rent FROM shop_detail WHERE id = $3;   -- JS 拿到 old
+const newVal = old + rentPerTick;                     -- JS 算
+UPDATE shop_detail SET pending_rent = $newVal WHERE id = $3;  -- 覆盖清零
+```
+
+## 为什么
+
+- PostgreSQL 对同一行的并发 UPDATE 自动串行化（行锁），`column + $1` 中的 `column` 永远是**最新已提交值**
+- "读旧值 → JS 算 → 绝对值写回" 即便加 `@Transactional + FOR UPDATE` 也会拉长事务、放大锁范围；不加则必然 lost update
+- 增量 UPDATE 只锁当前处理的一行，释放快，不需要长事务
+
+## 适用场景
+
+- 定时任务累加 + 用户操作清零（如租金 pending vs 一键收取）
+- 余额增减 + 扣款 / 转账并发
+- 计数器累加（库存、积分、经验值）
+- 任何"多入口可能并发改同一列"的字段
 
 ---
 
