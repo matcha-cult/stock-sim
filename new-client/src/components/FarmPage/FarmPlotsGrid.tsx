@@ -170,7 +170,7 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
   const handlePlant = async () => {
     if (!plantModal || !selectedSeedId) return;
     const result = await farmStore.plant(plantModal.row, plantModal.col, selectedSeedId);
-    if (result) {
+    if (result?.success) {
       if (result.hybridTriggered) {
         messageApi.success(`播种成功，触发杂交：${result.hybridResultSeedName}`);
       } else {
@@ -178,12 +178,14 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
       }
       setPlantModal(null);
       setSelectedSeedId(null);
+    } else if (result) {
+      messageApi.error(result.message);
     }
   };
 
   const handleHarvest = async (row: number, col: number) => {
     const result = await farmStore.harvest(row, col);
-    if (result) {
+    if (result?.success) {
       if (result.withered) {
         if (result.witheredSeedItemId) {
           messageApi.warning('作物已枯萎，金光变自然掉落 1 颗种子。');
@@ -196,6 +198,8 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
           + (result.seedProduced ? ' + 种子 1 颗' : '')
         );
       }
+    } else if (result) {
+      messageApi.error(result.message);
     }
   };
 
@@ -211,6 +215,8 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
           } else {
             messageApi.success('作物已铲除');
           }
+        } else if (result) {
+          messageApi.error(result.message);
         }
       },
     });
@@ -241,6 +247,8 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
     if (result?.success) {
       messageApi.success('移植成功');
       setTransplantMode(null);
+    } else if (result) {
+      messageApi.error(result.message);
     }
   };
 

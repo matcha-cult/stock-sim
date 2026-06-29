@@ -363,6 +363,27 @@ export interface HarvestInventoryItem {
   quality: CropQuality;
 }
 
+/**
+ * 灵材仓库分页项（含作物配置，供前端直接渲染）。
+ * 合并动态库存字段与静态作物配置，避免前端再次 join。
+ */
+export interface HarvestInventoryItemDto extends HarvestInventoryItem {
+  name: string;
+  element: CropElement[];
+  requiredTier: number;
+  sellPricePerUnit: number;
+  harvestTradeUnit: number;
+  harvestUnit: string;
+}
+
+/** 灵材仓库分页响应 */
+export interface HarvestInventoryPageResult {
+  items: HarvestInventoryItemDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 /** 灵田概览信息（V3：等级 + 等阶分离） */
 export interface FarmInfoDto {
   /** 当前等阶（1-4） */
@@ -417,13 +438,14 @@ export interface FarmOverviewDto {
 
 /**
  * 计算等级升级所需经验（线性递增公式）。
- * 公式：100 + 50 * (level - 1)
- * - 1 级升 2 级：100 经验
- * - 2 级升 3 级：150 经验
- * - 100 级：5050 经验
+ * 公式：(100 + 50 * (level - 1)) * 难度系数
+ * 当前难度系数 0.6（在原曲线基础上降低 40%），化简为 60 + 30 * (level - 1)。
+ * - 1 级升 2 级：60 经验
+ * - 2 级升 3 级：90 经验
+ * - 100 级：3030 经验
  */
 export function calculateLevelUpExpRequired(level: number): number {
-  return 100 + 50 * (level - 1);
+  return 60 + 30 * (level - 1);
 }
 
 /**

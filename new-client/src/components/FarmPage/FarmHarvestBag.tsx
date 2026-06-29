@@ -1,32 +1,37 @@
 /**
- * 灵田系统 V3 — 灵材仓库组件。
+ * 灵田系统 V3 — 灵材仓库组件（服务端分页）。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：展示灵材仓库（表格形式），提供出售操作（按各作物配置的 harvestTradeUnit 个体 = 1 交易单位）。
+ * 1. 做什么：展示灵材仓库（服务端分页表格），提供出售操作（按各作物配置的 harvestTradeUnit 个体 = 1 交易单位）。
  * 2. 不做什么：不做种子袋或灵田网格。
  *
  * 数据流 / 状态流：
- * FarmStore.harvestBagWithConfig → 渲染。用户操作 → FarmStore 方法 → 自动刷新。
+ * - 组件 mount → farmStore.fetchHarvestInventory(1) 加载首页。
+ * - FarmStore.harvestBagWithConfig（服务端已 join 作物配置）→ 渲染。
+ * - 翻页 → farmStore.fetchHarvestInventory(page)。
+ * - 用户操作 → FarmStore 方法 → 自动刷新当前页。
  *
  * 复用设计说明：
- * - 作物信息（交易单位）通过 cropId 从 staticConfig.crops 查找，避免重复存储。
+ * - 作物信息由后端分页接口一并返回（HarvestInventoryItemDto），前端无需再 join staticConfig。
  * - 元素颜色、等阶名称复用 farmConstants。
+ * - 分页组件使用 antd Pagination，与 LedgerTab 一致。
  *
  * 关键边界条件与坑点：
  * 1. 交易单位大小由每种灵材的 harvestTradeUnit 配置决定（如灵根 1000、灵莲 10）。
  * 2. 不足 harvestTradeUnit 的余数不可出售，保留在背包中。
+ * 3. 出售最后一页最后一项后，当前页可能为空；保留空页显示，用户可手动翻页。
  */
 
-import { useContext, useMemo, useState } from 'react';
+import { useContext, useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
   Button, Tag, Flex, Typography, InputNumber,
-  Descriptions, Empty, App, Table,
+  Descriptions, Empty, App, Table, Pagination,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
 import { ShoppingCartOutlined } from '@ant-design/icons';
 import { RootStoreContext } from '../../stores/RootStore';
-import type { HarvestInventoryItem, CropConfigDto, CropQuality, CropElement } from '../../services/api/farm';
+import type { HarvestInventoryItemDto, CropQuality, CropElement } from '../../services/api/farm';
 import ResponsiveModal from '../../shared/ResponsiveModal';
 import { TIER_NAMES } from './farmConstants';
 import { ElementTag } from './ElementTag';
@@ -39,9 +44,6 @@ const QUALITY_CONFIG: Record<CropQuality, { label: string; color: string }> = {
   lq: { label: '劣质', color: 'default' },
 };
 
-/** 灵材行类型（库存 + 作物配置） */
-type HarvestBagItem = HarvestInventoryItem & CropConfigDto;
-
 const FarmHarvestBag = observer(function FarmHarvestBag() {
   const { message: messageApi } = App.useApp();
   const rootStore = useContext(RootStoreContext)!;
@@ -50,8 +52,15 @@ const FarmHarvestBag = observer(function FarmHarvestBag() {
   const [sellModal, setSellModal] = useState<{ cropId: string; quality: CropQuality } | null>(null);
   const [sellTradeUnits, setSellTradeUnits] = useState(1);
 
-  // 灵材列表（直接使用 harvestBagWithConfig）
-  const harvestItems: HarvestBagItem[] = farmStore.harvestBagWithConfig;
+  // 首次挂载加载首页
+  useEffect(() => {
+    if (!farmStore.harvestInventory.length && farmStore.harvestInventoryTotal === 0) {
+      farmStore.fetchHarvestInventory(1);
+    }
+  }, []);
+
+  // 灵材列表（直接使用后端分页数据，已含作物配置）
+  const harvestItems: HarvestInventoryItemDto[] = farmStore.harvestBagWithConfig;
 
   const handleSell = async () => {
     if (!sellModal || sellTradeUnits <= 0) return;
@@ -70,8 +79,12 @@ const FarmHarvestBag = observer(function FarmHarvestBag() {
     }
   };
 
+  const handlePageChange = (page: number) => {
+    farmStore.fetchHarvestInventory(page);
+  };
+
   // 灵材仓库表格列定义
-  const harvestColumns: ColumnsType<HarvestBagItem> = [
+  const harvestColumns: ColumnsType<HarvestInventoryItemDto> = [
     {
       title: '名称',
       dataIndex: 'name',
@@ -169,23 +182,38 @@ const FarmHarvestBag = observer(function FarmHarvestBag() {
         <Button
           icon={<ShoppingCartOutlined />}
           onClick={handleSellAll}
-          disabled={harvestItems.length === 0}
+          disabled={farmStore.harvestInventoryTotal === 0}
         >
           一键出售
         </Button>
       </Flex>
 
-      {harvestItems.length === 0 ? (
+      {farmStore.harvestInventoryTotal === 0 && !farmStore.harvestInventoryLoading ? (
         <Empty description="灵材仓库为空" image={Empty.PRESENTED_IMAGE_SIMPLE} />
       ) : (
-        <Table
-          dataSource={harvestItems}
-          columns={harvestColumns}
-          rowKey={(record) => `${record.cropId}-${record.quality}`}
-          pagination={false}
-          size="small"
-          scroll={{ x: 'max-content' }}
-        />
+        <>
+          <Table
+            dataSource={harvestItems}
+            columns={harvestColumns}
+            rowKey={(record) => `${record.cropId}-${record.quality}`}
+            pagination={false}
+            size="small"
+            scroll={{ x: 'max-content' }}
+            loading={farmStore.harvestInventoryLoading}
+          />
+          {farmStore.harvestInventoryTotal > farmStore.harvestInventoryPageSize && (
+            <Flex justify="center">
+              <Pagination
+                size="small"
+                current={farmStore.harvestInventoryPage}
+                pageSize={farmStore.harvestInventoryPageSize}
+                total={farmStore.harvestInventoryTotal}
+                showSizeChanger={false}
+                onChange={handlePageChange}
+              />
+            </Flex>
+          )}
+        </>
       )}
 
       {/* 出售弹窗 */}

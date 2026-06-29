@@ -49,6 +49,8 @@ import {
   type FarmCellDto,
   type SeedInventoryItem,
   type HarvestInventoryItem,
+  type HarvestInventoryItemDto,
+  type HarvestInventoryPageResult,
   type FarmInfoDto,
   type CropStateDto,
   type FarmStaticConfigDto,
@@ -299,6 +301,50 @@ export async function getFarmOverview(characterId: number): Promise<FarmOverview
   const harvestBag = buildHarvestInventoryDto(harvestRows.rows);
 
   return { reclaimed: true, farmInfo, cells, seedBag, harvestBag, serverNow: now };
+}
+
+/** 灵材仓库分页查询（服务端分页） */
+export async function getHarvestInventory(
+  characterId: number,
+  page: number = 1,
+  pageSize: number = 20,
+): Promise<HarvestInventoryPageResult> {
+  const clampedPage = Math.max(1, page);
+  const clampedPageSize = Math.min(Math.max(pageSize, 1), 100);
+  const offset = (clampedPage - 1) * clampedPageSize;
+
+  const [countResult, dataResult] = await Promise.all([
+    query<{ count: string }>(
+      `SELECT COUNT(*) AS count FROM farm_harvest_inventory WHERE character_id = $1 AND quantity > 0`,
+      [characterId],
+    ),
+    query<HarvestRow>(
+      `SELECT crop_id, quantity, quality
+       FROM farm_harvest_inventory
+       WHERE character_id = $1 AND quantity > 0
+       ORDER BY crop_id, quality
+       LIMIT $2 OFFSET $3`,
+      [characterId, clampedPageSize, offset],
+    ),
+  ]);
+
+  const total = Number(countResult.rows[0].count);
+  const items: HarvestInventoryItemDto[] = dataResult.rows.map((row) => {
+    const crop = getCropConfig(row.crop_id);
+    return {
+      cropId: row.crop_id,
+      quantity: row.quantity,
+      quality: row.quality as CropQuality,
+      name: crop?.name ?? row.crop_id,
+      element: crop?.element ?? [],
+      requiredTier: crop?.requiredTier ?? 1,
+      sellPricePerUnit: crop?.sellPricePerUnit ?? 0,
+      harvestTradeUnit: crop?.harvestTradeUnit ?? 1,
+      harvestUnit: crop?.harvestUnit ?? '',
+    };
+  });
+
+  return { items, total, page: clampedPage, pageSize: clampedPageSize };
 }
 
 // ==================== 种子商店 ====================

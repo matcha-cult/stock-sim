@@ -435,6 +435,48 @@
       "seedUnit": "根"
     },
     {
+      "itemId": "seed_ling_lian",
+      "cropId": "ling_lian",
+      "name": "灵莲种子",
+      "description": "基础灵莲的种子，无属性",
+      "buyPrice": 200,
+      "sellPrice": 80,
+      "stackable": true,
+      "maxStack": 999,
+      "requiredTier": 1,
+      "enabled": true,
+      "sortOrder": 69,
+      "seedUnit": "颗"
+    },
+    {
+      "itemId": "seed_jin_feng_lian",
+      "cropId": "jin_feng_lian",
+      "name": "金锋莲种子",
+      "description": "金属性莲科灵植的种子",
+      "buyPrice": 350,
+      "sellPrice": 140,
+      "stackable": true,
+      "maxStack": 999,
+      "requiredTier": 1,
+      "enabled": true,
+      "sortOrder": 70,
+      "seedUnit": "颗"
+    },
+    {
+      "itemId": "seed_cui_xin_lian",
+      "cropId": "cui_xin_lian",
+      "name": "翠心莲种子",
+      "description": "木属性莲科灵植的种子",
+      "buyPrice": 380,
+      "sellPrice": 152,
+      "stackable": true,
+      "maxStack": 999,
+      "requiredTier": 1,
+      "enabled": true,
+      "sortOrder": 71,
+      "seedUnit": "颗"
+    },
+    {
       "itemId": "seed_bing_po_lian",
       "cropId": "bing_po_lian",
       "name": "冰魄莲种子",
@@ -445,7 +487,7 @@
       "maxStack": 999,
       "requiredTier": 1,
       "enabled": true,
-      "sortOrder": 70,
+      "sortOrder": 72,
       "seedUnit": "颗"
     },
     {
@@ -459,7 +501,7 @@
       "maxStack": 999,
       "requiredTier": 1,
       "enabled": true,
-      "sortOrder": 71,
+      "sortOrder": 73,
       "seedUnit": "颗"
     },
     {
@@ -473,21 +515,7 @@
       "maxStack": 999,
       "requiredTier": 1,
       "enabled": true,
-      "sortOrder": 72,
-      "seedUnit": "颗"
-    },
-    {
-      "itemId": "seed_ling_lian",
-      "cropId": "ling_lian",
-      "name": "灵莲种子",
-      "description": "基础灵莲的种子，无属性",
-      "buyPrice": 200,
-      "sellPrice": 80,
-      "stackable": true,
-      "maxStack": 999,
-      "requiredTier": 1,
-      "enabled": true,
-      "sortOrder": 69,
+      "sortOrder": 74,
       "seedUnit": "颗"
     },
     {

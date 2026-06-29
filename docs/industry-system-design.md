@@ -5,9 +5,9 @@
 百业系统是独立于股市行情、收租系统的第三个核心经济子系统。玩家作为「厂主」开工厂，每个 tick 系统自动完成「消耗原材料库存 → 生产 → 产出产品 → 按系统价格结算」的闭环。原材料需玩家提前从系统商城批量采购入库，每 tick 从库存扣减。玩家可控制两个策略维度：
 
 1. **囤积 / 抛售策略**：产品产出后可不随 tick 自动出售，等系统价格上涨后手动抛售
-2. **开工 / 停工控制**：灵机随时可停工止损，停工期间不消耗原材料和傀儡驱动灵石
+2. **开工 / 停工控制**：灵机随时可停工止损，停工期间不消耗原材料、灵机能量和傀儡驱动灵石
 
-核心风险：原材料价格波动，产品价格有涨有跌，傀儡驱动消耗灵石，工厂可能持续亏本。原材料需在系统商城按最小交易单位批量采购，需提前备货。
+核心风险：原材料价格波动，产品价格有涨有跌，灵机能量和傀儡驱动消耗灵石，工厂可能持续亏本。原材料需在系统商城按最小交易单位批量采购，需提前备货。
 
 ---
 
@@ -68,7 +68,7 @@ model industry_machine {
   id                   BigInt   @id @default(autoincrement())
   factory_id           BigInt
   character_id         Int
-  machine_type         String   @db.VarChar(50)       // 灵机类型，如 "FORGE_MACHINE"
+  machine_type         String   @db.VarChar(50)       // 灵机类型，如 "FORGING_MACHINE"
   upgrade_level        Int      @default(1)           // 当前等级（1 = 基础机）
   status               String   @db.VarChar(20) @default("installed") // installed/running/stopped
   recipe_id            String   @db.VarChar(50)       // 当前绑定配方
@@ -116,7 +116,7 @@ model industry_factory {
   product_inventory    Json     @default("{}")        // 产品仓库：{"产品ID": 份数, ...}
   total_product_sold   Int      @default(0)           // 累计已出售产品数量（统计用）
   total_revenue        BigInt   @default(0)           // 累计销售收入（分）
-  total_cost           BigInt   @default(0)           // 累计投入成本（分），含 startup_cost + 灵机采购 + 每 tick 材料 + 傀儡驱动
+  total_cost           BigInt   @default(0)           // 累计投入成本（分），含 startup_cost + 灵机采购 + 每 tick 材料 + 灵机能量 + 傀儡驱动
   last_tick_id         BigInt?                         // 上一次结算的 tick ID
   created_at           DateTime @default(now()) @db.Timestamp(6)
   updated_at           DateTime @updatedAt @db.Timestamp(6)
@@ -213,6 +213,7 @@ model industry_ledger {
 | `startup_cost` | 开工建厂（一次性投入） | 支出 |
 | `machine_buy` | 购买灵机（一次性） | 支出 |
 | `machine_upgrade` | 灵机升级 | 支出 |
+| `machine_energy` | 灵机每 tick 能量消耗 | 支出 |
 | `material_buy` | 商城采购原材料 | 支出 |
 | `material_sell` | 原材料卖回商城 | 收入 |
 | `puppet_drive` | 支付傀儡驱动灵石 | 支出 |
@@ -227,7 +228,7 @@ model industry_ledger {
 
 #### `industry_production_log` — 生产记录（用于追溯与玩家查看）
 
-记录每个 tick 每座工厂的生产明细，包含傀儡驱动成本。
+记录每个 tick 每座工厂的生产明细，包含灵机能量消耗、傀儡驱动成本。
 
 ```prisma
 model industry_production_log {
@@ -237,8 +238,9 @@ model industry_production_log {
   factory_type         String   @db.VarChar(50)
   tick_id              BigInt
   material_cost        BigInt                          // 本 tick 原材料消耗折算成本（分，按加权平均采购成本折算，仅用于生产记录展示，不重复扣灵石）
+  energy_cost          BigInt                          // 本 tick 灵机能量灵石消耗（分）
   puppet_cost          BigInt                          // 本 tick 傀儡驱动灵石消耗（分）
-  total_cost           BigInt                          // 本 tick 总成本（分）= material_cost + puppet_cost
+  total_cost           BigInt                          // 本 tick 总成本（分）= material_cost + energy_cost + puppet_cost
   output_quantity      Int                             // 本 tick 总产出数量（含灵机等级加成）
   base_output_quantity Int                             // 本 tick 基础产出（无灵机等级加成）
   machine_bonus_bps    Int      @default(0)            // 灵机等级加成基点
@@ -294,7 +296,7 @@ model industry_trade_record {
 | `industry_deposit` | 个人灵石 → 工厂对公账户（转入） |
 | `industry_withdraw` | 工厂对公账户 → 个人灵石（转出，扣税后到账） |
 
-工厂内部所有收支（采购、傀儡驱动、出售、手续费、事件损失等）通过 `industry_ledger` 记录，不再写入 `spirit_stones_ledger`。
+工厂内部所有收支（采购、灵机能量、傀儡驱动、出售、手续费、事件损失等）通过 `industry_ledger` 记录，不再写入 `spirit_stones_ledger`。
 
 **`spirit_stones_ledger.biz_type`** 需从 `@db.VarChar(32)` 扩展到能容纳上述新值（现有最长 `stock_sell` = 10 字符，新值最长 `industry_manual_sell` = 20 字符，32 足够）。
 
@@ -353,14 +355,9 @@ model industry_trade_record {
 
 ```json
 [
-  { "type": "WOODWORK",  "name": "灵木坊",  "startup_cost": 3000, "max_puppets": 16 },
-  { "type": "FORGE",     "name": "百炼炉",  "startup_cost": 5000, "max_puppets": 20 },
-  { "type": "ARMORY",    "name": "铸甲阁",  "startup_cost": 4500, "max_puppets": 18 },
-  { "type": "JADESMITH", "name": "琢玉斋",  "startup_cost": 8000, "max_puppets": 12 },
-  { "type": "LEATHER",   "name": "炼革坊",  "startup_cost": 2000, "max_puppets": 14 },
-  { "type": "WEAVING",   "name": "织锦阁",  "startup_cost": 3500, "max_puppets": 14 },
-  { "type": "ALCHEMY",   "name": "炼丹房",  "startup_cost": 7000, "max_puppets": 10 },
-  { "type": "CULINARY",  "name": "百味楼",  "startup_cost": 4000, "max_puppets": 16 }
+  { "type": "SMELTING", "name": "冶炼炉", "startup_cost": 5000, "max_puppets": 16 },
+  { "type": "FORGING",  "name": "锻造台", "startup_cost": 4000, "max_puppets": 20 },
+  { "type": "ALCHEMY",  "name": "炼丹炉", "startup_cost": 7000, "max_puppets": 10 }
 ]
 ```
 
@@ -371,64 +368,26 @@ model industry_trade_record {
 ```json
 [
   {
-    "machine_type": "WOODWORK_MACHINE",
-    "name": "灵木机",
-    "factory_type": "WOODWORK",
-    "base_price": 3000,
-    "upgrade_cost_multiplier": 1.5,
-    "output_per_level_bps": 2000,
-    "max_upgrade_level": 10,
-    "description": "加工灵木，产出法器、阵盘等"
-  },
-  {
-    "machine_type": "FORGE_MACHINE",
-    "name": "锻灵机",
-    "factory_type": "FORGE",
+    "machine_type": "SMELTING_MACHINE",
+    "name": "冶炼机",
+    "factory_type": "SMELTING",
     "base_price": 5000,
-    "upgrade_cost_multiplier": 1.6,
-    "output_per_level_bps": 2000,
-    "max_upgrade_level": 10,
-    "description": "百炼淬火，产出飞剑、灵符等"
-  },
-  {
-    "machine_type": "ARMORY_MACHINE",
-    "name": "铸灵机",
-    "factory_type": "ARMORY",
-    "base_price": 4500,
     "upgrade_cost_multiplier": 1.5,
     "output_per_level_bps": 2000,
     "max_upgrade_level": 10,
-    "description": "浇筑法甲，产出护甲、阵盾等"
+    "description": "冶炼矿石，产出金属锭、灵银等",
+    "energy_per_tick": 800
   },
   {
-    "machine_type": "JADESMITH_MACHINE",
-    "name": "琢灵机",
-    "factory_type": "JADESMITH",
-    "base_price": 8000,
-    "upgrade_cost_multiplier": 1.8,
-    "output_per_level_bps": 2500,
-    "max_upgrade_level": 10,
-    "description": "雕琢灵玉，产出玉饰、符印等"
-  },
-  {
-    "machine_type": "LEATHER_MACHINE",
-    "name": "炼革机",
-    "factory_type": "LEATHER",
-    "base_price": 2000,
-    "upgrade_cost_multiplier": 1.4,
-    "output_per_level_bps": 2000,
-    "max_upgrade_level": 10,
-    "description": "鞣制灵革，产出皮甲、法囊等"
-  },
-  {
-    "machine_type": "WEAVING_MACHINE",
-    "name": "织灵机",
-    "factory_type": "WEAVING",
-    "base_price": 3500,
+    "machine_type": "FORGING_MACHINE",
+    "name": "锻造机",
+    "factory_type": "FORGING",
+    "base_price": 4000,
     "upgrade_cost_multiplier": 1.5,
     "output_per_level_bps": 2000,
     "max_upgrade_level": 10,
-    "description": "织造灵丝，产出法袍、阵幡等"
+    "description": "锻造金属，产出飞剑、法杖、护甲等",
+    "energy_per_tick": 1000
   },
   {
     "machine_type": "ALCHEMY_MACHINE",
@@ -438,17 +397,8 @@ model industry_trade_record {
     "upgrade_cost_multiplier": 1.7,
     "output_per_level_bps": 2500,
     "max_upgrade_level": 10,
-    "description": "炼制丹药，产出回灵丹、灵液等"
-  },
-  {
-    "machine_type": "CULINARY_MACHINE",
-    "name": "庖厨机",
-    "factory_type": "CULINARY",
-    "base_price": 4000,
-    "upgrade_cost_multiplier": 1.5,
-    "output_per_level_bps": 2000,
-    "max_upgrade_level": 10,
-    "description": "烹调灵膳，产出灵糕点、灵酿等"
+    "description": "炼制丹药，产出回灵丹、灵液等",
+    "energy_per_tick": 1200
   }
 ]
 ```
@@ -458,19 +408,19 @@ model industry_trade_record {
 ```json
 [
   {
-    "recipe_id": "WOOD_CRAFT",
+    "recipe_id": "INGOT_SMELT",
     "product_id": "",
     "output_per_tick": 0,
     "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["WOODWORK_MACHINE"],
+    "allowed_machine_types": ["SMELTING_MACHINE"],
     "materials": []
   },
   {
-    "recipe_id": "WOOD_ARTIFACT",
+    "recipe_id": "SILVER_REFINE",
     "product_id": "",
     "output_per_tick": 0,
     "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["WOODWORK_MACHINE"],
+    "allowed_machine_types": ["SMELTING_MACHINE"],
     "materials": []
   },
   {
@@ -478,79 +428,15 @@ model industry_trade_record {
     "product_id": "",
     "output_per_tick": 0,
     "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["FORGE_MACHINE"],
+    "allowed_machine_types": ["FORGING_MACHINE"],
     "materials": []
   },
   {
-    "recipe_id": "TOOL_FORGE",
+    "recipe_id": "ARMOR_FORGE",
     "product_id": "",
     "output_per_tick": 0,
     "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["FORGE_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "ARMOR_CAST",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["ARMORY_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "SHIELD_CAST",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["ARMORY_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "JADE_CRAFT",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["JADESMITH_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "GEM_SET",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["JADESMITH_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "LEATHER_ARMOR",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["LEATHER_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "LEATHER_GEAR",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["LEATHER_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "ROBE_WEAVE",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["WEAVING_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "SILK_WEAVE",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["WEAVING_MACHINE"],
+    "allowed_machine_types": ["FORGING_MACHINE"],
     "materials": []
   },
   {
@@ -568,30 +454,6 @@ model industry_trade_record {
     "min_puppets_per_machine": 1,
     "allowed_machine_types": ["ALCHEMY_MACHINE"],
     "materials": []
-  },
-  {
-    "recipe_id": "PASTRY_MAKE",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["CULINARY_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "FEAST_COOK",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["CULINARY_MACHINE"],
-    "materials": []
-  },
-  {
-    "recipe_id": "BREW_MAKE",
-    "product_id": "",
-    "output_per_tick": 0,
-    "min_puppets_per_machine": 1,
-    "allowed_machine_types": ["CULINARY_MACHINE"],
-    "materials": []
   }
 ]
 ```
@@ -602,14 +464,9 @@ model industry_trade_record {
 
 ```json
 [
-  { "factory_type": "WOODWORK",  "base_cost_per_puppet": 1000, "max_puppets": 16 },
-  { "factory_type": "FORGE",     "base_cost_per_puppet": 1500, "max_puppets": 20 },
-  { "factory_type": "ARMORY",    "base_cost_per_puppet": 1300, "max_puppets": 18 },
-  { "factory_type": "JADESMITH", "base_cost_per_puppet": 2500, "max_puppets": 12 },
-  { "factory_type": "LEATHER",   "base_cost_per_puppet": 800,  "max_puppets": 14 },
-  { "factory_type": "WEAVING",   "base_cost_per_puppet": 1200, "max_puppets": 14 },
-  { "factory_type": "ALCHEMY",   "base_cost_per_puppet": 2000, "max_puppets": 10 },
-  { "factory_type": "CULINARY",  "base_cost_per_puppet": 1200, "max_puppets": 16 }
+  { "factory_type": "SMELTING", "base_cost_per_puppet": 1500, "max_puppets": 16 },
+  { "factory_type": "FORGING",  "base_cost_per_puppet": 1200, "max_puppets": 20 },
+  { "factory_type": "ALCHEMY",  "base_cost_per_puppet": 2000, "max_puppets": 10 }
 ]
 ```
 
@@ -635,6 +492,7 @@ model industry_trade_record {
 | `machines.upgrade_cost_multiplier` | 升级成本递增倍率 | 倍率 |
 | `machines.output_per_level_bps` | 每升 1 级产出加成基点 | 基点（2000 = +20%） |
 | `machines.max_upgrade_level` | 灵机最高可升等级 | 级 |
+| `machines.energy_per_tick` | 灵机开工时每 tick 能量消耗（灵石从对公账户扣减） | 分，如 1000 = 10.00 灵石 |
 | `recipes.output_per_tick` | 每台灵机每 tick 基础产出数量 | 个 |
 | `recipes.min_puppets_per_machine` | 灵机开工最低傀儡数 | 个 |
 | `recipes.allowed_machine_types` | 允许使用此配方的灵机类型列表 | 数组 |
@@ -742,11 +600,13 @@ model industry_trade_record {
 ```text
 for each running factory:
   ── 阶段 A：灵机开工校验 ──
-  1. 汇总所有运行中灵机的原材料需求 & 傀儡成本:
+  1. 汇总所有运行中灵机的原材料需求、灵机能量消耗 & 傀儡成本:
      total_material_needed = {material_id: 0, ...}
+     total_energy_cost = 0
      total_puppet_cost = 0
      for each machine where machine.status = 'running':
        IF machine.puppet_count < recipe.min_puppets_per_machine: 该机停工，跳过
+       total_energy_cost += machine_config.energy_per_tick
        for each material in recipe:
          total_material_needed[material_id] += quantity_per_tick
        total_puppet_cost += machine.puppet_count × base_cost_per_puppet
@@ -759,8 +619,9 @@ for each running factory:
          记录 production_log (profit_loss 为负，output=0)，记录 incident_type = "material_shortage"
          跳过后续步骤
 
-  3. 检查对公账户余额（仅支付傀儡驱动灵石）:
-     IF wallet.balance < total_puppet_cost:
+  3. 检查对公账户余额（需支付灵机能量消耗 + 傀儡驱动灵石）:
+     total_operating_cost = total_energy_cost + total_puppet_cost
+     IF wallet.balance < total_operating_cost:
        → 尝试用已有产品库存抵成本:
           - 按 min_sell_qty 整数倍自动出售部分产品库存直到够支付或库存清空，收入进入对公账户
        → 若仍不够 → 工厂强制停工 (status='stopped')
@@ -778,14 +639,15 @@ for each running factory:
        IF inv.qty <= 0: inv.qty = 0; inv.cost_basis = 0  // 防止浮点残差累积
        // 记录消耗明细到 production_log.material_consumed
 
-  5. 对公账户扣除傀儡驱动灵石（industry_ledger: puppet_drive）
+  5. 对公账户扣除灵机能量消耗（industry_ledger: machine_energy）
+  6. 对公账户扣除傀儡驱动灵石（industry_ledger: puppet_drive）
 
-  6. 每台运行中的灵机产出:
+  7. 每台运行中的灵机产出:
      machine_bonus_bps = (machine.upgrade_level - 1) × output_per_level_bps
      output = floor(recipe.output_per_tick × (1 + machine_bonus_bps / 10000))
      factory.product_inventory[product_id] += output  // 按产品 ID 累加到产品仓库
 
-  7. 可选：自动出售模式 → 按工厂级 auto_sell_ratio 出售产品仓库中各产品的部分库存
+  8. 可选：自动出售模式 → 按工厂级 auto_sell_ratio 出售产品仓库中各产品的部分库存
      - 遍历 product_inventory 中每个 product_id，按工厂的 auto_sell_ratio 计算该产品应出售数量 = floor(库存 × auto_sell_ratio / 100)
      - 校验：出售数量必须为该产品的 min_sell_qty 的整数倍且 ≥ min_sell_qty，不足则向下取最大整数倍
      - 不足 min_sell_qty 的部分留在仓库中，不强制出售
@@ -793,16 +655,16 @@ for each running factory:
      - tick 自动出售免手续费（见 4.5）
      - 收入进入对公账户（industry_ledger: auto_sell）
 
-  8. 记录 production_log（含灵机等级加成、傀儡驱动成本、原材料消耗明细）
+  9. 记录 production_log（含灵机等级加成、灵机能量消耗、傀儡驱动成本、原材料消耗明细）
 ```
 
 #### 关键设计：库存抵成本机制
 
-这是防止工厂因对公账户余额不足而永久停摆的容错设计。当对公账户余额不足以支付当 tick 的傀儡驱动灵石时：
+这是防止工厂因对公账户余额不足而永久停摆的容错设计。当对公账户余额不足以支付当 tick 的灵机能量 + 傀儡驱动灵石时：
 
 1. 系统自动按当前产品价格出售产品仓库中各产品的一部分库存
 2. 每种产品的出售数量必须是该产品的 `min_sell_qty` 的整数倍，不足整数倍的部分留在仓库
-3. 所得灵石用于支付当 tick 傀儡驱动
+3. 所得灵石用于支付当 tick 灵机能量 + 傀儡驱动
 4. 如果全部产品库存卖出仍不够 → 工厂停工，剩余产品库存和原材料库存均保留
 5. 停工后玩家需向对公账户充值才能重新开工
 
@@ -907,7 +769,7 @@ for each material/product:
 ```text
 // 对公账户当期盈亏 = Σ(所有 industry_ledger.amount)
 收入 = Σ(amount) WHERE biz_type IN ('material_sell', 'auto_sell', 'manual_sell', 'personal_deposit')
-支出 = Σ(amount) WHERE biz_type IN ('startup_cost', 'machine_buy', 'machine_upgrade', 'material_buy', 'puppet_drive', 'fee', 'incident_loss', 'withdraw_tax', 'personal_withdraw')
+支出 = Σ(amount) WHERE biz_type IN ('startup_cost', 'machine_buy', 'machine_upgrade', 'machine_energy', 'material_buy', 'puppet_drive', 'fee', 'incident_loss', 'withdraw_tax', 'personal_withdraw')
 对公账户盈亏 = 收入 + 支出（支出 amount 为负数，直接相加即可）
 
 // 玩家个人视角（已扣除提现税费）
@@ -966,14 +828,9 @@ total_tax_paid  // 累计已缴提现税（分）
 
 | 工厂类型 | 每傀儡每 tick 驱动灵石（分） | 傀儡上限 |
 | --- | --- | --- |
-| 灵木坊 | 1000（10.00 灵石） | 16 |
-| 百炼炉 | 1500（15.00 灵石） | 20 |
-| 铸甲阁 | 1300（13.00 灵石） | 18 |
-| 琢玉斋 | 2500（25.00 灵石） | 12 |
-| 炼革坊 | 800（8.00 灵石） | 14 |
-| 织锦阁 | 1200（12.00 灵石） | 14 |
-| 炼丹房 | 2000（20.00 灵石） | 10 |
-| 百味楼 | 1200（12.00 灵石） | 16 |
+| 冶炼炉 | 1500（15.00 灵石） | 16 |
+| 锻造台 | 1200（12.00 灵石） | 20 |
+| 炼丹炉 | 2000（20.00 灵石） | 10 |
 
 - 傀儡无满意度、无事件、无工资波动，成本固定
 - 每 tick 傀儡成本 = Σ(各灵机 puppet_count × base_cost_per_puppet)
@@ -983,25 +840,28 @@ total_tax_paid  // 累计已缴提现税（分）
 
 每台灵机至少需要配置 1 个傀儡才能开工。傀儡数量不直接影响产出倍率——产出由灵机等级加成和配方基础产出决定。每台灵机配 1 个傀儡即可满效运转，多余傀儡只会增加驱动成本而不产生额外收益。
 
+每台运行中的灵机还需额外消耗 `energy_per_tick` 灵石作为自身能量（从对公账户扣减），与傀儡驱动成本独立计算。灵机每 tick 总运营成本 = 灵机能量消耗 + 傀儡驱动成本。
+
 玩家策略的核心是**「多开灵机」**而非**「多配傀儡」**——每台灵机配 1 傀儡，成本最优。增加产出的方式是购买更多灵机并各自配 1 傀儡，而非给单台灵机堆傀儡数量。
 
 #### 策略博弈
 
 玩家面临的**二元权衡**：
 
-1. **少开灵机** → 驱动成本低，但总产出受限，可能无法覆盖固定成本
-2. **多开灵机** → 产出高，但每 tick 驱动灵石消耗线性增长（每台灵机 1 傀儡 × base_cost），产品价格下跌时亏损更大
+1. **少开灵机** → 驱动成本（傀儡 + 能量）低，但总产出受限，可能无法覆盖固定成本
+2. **多开灵机** → 产出高，但每 tick 驱动灵石消耗线性增长（每台灵机 1 傀儡 × base_cost + energy_per_tick），产品价格下跌时亏损更大
 
-**例**：百炼炉开 2 台灵机，每台配 1 傀儡，每 tick 驱动 = 2 × 15 = 30 灵石。1 号机产出 2 把飞剑 × 200 = 400 灵石，2 号机产出 1 件法器 = 500 灵石，总收入 900，驱动 30，毛利 870。如果飞剑跌到 150，1 号机收入 = 300，总收入 = 800，毛利 = 770，仍盈利。但如果原材料成本也上涨，可能转亏。此时玩家可停工灵机止损，傀儡不产生额外成本。
+**例**：锻造台开 2 台灵机，每台配 1 傀儡，每 tick 傀儡驱动 = 2 × 12 = 24 灵石，灵机能量 = 2 × 10 = 20 灵石，总运营 = 44 灵石。1 号机产出 2 把飞剑 × 200 = 400 灵石，2 号机产出 1 件护甲 = 500 灵石，总收入 900，运营 44，毛利 856。如果飞剑跌到 150，1 号机收入 = 300，总收入 = 800，毛利 = 756，仍盈利。但如果原材料成本也上涨，可能转亏。此时玩家可停工灵机止损，傀儡不产生额外成本，停工灵机不消耗能量。
 
 ### 4.11 灵机系统
 
 每个工厂可安装多台灵机，灵机数量无上限。每台灵机是一台独立的生产单元：
 
-- **独立绑定配方**：同工厂的不同灵机可以产出不同产品（如百炼炉的 1 号锻灵机产飞剑，2 号锻灵机产法器）
+- **独立绑定配方**：同工厂的不同灵机可以产出不同产品（如锻造台的 1 号锻造机产飞剑，2 号锻造机产护甲）
 - **独立配置傀儡**：每台灵机有自己的 `puppet_count`，需 ≥ `min_puppets_per_machine` 才能开工
 - **独立开关**：每台灵机可单独启动 / 停工
 - **独立升级**：每台灵机可独立升级，等级越高产出加成越大
+- **独立能量消耗**：每台开工中的灵机每 tick 消耗 `energy_per_tick` 灵石（从对公账户扣减），停工不消耗
 - **共享仓库**：所有灵机的产品产出进入同一个产品仓库，原材料消耗共享原材料仓库
 
 #### 灵机产出加成
@@ -1011,7 +871,7 @@ total_tax_paid  // 累计已缴提现税（分）
 实际产出 = floor(recipe.output_per_tick × (1 + machine_bonus_bps / 10000))
 ```
 
-例：锻灵机基础产出 2，灵机等级 3（+4000 bps = +40%）：
+例：锻造机基础产出 2，灵机等级 3（+4000 bps = +40%）：
 ```
 实际产出 = floor(2 × 1.40) = floor(2.80) = 2
 ```
@@ -1024,16 +884,16 @@ total_tax_paid  // 累计已缴提现税（分）
 升级费用 = floor(base_price × upgrade_cost_multiplier ^ (upgrade_level - 1))
 ```
 
-以锻灵机（base_price=5000, multiplier=1.6）为例：
-- Lv0 → Lv1（购买新机）：5,000
-- Lv1 → Lv2：8,000
-- Lv2 → Lv3：12,800
-- Lv3 → Lv4：20,480
-- Lv4 → Lv5：32,768
+以锻造机（base_price=4000, multiplier=1.5）为例：
+- Lv0 → Lv1（购买新机）：4,000
+- Lv1 → Lv2：4,000
+- Lv2 → Lv3：6,000
+- Lv3 → Lv4：9,000
+- Lv4 → Lv5：13,500
 
 #### 灵机与工厂类型约束
 
-- 灵机只能安装到对应类型的工厂（锻灵机 → 百炼炉，不可装到其他工厂）
+- 灵机只能安装到对应类型的工厂（锻造机 → 锻造台，不可装到其他工厂）
 - 工厂内灵机数量无上限，但傀儡总数受 `max_puppets` 限制
 - 灵机可切换绑定配方，但仅限 `allowed_machine_types` 包含该灵机类型的配方
 
@@ -1042,21 +902,21 @@ total_tax_paid  // 累计已缴提现税（分）
 工厂仓库分为**原材料仓库**和**产品仓库**两部分，均为 JSON 格式存储：
 
 ```text
-factory (百炼炉)
+factory (锻造台)
 ├── material_inventory:
 │   ├── IRON_ORE:    {qty: 1000, cost_basis: 5000000}  ← 数量(份) + 累计采购成本(分)
 │   └── SPIRIT_SILVER: {qty: 200, cost_basis: 2400000}
 ├── product_inventory: {"IRON_SWORD": 10, "SPIRIT_TOOL": 3}  ← 产品库存（份）
-├── machine_1 (类型: 锻灵机, Lv3, 配方: 飞剑, puppet_count: 5, status: running)
-├── machine_2 (类型: 锻灵机, Lv1, 配方: 法器, puppet_count: 4, status: running)
-└── machine_3 (类型: 锻灵机, Lv2, 配方: 飞剑, puppet_count: 0, status: installed)
+├── machine_1 (类型: 锻造机, Lv3, 配方: 飞剑, puppet_count: 5, status: running)
+├── machine_2 (类型: 锻造机, Lv1, 配方: 护甲, puppet_count: 4, status: running)
+└── machine_3 (类型: 锻造机, Lv2, 配方: 飞剑, puppet_count: 0, status: installed)
 ```
 
 - 原材料库存：玩家从系统商城批量采购入库，每 tick 生产时按配方实际消耗量扣减；每条材料记录 `{qty, cost_basis}` 用于加权平均成本核算
 - 产品库存：每 tick 生产时产出累加，玩家可手动/自动出售
 - 仓库库存不区分来源，玩家抛售时选择产品 ID 即可
 - 多台灵机同时消耗同种原材料时，消耗量 = Σ(各机消耗量)，统一从原材料仓库扣减
-- 各灵机的傀儡驱动成本独立计算但统一扣除
+- 各灵机的傀儡驱动成本独立计算但统一扣除，灵机能量按运行中灵机逐一累加后统一扣除
 
 #### 傀儡分配约束
 
@@ -1108,7 +968,8 @@ server/src/services/industry/
 ├── industryScheduler.ts    # 独立 tick 调度器（类比 shopRentScheduler）
 ├── priceEngine.ts          # 价格波动引擎（独立模块，纯函数）
 ├── machineService.ts       # 灵机管理：购买、升级、启停、配方切换、等级加成计算
-└── puppetCostEngine.ts     # 傀儡驱动成本计算（纯函数）
+├── puppetCostEngine.ts     # 傀儡驱动成本计算（纯函数）
+└── energyCostEngine.ts     # 灵机能量消耗计算（纯函数）
 ```
 
 ### 5.1 模块职责
@@ -1125,6 +986,7 @@ server/src/services/industry/
 | `priceEngine.ts` | 纯函数：给定当前价格 + 波动率 → 新价格 | 类比 `generateStockMarketNoiseChangeBps` |
 | `machineService.ts` | 灵机购买、升级、启停、配方切换、等级加成计算、灵机与工厂类型校验 | 封装灵机生命周期管理 |
 | `puppetCostEngine.ts` | 纯函数：傀儡数量 × 基准成本 → 每 tick 驱动灵石消耗 | 独立纯函数模块，tick 结算时调用 |
+| `energyCostEngine.ts` | 纯函数：汇总运行中灵机 → 每 tick 能量灵石消耗 | 独立纯函数模块，tick 结算时调用 |
 
 ### 5.2 调度器模式（复用已有）
 
@@ -1143,16 +1005,16 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 购买新机费用 = base_price
 从 Lv(n) 升到 Lv(n+1) 费用 = floor(base_price × upgrade_cost_multiplier ^ (n - 1))
 
-以锻灵机（base_price=5000, upgrade_cost_multiplier=1.6）为例：
-  Lv0→Lv1（新机）: 5,000
-  Lv1→Lv2: 8,000
-  Lv2→Lv3: 12,800
-  Lv3→Lv4: 20,480
-  Lv4→Lv5: 32,768
+以锻造机（base_price=4000, upgrade_cost_multiplier=1.5）为例：
+  Lv0→Lv1（新机）: 4,000
+  Lv1→Lv2: 4,000
+  Lv2→Lv3: 6,000
+  Lv3→Lv4: 9,000
+  Lv4→Lv5: 13,500
 
 灵机等级产出加成:
   machine_bonus_bps = (upgrade_level - 1) × output_per_level_bps
-  例：锻灵机 Lv3，output_per_level_bps=2000 → +4000bps = +40% 产出
+  例：锻造机 Lv3，output_per_level_bps=2000 → +4000bps = +40% 产出
 ```
 
 ---
@@ -1187,7 +1049,7 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 | GET | `/machines` | 获取灵机配置和价格列表 |
 | GET | `/prices` | 获取当前原材料和产品价格 |
 | GET | `/prices/history` | 价格历史（指定 material_id 或 product_id） |
-| GET | `/production-log` | 玩家生产记录（分页，含傀儡驱动成本、灵机等级加成） |
+| GET | `/production-log` | 玩家生产记录（分页，含灵机能量消耗、傀儡驱动成本、灵机等级加成） |
 | GET | `/trade-log` | 玩家手动出售记录（分页） |
 
 ### 6.2 GM 接口
@@ -1206,7 +1068,7 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 以下示例中的「灵石」均为对公账户余额（系统内部以分为单位存储）。
 
-以「百炼炉」为例：
+以「锻造台」为例：
 
 ### 7.1 单 tick 收支
 
@@ -1214,43 +1076,46 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 - 灵铁矿：5000 分/单位 = 50 灵石（系统商城价格，已采购入库）
 - 飞剑：20000 分/单位 = 200 灵石（系统回收价格）
-- 傀儡驱动：15 灵石/个/tick（= 1500 分，系统存储单位为分）
-- 百炼炉有 2 台锻灵机：1 号机产飞剑，2 号机产法器
-- 百炼炉原材料仓库已有足够灵铁矿
+- 傀儡驱动：12 灵石/个/tick（= 1200 分，系统存储单位为分）
+- 灵机能量：锻造机 10 灵石/台/tick（= 1000 分）
+- 锻造台有 2 台锻造机：1 号机产飞剑，2 号机产护甲
+- 锻造台原材料仓库已有足够灵铁矿
 
-**1 号锻灵机（产飞剑，配置 1 傀儡，灵机 Lv3）**：
+**1 号锻造机（产飞剑，配置 1 傀儡，灵机 Lv3）**：
 
 - 灵铁矿消耗 × 5 份（从原材料仓库扣减，无灵石支出）
-- 傀儡 × 1 × 15 = 15 灵石（驱动成本）
+- 傀儡 × 1 × 12 = 12 灵石（驱动成本）
+- 灵机能量 = 10 灵石（能量消耗）
 - 基础产出 = 2 把飞剑 → 灵机加成 +40%（Lv3）→ floor(2 × 1.40) = 2 把（基数小 floor 后不变）
 - 系统回收价值 400 灵石
-- 单线利润（当 tick）：400 - 15 = 385 灵石（不含原材料采购成本）
+- 单线利润（当 tick）：400 - 12 - 10 = 378 灵石（不含原材料采购成本）
 
-**2 号锻灵机（产法器，配置 1 傀儡，灵机 Lv1）**：
+**2 号锻造机（产护甲，配置 1 傀儡，灵机 Lv1）**：
 
 - 灵铁矿消耗 × 10 份（从原材料仓库扣减，无灵石支出）
-- 傀儡 × 1 × 15 = 15 灵石（驱动成本）
-- 基础产出 = 1 件法器 → 无灵机加成
+- 傀儡 × 1 × 12 = 12 灵石（驱动成本）
+- 灵机能量 = 10 灵石（能量消耗）
+- 基础产出 = 1 件护甲 → 无灵机加成
 - 系统回收价值 500 灵石
-- 单线利润（当 tick）：500 - 15 = 485 灵石（不含原材料采购成本）
+- 单线利润（当 tick）：500 - 12 - 10 = 478 灵石（不含原材料采购成本）
 
-**工厂合计（当 tick）**：385 + 485 = 870 灵石（不含原材料采购成本）
+**工厂合计（当 tick）**：378 + 478 = 856 灵石（不含原材料采购成本）
 
 **完整盈亏口径**（含原材料采购成本）：
 
 - 1 号机灵铁矿成本：5 份 × 50 灵石 = 250 灵石（采购时已计入 total_cost）
 - 2 号机灵铁矿成本：10 份 × 50 灵石 = 500 灵石（采购时已计入 total_cost）
-- 总成本 = 250 + 500 + 15 + 15 = 780 灵石
+- 总成本 = 250 + 500 + 12 + 12 + 10 + 10 = 794 灵石
 - 总收入 = 400 + 500 = 900 灵石
-- 净盈亏 = 900 - 780 = 120 灵石（盈利）
+- 净盈亏 = 900 - 794 = 106 灵石（盈利）
 
 ### 7.2 亏本场景
 
-如果灵铁矿涨到 80 灵石/单位（采购价），飞剑跌到 150，法器跌到 350：
+如果灵铁矿涨到 80 灵石/单位（采购价），飞剑跌到 150，护甲跌到 350：
 
-- 1 号机材料成本 = 5 × 80 = 400，傀儡驱动 = 15，收入 = 150 × 2 = 300 → 亏 115
-- 2 号机材料成本 = 10 × 80 = 800，傀儡驱动 = 15，收入 = 350 × 1 = 350 → 亏 465
-- 总亏损：-580 灵石/tick
+- 1 号机材料成本 = 5 × 80 = 400，傀儡驱动 = 12，灵机能量 = 10，收入 = 150 × 2 = 300 → 亏 122
+- 2 号机材料成本 = 10 × 80 = 800，傀儡驱动 = 12，灵机能量 = 10，收入 = 350 × 1 = 350 → 亏 472
+- 总亏损：-594 灵石/tick
 
 **策略选择**：
 
@@ -1261,11 +1126,11 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 ### 7.2.1 灵机升级对盈亏的影响
 
-接上例，2 号机亏 465 灵石。玩家选择将 2 号机从 Lv1 升到 Lv3（升级费用 8000 + 12800 = 20800 灵石，从对公账户扣）：
+接上例，2 号机亏 472 灵石。玩家选择将 2 号机从 Lv1 升到 Lv3（升级费用 4000 + 6000 = 10000 灵石，从对公账户扣）：
 
 - 灵机加成 = (3 - 1) × 2000 bps = +40%
-- 实际产出 = floor(1 × 1.40) = 1 件法器（因为产出基数为 1，floor 后不变）
-- 收入 = 350，亏损 = 350 - 815 = -465（与升级前相同，floor 抵消了加成）
+- 实际产出 = floor(1 × 1.40) = 1 件护甲（因为产出基数为 1，floor 后不变）
+- 收入 = 350，亏损 = 350 - (800 + 12 + 10) = -472（与升级前相同，floor 抵消了加成）
 
 **分析**：产出基数为 1 时，灵机等级加成 floor 后无实际增益，升级纯亏。这说明灵机升级策略只在产出基数 ≥ 10 时才有意义（40% × 10 = +4 件实际产出）。玩家应当只在高产出灵机升级，低产出灵机维持基础等级。
 
@@ -1273,11 +1138,11 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 接上例，玩家判断灵铁矿和飞剑价格会恢复，选择只开 1 号机、2 号机停工、产品不出售：
 
-- 1 号机每 tick 傀儡驱动 = 15 灵石（原材料已从库存扣减）
-- 连续 5 个 tick，共支出驱动 75 灵石
+- 1 号机每 tick 傀儡驱动 = 12 灵石 + 灵机能量 = 10 灵石（原材料已从库存扣减）
+- 连续 5 个 tick，共支出运营 110 灵石
 - 仓库积累飞剑 10 把（尚未出售）
 - 第 6 个 tick 飞剑涨到 280、灵铁矿回到 50：
-  - 当 tick 1 号机收入 = 280 × 2 = 560，驱动 = 15 → 当 tick 盈利 545
+  - 当 tick 1 号机收入 = 280 × 2 = 560，运营 = 12 + 10 = 22 → 当 tick 盈利 538
   - 手动出售 10 把 = 2800 灵石（扣除手续费后约 2799）
 - 覆盖之前亏损后仍有盈余
 
@@ -1285,26 +1150,26 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 ### 7.4 傀儡配置对盈亏的影响
 
-百炼炉 2 台灵机，每台配 1 傀儡，每傀儡驱动 15 灵石/个/tick。
+锻造台 2 台灵机，每台配 1 傀儡，每傀儡驱动 12 灵石/个/tick，每台锻造机能量 10 灵石/tick。
 
 2 台灵机各配 1 傀儡（最优策略）：
 
-- 每 tick 驱动成本 = 2 × 15 = 30 灵石
-- 1 号机产出 2 把飞剑 = 400 灵石，2 号机产出 1 件法器 = 500 灵石
-- 总收入 900，驱动 30，毛利 870
+- 每 tick 傀儡驱动 = 2 × 12 = 24 灵石，灵机能量 = 2 × 10 = 20 灵石
+- 1 号机产出 2 把飞剑 = 400 灵石，2 号机产出 1 件护甲 = 500 灵石
+- 总收入 900，运营 44，毛利 856
 
 如果玩家将 2 号机减少到 0 傀儡：
 
-- 2 号机无法开工，产出 0
-- 驱动成本 = 1 × 15 + 0 = 15 灵石
-- 收入 = 400，驱动 = 15，毛利 385
-- **结论**：傀儡数量必须 ≥ 1 才能开工，0 则该机停产
+- 2 号机无法开工，产出 0（不消耗灵机能量）
+- 傀儡驱动 = 1 × 12 = 12 灵石，灵机能量 = 1 × 10 = 10 灵石
+- 收入 = 400，运营 22，毛利 378
+- **结论**：傀儡数量必须 ≥ 1 才能开工，0 则该机停产且不消耗能量
 
 **核心策略**：傀儡是驱动单元，不是产出乘数。每台灵机配 1 个傀儡即可满效运转，多余傀儡只会增加驱动成本而不产生额外收益。玩家的策略核心是**「多开灵机」**而非**「多配傀儡」**——增加产出靠买更多灵机，而非给单台灵机堆傀儡。
 
 ### 7.5 最小交易单位对盈亏的影响
 
-以「百炼炉」生产飞剑为例：
+以「锻造台」生产飞剑为例：
 
 **配置**：
 - 灵铁矿 `min_sell_qty = 10`，单价 5000 分/单位 = 50.00 灵石 / 10 份（即 5 灵石/份）
@@ -1321,7 +1186,9 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 2. 生产：每 tick 消耗灵铁矿 5 份 → 产出 2 把飞剑
    - 备货 1000 份灵铁矿可生产 200 个 tick
-   - 每 tick 傀儡驱动 = 1 × 1500 分 = 15 灵石（1 傀儡即可开工）
+   - 每 tick 傀儡驱动 = 1 × 1200 分 = 12 灵石（1 傀儡即可开工）
+   - 每 tick 灵机能量 = 1000 分 = 10 灵石
+   - 每 tick 总运营 = 22 灵石
 
 3. 飞剑价格跌到 150 灵石/份，玩家想抛售 → 必须至少卖 10 份的整数倍
    - 卖 10 份 = 2000 灵石收入
@@ -1329,7 +1196,7 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 4. 如果玩家只有 28 份库存，想卖 20 份 → 可以；剩余 8 份无法单独出售，必须等到库存再次积累到 10 的整数倍
 
-**与百味楼对比**：飞剑 `min_sell_qty = 10`，`output_per_tick = 2`（每 tick 产 2 把），需 5 个 tick 才能凑够一次出售；灵糕点 `min_sell_qty = 1000`，`output_per_tick = 500`（每 tick 产 500 份），2 个 tick 即可满足出售门槛。虽然飞剑最小交易单位数值更小，但因为产出基数低，实际出售等待周期并不短——**决定囤积压力的不是 min_sell_qty 绝对值，而是 min_sell_qty / output_per_tick 的 tick 倍数**。两者都要求玩家积累足够库存才能抛售，形成"先囤后卖"的策略张力。原材料 `min_sell_qty` 制造"批量采购门槛"，产品 `min_sell_qty` 制造"批量出售门槛"，两者结合强化择时决策的重要性。
+**与炼丹炉对比**：飞剑 `min_sell_qty = 10`，`output_per_tick = 2`（每 tick 产 2 把），需 5 个 tick 才能凑够一次出售；回灵丹 `min_sell_qty = 1`，`output_per_tick = 1`（每 tick 产 1 颗），1 个 tick 即可满足出售门槛。虽然飞剑最小交易单位数值更大，但因为产出基数低，实际出售等待周期更长——**决定囤积压力的不是 min_sell_qty 绝对值，而是 min_sell_qty / output_per_tick 的 tick 倍数**。两者都要求玩家积累足够库存才能抛售，形成"先囤后卖"的策略张力。原材料 `min_sell_qty` 制造"批量采购门槛"，产品 `min_sell_qty` 制造"批量出售门槛"，两者结合强化择时决策的重要性。
 
 ---
 
@@ -1339,7 +1206,7 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 
 | 场景 | 处理策略 |
 | --- | --- |
-| 对公账户余额不足以支付当 tick 傀儡驱动 | 先自动出售部分产品库存抵扣 → 仍不够则强制停工 |
+| 对公账户余额不足以支付当 tick 灵机能量 + 傀儡驱动 | 先自动出售部分产品库存抵扣 → 仍不够则强制停工 |
 | 产品库存为 0 时手动出售 | 返回「无库存可出售」 |
 | 库存不足 `min_sell_qty` 时手动出售 | 返回「库存不足最小交易单位，无法出售」 |
 | 库存是 `min_sell_qty` 的倍数但不够出售 | 正常出售 |
@@ -1354,6 +1221,7 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 | 傀儡数量/分配调整 | 当 tick 不生效，下一 tick 生效 |
 | 产品价格极低（低于材料成本） | 最低价保护（`price_min` 硬下限），不会归零 |
 | 灵机傀儡 < `min_puppets_per_machine` | 该灵机无法启动，提示配置更多傀儡 |
+| 灵机停工（已停止/未分配傀儡/原材料不足） | 不消耗灵机能量，不消耗傀儡驱动 |
 | 傀儡分配之和 > `total_puppets` | 拒绝分配，提示傀儡总数不足 |
 | 闲置傀儡（未分配到灵机） | 不产生驱动成本 |
 | 灵机升级到 max_upgrade_level | 拒绝升级，提示已达最高等级 |
@@ -1428,7 +1296,7 @@ industryScheduler.ts 严格复用 shopRentScheduler 的模式：
 ```prisma
 model industry_resonance {
   id                   BigInt   @id @default(autoincrement())
-  factory_types        String[]                    // 覆盖的工厂类型，如 ["FORGE"]
+  factory_types        String[]                    // 覆盖的工厂类型，如 ["FORGING"]
   active_machines      Int      @default(0)       // 全服该行业运行中灵机数
   resonance_level      String   @db.VarChar(20)   @default("none")  // none/weak/strong/surge
   bonus_bps            Int      @default(0)       // 共振产出加成基点
@@ -1492,7 +1360,7 @@ model industry_resonance {
 - **共享个人余额**：三个系统操作同一个 `characters.spirit_stones`，玩家需要在股市、店铺、工厂之间分配灵石
 - **对公账户独立**：百业工厂拥有独立的对公账户层（`industry_factory_wallet`），工厂内部所有收支不直接影响个人灵石
 - **个人流水**：个人灵石变动通过 `spirit_stones_ledger` 记录（含 deposit/withdraw）
-- **对公流水**：工厂对公账户收支通过 `industry_ledger` 记录（含采购、傀儡驱动、出售、手续费、事件损失等）
+- **对公流水**：工厂对公账户收支通过 `industry_ledger` 记录（含采购、灵机能量、傀儡驱动、出售、手续费、事件损失等）
 
 ---
 
@@ -1519,7 +1387,7 @@ model industry_resonance {
 
 - [x] 工厂开工 / 停工
 - [x] 配置 / 解配傀儡
-- [x] 每 tick 消耗原材料库存 + 傀儡驱动灵石 + 产出产品
+- [x] 每 tick 消耗原材料库存 + 灵机能量灵石 + 傀儡驱动灵石 + 产出产品
 - [x] 原材料库存管理（玩家从商城批量采购入库，每 tick 按配方扣减）
 - [x] 原材料商城进货 / 卖回（最小交易单位约束，从对公账户扣/入账）
 - [x] 原材料 / 产品价格系统波动（纯随机）
@@ -1538,6 +1406,7 @@ model industry_resonance {
 - [x] 原材料最小交易单位约束（`min_sell_qty`，商城进货/卖回整数倍）
 - [x] 产品最小交易单位约束（`min_sell_qty`，整数倍校验）
 - [x] 灵机傀儡系统（配置/解配、驱动灵石消耗）
+- [x] 灵机能量系统（开工时每台灵机每 tick 消耗 `energy_per_tick` 灵石，从对公账户扣减）
 - [x] 灵机系统：购买、升级、启停、配方切换
 - [x] 灵机等级产出加成（每台灵机独立升级，等级越高产出加成越大）
 - [x] 灵机数量无上限（但受傀儡总数限制）

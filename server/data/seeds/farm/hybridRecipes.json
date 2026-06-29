@@ -427,6 +427,24 @@
       "resultQuantity": 1
     },
     {
+      "recipeId": "hybrid_jin_feng_lian",
+      "name": "金锋莲",
+      "description": "灵莲受金灵根影响，孕育金锋莲",
+      "enabled": true,
+      "sortOrder": 34,
+      "baseCropId": "ling_lian",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "金"
+        }
+      ],
+      "resultCropId": "jin_feng_lian",
+      "resultSeedItemId": "seed_jin_feng_lian",
+      "resultQuantity": 1
+    },
+    {
       "recipeId": "hybrid_bing_po_lian",
       "name": "冰魄莲",
       "description": "灵莲受水灵根影响，孕育冰魄莲",
@@ -478,6 +496,24 @@
       ],
       "resultCropId": "hou_tu_lian",
       "resultSeedItemId": "seed_hou_tu_lian",
+      "resultQuantity": 1
+    },
+    {
+      "recipeId": "hybrid_cui_xin_lian",
+      "name": "翠心莲",
+      "description": "灵莲受木灵根影响，孕育翠心莲",
+      "enabled": true,
+      "sortOrder": 38,
+      "baseCropId": "ling_lian",
+      "requiredAdjacent": [
+        {
+          "type": "elementCondition",
+          "conditionId": "single_element_invasion",
+          "element": "木"
+        }
+      ],
+      "resultCropId": "cui_xin_lian",
+      "resultSeedItemId": "seed_cui_xin_lian",
       "resultQuantity": 1
     }
   ]

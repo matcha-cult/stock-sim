@@ -162,6 +162,24 @@ export interface HarvestInventoryItem {
   quality: CropQuality;
 }
 
+/** 灵材仓库分页项（含作物配置，供前端直接渲染） */
+export interface HarvestInventoryItemDto extends HarvestInventoryItem {
+  name: string;
+  element: CropElement[];
+  requiredTier: number;
+  sellPricePerUnit: number;
+  harvestTradeUnit: number;
+  harvestUnit: string;
+}
+
+/** 灵材仓库分页响应 */
+export interface HarvestInventoryPageResult {
+  items: HarvestInventoryItemDto[];
+  total: number;
+  page: number;
+  pageSize: number;
+}
+
 // ==================== DTO 类型 ====================
 
 export type CropElement = '金' | '木' | '水' | '火' | '土';
@@ -375,6 +393,10 @@ export interface ActivityLogPageResult {
 /** 获取活动日志（分页） */
 export const getFarmLog = (page: number = 1, pageSize: number = 20, config?: AxiosRequestConfig) =>
   api.get<ActivityLogPageResult>('/api/farm/log', { params: { page, pageSize }, ...config });
+
+/** 获取灵材仓库（分页） */
+export const getHarvestInventory = (page: number = 1, pageSize: number = 20, config?: AxiosRequestConfig) =>
+  api.get<HarvestInventoryPageResult>('/api/farm/harvest-inventory', { params: { page, pageSize }, ...config });
 
 /** 开垦灵田（首次 16 格） */
 export const reclaimFarm = () =>

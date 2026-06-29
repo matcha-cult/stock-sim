@@ -175,7 +175,7 @@ const HybridRecipesTable = observer(function HybridRecipesTable() {
       dataSource={recipes}
       columns={columns}
       rowKey="recipeId"
-      pagination={false}
+      pagination={{ pageSize: 20, showSizeChanger: false }}
       size="small"
     />
   );

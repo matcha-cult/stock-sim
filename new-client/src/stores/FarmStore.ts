@@ -27,6 +27,7 @@ import type {
   FarmCellDto,
   SeedInventoryItem,
   HarvestInventoryItem,
+  HarvestInventoryItemDto,
   FarmStaticConfigDto,
   SeedConfigDto,
   CropConfigDto,
@@ -55,6 +56,12 @@ export class FarmStore {
   cells: FarmCellDto[] = [];
   seedBag: SeedInventoryItem[] = [];
   harvestBag: HarvestInventoryItem[] = [];
+  /** 灵材仓库分页数据（服务端分页，独立于 overview） */
+  harvestInventory: HarvestInventoryItemDto[] = [];
+  harvestInventoryTotal: number = 0;
+  harvestInventoryPage: number = 1;
+  harvestInventoryPageSize: number = 20;
+  harvestInventoryLoading: boolean = false;
   serverNow: number = 0;
   serverNowFetchedAt: number = 0;
   overviewLoaded: boolean = false;
@@ -141,17 +148,9 @@ export class FarmStore {
       .sort((a, b) => a.requiredTier - b.requiredTier || a.buyPrice - b.buyPrice);
   }
 
-  /** 灵材仓库（join 静态配置，用于 UI 展示） */
-  get harvestBagWithConfig(): Array<HarvestInventoryItem & CropConfigDto> {
-    if (!this.staticConfig) return [];
-    const cropMap = new Map(this.staticConfig.crops.map((c) => [c.cropId, c]));
-    return this.harvestBag
-      .map((item) => {
-        const config = cropMap.get(item.cropId);
-        if (!config) return null;
-        return { ...item, ...config };
-      })
-      .filter((h): h is HarvestInventoryItem & CropConfigDto => h !== null);
+  /** 灵材仓库（服务端分页，后端已 join 作物配置，直接返回） */
+  get harvestBagWithConfig(): HarvestInventoryItemDto[] {
+    return this.harvestInventory;
   }
 
   // ==================== 概览 ====================
@@ -207,6 +206,31 @@ export class FarmStore {
     }
   }
 
+  // ==================== 灵材仓库分页 ====================
+
+  /** 获取灵材仓库分页数据 */
+  async fetchHarvestInventory(page: number = 1): Promise<void> {
+    const key = `farm-harvest-inv:${page}`;
+    if (!this.dedup.enter(key)) return;
+
+    this.harvestInventoryLoading = true;
+    try {
+      const response = await farmApi.getHarvestInventory(page, this.harvestInventoryPageSize);
+      runInAction(() => {
+        if (response.success && response.data) {
+          this.harvestInventory = response.data.items;
+          this.harvestInventoryTotal = response.data.total;
+          this.harvestInventoryPage = response.data.page;
+        }
+      });
+    } finally {
+      runInAction(() => {
+        this.harvestInventoryLoading = false;
+      });
+      this.dedup.complete(key);
+    }
+  }
+
   // ==================== 种子商店 ====================
 
   async buySeed(itemId: string, quantity: number): Promise<boolean> {
@@ -245,7 +269,8 @@ export class FarmStore {
     if (!this.dedup.enter('farm-plant')) return null;
     try {
       const response = await farmApi.plantCrop(row, col, seedId);
-      if (response.success && response.data?.success) {
+      if (!response.success || !response.data) return null;
+      if (response.data.success) {
         // 局部更新：用返回的格子数据替换 cells 中对应的格子
         if (response.data.cell) {
           const cellIndex = this.cells.findIndex((c) => c.row === row && c.col === col);
@@ -261,9 +286,9 @@ export class FarmStore {
             this.seedBag.splice(seedIndex, 1);
           }
         }
-        return response.data;
       }
-      return null;
+      // 透传 response.data（含 success + message），让调用方按 success 分支展示提示
+      return response.data;
     } finally {
       this.dedup.complete('farm-plant');
     }
@@ -273,11 +298,11 @@ export class FarmStore {
     if (!this.dedup.enter('farm-harvest')) return null;
     try {
       const response = await farmApi.harvestCrop(row, col);
-      if (response.success && response.data?.success) {
+      if (!response.success || !response.data) return null;
+      if (response.data.success) {
         await this.fetchOverview(true);
-        return response.data;
       }
-      return null;
+      return response.data;
     } finally {
       this.dedup.complete('farm-harvest');
     }
@@ -299,15 +324,15 @@ export class FarmStore {
   }
 
   /** 铲除作物（萌芽阶段铲除会撤销已判定的杂交种子） */
-  async remove(row: number, col: number): Promise<{ success: boolean; hybridRevoked?: boolean } | null> {
+  async remove(row: number, col: number): Promise<(farmApi.ActionResult & { hybridRevoked?: boolean }) | null> {
     if (!this.dedup.enter('farm-remove')) return null;
     try {
       const response = await farmApi.removeCrop(row, col);
-      if (response.success && response.data?.success) {
+      if (!response.success || !response.data) return null;
+      if (response.data.success) {
         await this.fetchOverview(true);
-        return { success: true, hybridRevoked: response.data.hybridRevoked };
       }
-      return null;
+      return response.data;
     } finally {
       this.dedup.complete('farm-remove');
     }
@@ -323,7 +348,8 @@ export class FarmStore {
     if (!this.dedup.enter('farm-transplant')) return null;
     try {
       const response = await farmApi.transplantCrop(fromRow, fromCol, toRow, toCol);
-      if (response.success && response.data?.success) {
+      if (!response.success || !response.data) return null;
+      if (response.data.success) {
         // 局部更新：用返回的格子数据替换 cells 中对应的格子
         if (response.data.fromCell) {
           const fromIndex = this.cells.findIndex((c) => c.row === fromRow && c.col === fromCol);
@@ -337,9 +363,8 @@ export class FarmStore {
             this.cells[toIndex] = response.data.toCell;
           }
         }
-        return response.data;
       }
-      return null;
+      return response.data;
     } finally {
       this.dedup.complete('farm-transplant');
     }
@@ -350,7 +375,7 @@ export class FarmStore {
     try {
       const response = await farmApi.sellHarvest(cropId, quality, tradeUnits);
       if (response.success && response.data?.success) {
-        await this.fetchOverview(true);
+        await this.fetchHarvestInventory(this.harvestInventoryPage);
         this.rootStore.authStore.refreshCharacter();
         return true;
       }
@@ -365,7 +390,7 @@ export class FarmStore {
     try {
       const response = await farmApi.sellAllHarvest();
       if (response.success && response.data?.success) {
-        await this.fetchOverview(true);
+        await this.fetchHarvestInventory(1);
         this.rootStore.authStore.refreshCharacter();
         return response.data.totalEarn;
       }

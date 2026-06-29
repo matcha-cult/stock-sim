@@ -81,6 +81,21 @@ router.get(
   }),
 );
 
+// ==================== 灵材仓库分页 ====================
+
+router.get(
+  '/harvest-inventory',
+  requireCharacter,
+  overviewQpsLimit,
+  asyncHandler(async (req, res) => {
+    const characterId = req.characterId!;
+    const page = parsePositiveInt(req.query?.page) ?? 1;
+    const pageSize = parsePositiveInt(req.query?.pageSize) ?? 20;
+    const result = await farmService.getHarvestInventory(characterId, page, pageSize);
+    sendSuccess(res, result);
+  }),
+);
+
 // ==================== 静态配置 ====================
 
 router.get(
