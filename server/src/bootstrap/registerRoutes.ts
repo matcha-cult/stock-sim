@@ -17,6 +17,7 @@ import rankRoutes from '../routes/rankRoutes.js';
 import shopRoutes from '../routes/shopRoutes.js';
 import ledgerRoutes from '../routes/ledgerRoutes.js';
 import scratchGameRoutes from '../routes/scratchGameRoutes.js';
+import puzzleCardRoutes from '../routes/puzzleCardRoutes.js';
 import monthCardRoutes from '../routes/monthCardRoutes.js';
 import gmMonthCardRoutes from '../routes/gmMonthCardRoutes.js';
 import farmRoutes from '../routes/farmRoutes.js';
@@ -44,6 +45,9 @@ export function registerRoutes(app: express.Application): void {
 
   // 刮刮乐路由
   app.use('/api/scratch', scratchGameRoutes);
+
+  // 常驻刮刮乐路由
+  app.use('/api/puzzle-card', puzzleCardRoutes);
 
   // 月卡路由（玩家侧）
   app.use('/api/month-card', monthCardRoutes);

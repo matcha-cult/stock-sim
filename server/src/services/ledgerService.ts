@@ -41,6 +41,8 @@ export type SpiritStonesLedgerBizType =
   | 'gm_grant_month_card'
   | 'gm_revoke_month_card'
   | 'scratch_prize'
+  | 'puzzle_buy'
+  | 'puzzle_prize'
   | 'month_card_daily'
   | 'farm_buy_seed'
   | 'farm_sell_seed'
@@ -411,6 +413,8 @@ export const LEDGER_BIZ_TYPE_LABELS: Record<SpiritStonesLedgerBizType, string> =
   gm_revoke_month_card: 'GM 回收月卡',
   month_card_daily: '月卡每日领取',
   scratch_prize: '刮刮乐奖金',
+  puzzle_buy: '无限刮刮乐购票',
+  puzzle_prize: '无限刮刮乐奖金',
   farm_buy_seed: '灵田购买种子',
   farm_sell_seed: '灵田出售种子',
   farm_sell_harvest: '灵田出售灵材',

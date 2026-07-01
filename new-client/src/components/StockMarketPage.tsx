@@ -50,6 +50,7 @@ import GmPendingOrderViewer from './GmPendingOrderViewer/GmPendingOrderViewer';
 import GmSpiritStonesManager from './GmSpiritStonesManager/GmSpiritStonesManager';
 import GmMonthCardManager from './GmMonthCardManager/GmMonthCardManager';
 import ScratchCardPage from './ScratchCardPage';
+import PuzzleCardPage from './PuzzleCard';
 import FarmPage from './FarmPage/FarmPage';
 import {
   buildStockMarketOverviewViewModel,
@@ -71,7 +72,7 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'stock-market' | 'pending-orders' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'farm' | 'gm-online-ops';
+type ActiveTab = 'stock-market' | 'pending-orders' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'puzzle-card' | 'farm' | 'gm-online-ops';
 type StockSubTab = 'market' | 'pending-orders-sub' | 'profit' | 'records';
 type GmTabKey = 'gm-spirit-stones' | 'gm-month-card' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders';
 
@@ -341,7 +342,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade, authStore]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'stock-market' || key === 'pending-orders' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'farm' || key === 'gm-online-ops') {
+    if (key === 'stock-market' || key === 'pending-orders' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'puzzle-card' || key === 'farm' || key === 'gm-online-ops') {
       setActiveTab(key as ActiveTab);
     }
   }, []);
@@ -573,8 +574,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
             },
             {
               key: 'scratch',
-              label: '刮刮乐',
+              label: '每日刮刮乐',
               children: <ScratchCardPage />,
+            },
+            {
+              key: 'puzzle-card',
+              label: '无限刮刮乐',
+              children: <PuzzleCardPage />,
             },
             ...(authStore.user?.permissions.includes('GM')
               ? [{

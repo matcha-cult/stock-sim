@@ -1,0 +1,143 @@
+/**
+ * 常驻刮刮乐状态管理 Hook。
+ *
+ * 作用（做什么 / 不做什么）：
+ * 1. 做什么：管理购票、兑奖、历史查询、活跃票据恢复等核心状态。
+ * 2. 不做什么：不处理 UI 动画（由组件负责）、不决定玩法规则（后端决定）。
+ *
+ * 数据流 / 状态流：
+ * mount → 加载活跃票据（恢复）→ 购票 → 展示票据 → 用户刮开/兑奖 → 刷新历史。
+ *
+ * 复用设计说明：
+ * - API 调用统一走 services/api/puzzleCard.ts。
+ * - 请求去重走 RequestDedup，in-flight 守卫覆盖 StrictMode 双 mount。
+ *
+ * 关键边界条件与坑点：
+ * 1. dedup.enter() 必须在设置 loading 之前调用；dedup.complete() 必须在 finally 中。
+ * 2. 购票失败由 axios 拦截器自动弹 toast，组件不需重复处理。
+ * 3. 活跃票据通过 getActiveTicket 恢复（后端重新生成 redeemCode）。
+ */
+import { useState, useCallback, useEffect } from 'react';
+import type { PuzzleTicketDto, HistoryResultDto, RedeemResultDto } from '../services/api/puzzleCard';
+import { purchaseTicket, redeemTicket, getRedeemHistory, getActiveTicket } from '../services/api/puzzleCard';
+import { RequestDedup } from '../stores/RequestDedup';
+
+interface UsePuzzleCardReturn {
+  activeTicket: PuzzleTicketDto | null;
+  history: HistoryResultDto | null;
+  purchasing: boolean;
+  redeeming: boolean;
+  loadingHistory: boolean;
+  loadingActive: boolean;
+  purchase: (typeKey: string) => Promise<PuzzleTicketDto | null>;
+  redeem: () => Promise<RedeemResultDto | null>;
+  redeemFromHistory: (ticketId: number, redeemCode: string) => Promise<RedeemResultDto | null>;
+  refreshHistory: (page?: number) => Promise<void>;
+  clearActive: () => void;
+}
+
+export const usePuzzleCard = (): UsePuzzleCardReturn => {
+  const [activeTicket, setActiveTicket] = useState<PuzzleTicketDto | null>(null);
+  const [history, setHistory] = useState<HistoryResultDto | null>(null);
+  const [purchasing, setPurchasing] = useState(false);
+  const [redeeming, setRedeeming] = useState(false);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+  const [loadingActive, setLoadingActive] = useState(true);
+  const dedupRef = useState(() => new RequestDedup())[0];
+
+  // 挂载时恢复活跃票据
+  useEffect(() => {
+    const loadActive = async () => {
+      if (!dedupRef.enter('active')) return;
+      setLoadingActive(true);
+      try {
+        const res = await getActiveTicket();
+        if (res.success) setActiveTicket(res.data);
+      } finally {
+        dedupRef.complete('active');
+        setLoadingActive(false);
+      }
+    };
+    void loadActive();
+  }, [dedupRef]);
+
+  const purchase = useCallback(async (typeKey: string): Promise<PuzzleTicketDto | null> => {
+    if (!dedupRef.enter('purchase')) return null;
+    setPurchasing(true);
+    try {
+      const res = await purchaseTicket(typeKey);
+      if (res.success) {
+        setActiveTicket(res.data);
+        return res.data;
+      }
+      return null;
+    } finally {
+      dedupRef.complete('purchase');
+      setPurchasing(false);
+    }
+  }, [dedupRef]);
+
+  const redeem = useCallback(async (): Promise<RedeemResultDto | null> => {
+    if (!activeTicket) return null;
+    if (!dedupRef.enter('redeem')) return null;
+    setRedeeming(true);
+    try {
+      const res = await redeemTicket(Number(activeTicket.id), activeTicket.redeemCode);
+      if (res.success) {
+        setActiveTicket(null);
+        return res.data;
+      }
+      return null;
+    } finally {
+      dedupRef.complete('redeem');
+      setRedeeming(false);
+    }
+  }, [activeTicket, dedupRef]);
+
+  const refreshHistory = useCallback(async (page: number = 1): Promise<void> => {
+    if (!dedupRef.enter('history')) return;
+    setLoadingHistory(true);
+    try {
+      const res = await getRedeemHistory(page);
+      if (res.success) setHistory(res.data);
+    } finally {
+      dedupRef.complete('history');
+      setLoadingHistory(false);
+    }
+  }, [dedupRef]);
+
+  const redeemFromHistory = useCallback(async (ticketId: number, redeemCode: string): Promise<RedeemResultDto | null> => {
+    if (!dedupRef.enter('redeem-history')) return null;
+    setRedeeming(true);
+    try {
+      const res = await redeemTicket(ticketId, redeemCode);
+      if (res.success) {
+        // 刷新历史
+        if (history) void refreshHistory(history.page);
+        return res.data;
+      }
+      return null;
+    } finally {
+      dedupRef.complete('redeem-history');
+      setRedeeming(false);
+    }
+  }, [dedupRef, history, refreshHistory]);
+
+  const clearActive = useCallback(() => {
+    setActiveTicket(null);
+  }, []);
+
+  return {
+    activeTicket,
+    history,
+    purchasing,
+    redeeming,
+    loadingHistory,
+    loadingActive,
+    purchase,
+    redeem,
+    redeemFromHistory,
+    refreshHistory,
+    clearActive,
+  };
+};

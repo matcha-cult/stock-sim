@@ -53,6 +53,7 @@ model characters {
   farm_decorations             farm_decoration[]
   farm_activity_logs           farm_activity_log[]
   farm_plant_templates         farm_plant_template[]
+  puzzle_cards                 puzzle_card[] @ignore
 }
 
 // 股票报价表
@@ -462,5 +463,30 @@ model farm_plant_template_item {
   template        farm_plant_template @relation(fields: [template_id], references: [id], onDelete: Cascade)
 
   @@index([template_id])
+}
+
+// ========== 常驻刮刮乐 ==========
+
+// 常驻刮刮乐彩票表（配置数据由 TypeScript 内存常量承载，无独立配置表）
+model puzzle_card {
+  id              BigInt    @id @default(autoincrement())
+  character_id    Int
+  ticket_number   BigInt
+  type_key        String    @db.VarChar(32)
+  grid_rows       Int       @db.SmallInt
+  grid_cols       Int       @db.SmallInt
+  price_paid      BigInt
+  ticket_data     Json      @db.JsonB
+  matched_lines   Json      @default("[]") @db.JsonB
+  prize_type      String    @default("spirit_stones") @db.VarChar(20)
+  prize_amount    BigInt    @default(0)
+  redeemed_at     DateTime? @db.Timestamp(6)
+  created_at      DateTime  @default(now()) @db.Timestamp(6)
+
+  character       characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@unique([character_id, ticket_number])
+  @@index([character_id])
+  @@index([type_key])
 }
 
