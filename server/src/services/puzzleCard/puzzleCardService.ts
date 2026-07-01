@@ -33,7 +33,7 @@
 import { query, withTransaction } from '../../config/database.js';
 import { Transactional } from '../../decorators/transactional.js';
 import { recordSpiritStones, type SpiritStonesLedgerBizType } from '../ledgerService.js';
-import { PUZZLE_CARD_TYPES, SETTLE_FNS, generateRandomGrid } from './puzzleCardTypes.js';
+import { PUZZLE_CARD_TYPES, SETTLE_FNS, generateRandomGrid, generateQixiGrid } from './puzzleCardTypes.js';
 import { generateRedeemCode, verifyRedeemCode, type RedeemCodePayload } from './puzzleCardRedeemCode.js';
 
 // ========== 类型定义 ==========
@@ -176,8 +176,13 @@ class PuzzleCardService {
     const ticketNumber = Number(ticketNumResult.rows[0].ticket_number);
 
     // 4. 生成格子数据 + 结算
-    const gridLength = typeConfig.gridRows * typeConfig.gridCols * typeConfig.numbersPerCell;
-    const grid = generateRandomGrid(gridLength, TICKET_DATA_MIN, TICKET_DATA_MAX);
+    let grid: number[];
+    if (typeConfig.typeKey === 'QIXI') {
+      grid = generateQixiGrid();
+    } else {
+      const gridLength = typeConfig.gridRows * typeConfig.gridCols * typeConfig.numbersPerCell;
+      grid = generateRandomGrid(gridLength, TICKET_DATA_MIN, TICKET_DATA_MAX);
+    }
     const settleResult = settleFn(grid);
 
     const ticketData = { grid };

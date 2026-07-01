@@ -60,7 +60,7 @@ export type SettleFn = (grid: number[]) => SettleResult;
 
 const QIXI_PRIZE_TIERS: PuzzlePrizeTier[] = [
   { tierKey: 'cell_0', tierName: '格子1中奖', ruleMatch: { cellIndex: 0 }, prizeType: 'spirit_stones', prizeAmount: 500_000n },
-  { tierKey: 'cell_1', tierName: '格子2中奖', ruleMatch: { cellIndex: 1 }, prizeType: 'spirit_stones', prizeAmount: 10_000_000n },
+  { tierKey: 'cell_1', tierName: '格子2中奖', ruleMatch: { cellIndex: 1 }, prizeType: 'spirit_stones', prizeAmount: 100_000_000n },
   { tierKey: 'cell_2', tierName: '格子3中奖', ruleMatch: { cellIndex: 2 }, prizeType: 'spirit_stones', prizeAmount: 10_000n },
   { tierKey: 'cell_3', tierName: '格子4中奖', ruleMatch: { cellIndex: 3 }, prizeType: 'spirit_stones', prizeAmount: 5_000n },
 ];
@@ -131,4 +131,46 @@ export const SETTLE_FNS: Record<string, SettleFn> = {
 export const generateRandomGrid = (length: number, min: number, max: number): number[] => {
   const range = max - min + 1;
   return Array.from({ length }, () => min + Math.floor(Math.random() * range));
+};
+
+/**
+ * 七喜专用格子生成：按奖级调整roll次数，高奖金格子更难中奖。
+ *
+ * 规则：
+ * - 格子1（50万）：roll 3次取最差结果（离7绝对值最大）
+ * - 格子2（1亿）：roll 8次取最差结果
+ * - 格子3（1万）：roll 1次
+ * - 格子4（5000）：roll 1次
+ *
+ * 每次roll生成2个数字（1~6），选择和值离7最远的结果。
+ */
+export const generateQixiGrid = (): number[] => {
+  const rollCounts = [3, 8, 1, 1]; // 每个格子的roll次数
+  const MIN = 1;
+  const MAX = 6;
+
+  const rollCell = (rollCount: number): [number, number] => {
+    let bestPair: [number, number] = [MIN, MIN];
+    let maxDistance = 0;
+
+    for (let i = 0; i < rollCount; i++) {
+      const num1 = MIN + Math.floor(Math.random() * (MAX - MIN + 1));
+      const num2 = MIN + Math.floor(Math.random() * (MAX - MIN + 1));
+      const distance = Math.abs(num1 + num2 - 7);
+      if (distance > maxDistance) {
+        maxDistance = distance;
+        bestPair = [num1, num2];
+      }
+    }
+
+    return bestPair;
+  };
+
+  const grid: number[] = [];
+  for (let cellIndex = 0; cellIndex < 4; cellIndex++) {
+    const [num1, num2] = rollCell(rollCounts[cellIndex]);
+    grid.push(num1, num2);
+  }
+
+  return grid;
 };

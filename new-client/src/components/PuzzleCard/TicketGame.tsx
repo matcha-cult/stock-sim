@@ -64,7 +64,7 @@ const TicketGame = ({ ticket, onRedeem, onContinue, onBuyAnother, isRedeeming }:
             message={`恭喜中奖！共 ${ticket.matchedLines.length} 格中奖 — ${formatPrize(ticket.prizeAmount)} 灵石`}
           />
         ) : (
-          <Alert type="info" showIcon message="无格子凑成7点，未中奖" />
+          <Alert type="info" showIcon message="未中奖" />
         )}
 
         <Flex justify="center" gap={12}>
