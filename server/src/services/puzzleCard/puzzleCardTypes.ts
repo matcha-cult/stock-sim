@@ -59,10 +59,10 @@ export type SettleFn = (grid: number[]) => SettleResult;
 // ========== 七喜（QIXI）常量 ==========
 
 const QIXI_PRIZE_TIERS: PuzzlePrizeTier[] = [
-  { tierKey: 'cell_0', tierName: '格子1中奖', ruleMatch: { cellIndex: 0 }, prizeType: 'spirit_stones', prizeAmount: 500_000n },
+  { tierKey: 'cell_0', tierName: '格子1中奖', ruleMatch: { cellIndex: 0 }, prizeType: 'spirit_stones', prizeAmount: 5_000_000n },
   { tierKey: 'cell_1', tierName: '格子2中奖', ruleMatch: { cellIndex: 1 }, prizeType: 'spirit_stones', prizeAmount: 100_000_000n },
-  { tierKey: 'cell_2', tierName: '格子3中奖', ruleMatch: { cellIndex: 2 }, prizeType: 'spirit_stones', prizeAmount: 10_000n },
-  { tierKey: 'cell_3', tierName: '格子4中奖', ruleMatch: { cellIndex: 3 }, prizeType: 'spirit_stones', prizeAmount: 5_000n },
+  { tierKey: 'cell_2', tierName: '格子3中奖', ruleMatch: { cellIndex: 2 }, prizeType: 'spirit_stones', prizeAmount: 100_000n },
+  { tierKey: 'cell_3', tierName: '格子4中奖', ruleMatch: { cellIndex: 3 }, prizeType: 'spirit_stones', prizeAmount: 50_000n },
 ];
 
 const QIXI_TYPE: PuzzleCardType = {
@@ -145,7 +145,7 @@ export const generateRandomGrid = (length: number, min: number, max: number): nu
  * 每次roll生成2个数字（1~6），选择和值离7最远的结果。
  */
 export const generateQixiGrid = (): number[] => {
-  const rollCounts = [3, 8, 1, 1]; // 每个格子的roll次数
+  const rollCounts = [3, 5, 1, 1]; // 每个格子的roll次数
   const MIN = 1;
   const MAX = 6;
 

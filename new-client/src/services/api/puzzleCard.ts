@@ -116,10 +116,10 @@ export const PUZZLE_CARD_TYPES: PuzzleCardTypeDto[] = [
     rules: [
       '每个格子生成2个数字（1~6）',
       '格子内两数之和 = 7 则该格中奖',
-      '格子1中奖：50万灵石',
-      '格子2中奖：1000万灵石',
-      '格子3中奖：1万灵石',
-      '格子4中奖：5000灵石',
+      '格子1中奖：500万灵石',
+      '格子2中奖：1亿灵石',
+      '格子3中奖：10万灵石',
+      '格子4中奖：5万灵石',
       '多格中奖奖金累加',
       '购票限制：5秒内最多购买2次',
       '兑奖限制：5秒内最多兑奖2次',
@@ -128,8 +128,8 @@ export const PUZZLE_CARD_TYPES: PuzzleCardTypeDto[] = [
 ];
 
 export const QIXI_PRIZE_TIERS: Record<number, PuzzlePrizeTierDto> = {
-  0: { tierKey: 'cell_0', tierName: '格子1中奖', prizeAmount: 500_000 },
-  1: { tierKey: 'cell_1', tierName: '格子2中奖', prizeAmount: 10_000_000 },
-  2: { tierKey: 'cell_2', tierName: '格子3中奖', prizeAmount: 10_000 },
-  3: { tierKey: 'cell_3', tierName: '格子4中奖', prizeAmount: 5_000 },
+  0: { tierKey: 'cell_0', tierName: '格子1中奖', prizeAmount: 5_000_000 },
+  1: { tierKey: 'cell_1', tierName: '格子2中奖', prizeAmount: 100_000_000 },
+  2: { tierKey: 'cell_2', tierName: '格子3中奖', prizeAmount: 100_000 },
+  3: { tierKey: 'cell_3', tierName: '格子4中奖', prizeAmount: 50_000 },
 };
