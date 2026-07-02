@@ -39,6 +39,8 @@ export interface PuzzleCardType {
   price: bigint;
   ruleType: string;
   prizeTiers: readonly PuzzlePrizeTier[];
+  /** 每日购票上限（按 UTC+8 08:00 刷新） */
+  dailyLimit: number;
 }
 
 export interface SettleMatchedLine {
@@ -75,6 +77,7 @@ const QIXI_TYPE: PuzzleCardType = {
   price: 50_000n,
   ruleType: 'CELL_SUM_MATCH',
   prizeTiers: QIXI_PRIZE_TIERS,
+  dailyLimit: 777,
 };
 
 // ========== 七喜结算函数 ==========

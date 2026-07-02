@@ -129,3 +129,26 @@ export const getScratchRanks = (
   if (limit) params.limit = limit;
   return api.get('/api/rank/scratch', { params, ...requestConfig });
 };
+
+export type PuzzleCardRankDto = {
+  rank: number;
+  characterId: number;
+  name: string;
+  title: string;
+  monthCardActive: boolean;
+  ticketCount: number;
+  totalPurchase: number;
+  totalPrize: number;
+  netProfit: number;
+};
+
+export const getPuzzleCardRanks = (
+  typeKey?: string | null,
+  limit?: number,
+  requestConfig?: AxiosRequestConfig,
+): Promise<RankApiResponse<PuzzleCardRankDto[]>> => {
+  const params: Record<string, unknown> = {};
+  if (typeKey) params.typeKey = typeKey;
+  if (limit) params.limit = limit;
+  return api.get('/api/rank/puzzle-card', { params, ...requestConfig });
+};

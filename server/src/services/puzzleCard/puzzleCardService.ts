@@ -60,6 +60,8 @@ export interface HistoryItemDto {
   typeName: string;
   ticketNumber: number;
   pricePaid: number;
+  ticketData: { grid: number[] };
+  matchedLines: Array<{ tierKey: string; tierName: string; prizeType: string; prizeAmount: number }>;
   prizeType: string;
   prizeAmount: number;
   redeemCode: string | null;
@@ -86,6 +88,30 @@ export interface RedeemResultDto {
 const HISTORY_PAGE_SIZE = 20;
 const TICKET_DATA_MIN = 1;
 const TICKET_DATA_MAX = 6;
+
+// 每日刷新时间：UTC+8 08:00 = UTC 00:00
+const DAILY_RESET_HOUR_UTC = 0;
+
+/**
+ * 计算当前周期起始时间（UTC+8 08:00，即 UTC 00:00）。
+ * 返回 UTC 时间戳（毫秒）。
+ */
+const getCurrentPeriodStart = (): Date => {
+  const now = new Date();
+  const utcHour = now.getUTCHours();
+  const today = new Date(now);
+  today.setUTCHours(0, 0, 0, 0);
+
+  // 如果当前 UTC 时间 < 00:00（不可能），或 UTC 时间 >= 00:00，则周期从今天 00:00 开始
+  // 实际上 UTC+8 08:00 = UTC 00:00，所以每日周期从 UTC 00:00 开始
+  if (utcHour >= DAILY_RESET_HOUR_UTC) {
+    return today;
+  }
+  // 当前 UTC 时间在 00:00 之前（即 UTC+8 在 08:00 之前），属于昨天的周期
+  const yesterday = new Date(today);
+  yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  return yesterday;
+};
 
 // ========== DTO 构建 ==========
 
@@ -136,6 +162,18 @@ class PuzzleCardService {
 
     const settleFn = SETTLE_FNS[typeConfig.ruleType];
     if (!settleFn) throw new Error(`未知结算规则：${typeConfig.ruleType}`);
+
+    // 0. 每日上限检查（按 typeKey 分别计算）
+    const periodStart = getCurrentPeriodStart();
+    const todayCountResult = await query<{ count: string | bigint }>(
+      `SELECT COUNT(*)::bigint AS count FROM puzzle_card
+       WHERE character_id = $1 AND type_key = $2 AND created_at >= $3`,
+      [characterId, typeKey, periodStart],
+    );
+    const todayCount = Number(todayCountResult.rows[0].count);
+    if (todayCount >= typeConfig.dailyLimit) {
+      throw new Error(`今日${typeConfig.name}购票已达上限（${typeConfig.dailyLimit}张）`);
+    }
 
     // 1. 锁角色行（FOR UPDATE 保证 ticket_number 递增安全 + 余额原子操作）
     const charLock = await query<{ spirit_stones: string | bigint }>(
@@ -292,6 +330,10 @@ class PuzzleCardService {
 
     if (row.redeemed_at !== null) throw new Error('票据已兑奖');
 
+    // 未中奖票据无需兑奖
+    const prizeAmount = Number(row.prize_amount);
+    if (prizeAmount <= 0) throw new Error('未中奖票据无需兑奖');
+
     // 2. 验证安保码
     const payload: RedeemCodePayload = {
       characterId: row.character_id,
@@ -321,27 +363,24 @@ class PuzzleCardService {
     const redeemedAt = Math.floor(Number(redeemedAtRow.rows[0].epoch));
 
     // 4. 发放奖金
-    const prizeAmount = Number(row.prize_amount);
-    if (prizeAmount > 0) {
-      await query(
-        `UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = now() WHERE id = $2`,
-        [prizeAmount, characterId],
-      );
-      const balanceAfterRow = await query<{ spirit_stones: string | bigint }>(
-        `SELECT spirit_stones FROM characters WHERE id = $1`,
-        [characterId],
-      );
-      const balanceAfter = BigInt(balanceAfterRow.rows[0].spirit_stones);
-      const typeConfig = PUZZLE_CARD_TYPES[row.type_key];
-      await recordSpiritStones({
-        characterId,
-        amount: BigInt(prizeAmount),
-        balanceAfter,
-        bizType: 'puzzle_prize' as SpiritStonesLedgerBizType,
-        bizId: `puzzle:${row.id}`,
-        memo: `常驻刮刮乐兑奖：${typeConfig?.name ?? row.type_key}`,
-      });
-    }
+    await query(
+      `UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = now() WHERE id = $2`,
+      [prizeAmount, characterId],
+    );
+    const balanceAfterRow = await query<{ spirit_stones: string | bigint }>(
+      `SELECT spirit_stones FROM characters WHERE id = $1`,
+      [characterId],
+    );
+    const balanceAfter = BigInt(balanceAfterRow.rows[0].spirit_stones);
+    const typeConfig = PUZZLE_CARD_TYPES[row.type_key];
+    await recordSpiritStones({
+      characterId,
+      amount: BigInt(prizeAmount),
+      balanceAfter,
+      bizType: 'puzzle_prize' as SpiritStonesLedgerBizType,
+      bizId: `puzzle:${row.id}`,
+      memo: `常驻刮刮乐兑奖：${typeConfig?.name ?? row.type_key}`,
+    });
 
     return {
       id: String(row.id),
@@ -416,6 +455,9 @@ class PuzzleCardService {
         typeName: typeConfig?.name ?? row.type_key,
         ticketNumber: Number(row.ticket_number),
         pricePaid: Number(row.price_paid),
+        ticketData: row.ticket_data as { grid: number[] },
+        matchedLines: (row.matched_lines as Array<{ tierKey: string; tierName: string; prizeType: string; prizeAmount: number | string }>)
+          .map(m => ({ ...m, prizeAmount: Number(m.prizeAmount) })),
         prizeType: row.prize_type,
         prizeAmount: Number(row.prize_amount),
         redeemCode,

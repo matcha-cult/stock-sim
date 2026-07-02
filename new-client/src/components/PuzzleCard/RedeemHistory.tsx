@@ -3,6 +3,7 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：展示所有票据记录，支持分页，未兑奖中奖票据可在此兑奖。
+ *    显示每个格子的数字及和值，中奖格子高亮。
  * 2. 不做什么：不处理购票逻辑（由 TicketSelect 负责）。
  *
  * 输入 / 输出：
@@ -21,7 +22,7 @@
  */
 import { Table, List, Card, Tag, Button, Flex, Typography, Pagination, Space } from 'antd';
 import { useIsMobile } from '../../shared/responsive';
-import type { HistoryItemDto } from '../../services/api/puzzleCard';
+import type { HistoryItemDto, MatchedLineDto } from '../../services/api/puzzleCard';
 
 const { Text } = Typography;
 
@@ -54,6 +55,30 @@ const getStatusTag = (item: HistoryItemDto) => {
   return <Tag>未中奖</Tag>;
 };
 
+// 判断某格子是否中奖
+const isCellMatched = (cellIndex: number, matchedLines: MatchedLineDto[]): boolean => {
+  return matchedLines.some(m => m.tierKey === `cell_${cellIndex}`);
+};
+
+// 票据格子渲染：Space + Tag，中奖标绿
+const TicketGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: MatchedLineDto[] }) => {
+  return (
+    <Space size={[4, 4]} wrap>
+      {Array.from({ length: 4 }, (_, i) => {
+        const num1 = grid[i * 2];
+        const num2 = grid[i * 2 + 1];
+        const sum = num1 + num2;
+        const matched = isCellMatched(i, matchedLines);
+        return (
+          <Tag key={i} color={matched ? 'green' : undefined} style={{ margin: 0, width: 64, textAlign: 'center' }}>
+            {num1}+{num2}={sum}
+          </Tag>
+        );
+      })}
+    </Space>
+  );
+};
+
 const RedeemHistory = ({
   items, total, page, pageSize, loading, redeeming, onRedeem, onPageChange,
 }: RedeemHistoryProps) => {
@@ -62,19 +87,25 @@ const RedeemHistory = ({
   // PC 端 Table
   if (!isMobile) {
     const columns = [
-      { title: '票种', dataIndex: 'typeName', key: 'typeName', width: 80 },
-      { title: '票号', dataIndex: 'ticketNumber', key: 'ticketNumber', width: 80, render: (v: number) => `#${v}` },
+      { title: '票种', dataIndex: 'typeName', key: 'typeName' },
+      { title: '票号', dataIndex: 'ticketNumber', key: 'ticketNumber', render: (v: number) => `#${v}` },
       {
-        title: '购买时间', dataIndex: 'createdAt', key: 'createdAt', width: 120,
+        title: '票据', key: 'ticket',
+        render: (_: unknown, item: HistoryItemDto) => item.ticketData?.grid ? (
+          <TicketGrid grid={item.ticketData.grid} matchedLines={item.matchedLines} />
+        ) : null,
+      },
+      {
+        title: '购买时间', dataIndex: 'createdAt', key: 'createdAt',
         render: (v: number) => formatTime(v),
       },
       {
-        title: '奖金', dataIndex: 'prizeAmount', key: 'prizeAmount', width: 120,
+        title: '奖金', dataIndex: 'prizeAmount', key: 'prizeAmount',
         render: (v: number) => v > 0 ? <Text strong>{formatPrize(v)}</Text> : <Text type="secondary">—</Text>,
       },
-      { title: '状态', key: 'status', width: 100, render: (_: unknown, item: HistoryItemDto) => getStatusTag(item) },
+      { title: '状态', key: 'status', render: (_: unknown, item: HistoryItemDto) => getStatusTag(item) },
       {
-        title: '操作', key: 'action', width: 100,
+        title: '操作', key: 'action',
         render: (_: unknown, item: HistoryItemDto) => {
           if (item.redeemedAt !== null) return <Text type="secondary">已兑奖</Text>;
           if (item.prizeAmount <= 0) return null;
@@ -101,6 +132,7 @@ const RedeemHistory = ({
           loading={loading}
           pagination={false}
           size="small"
+          scroll={{ x: 'max-content' }}
         />
         {total > pageSize && (
           <Flex justify="center">
@@ -117,35 +149,50 @@ const RedeemHistory = ({
     );
   }
 
-  // Mobile 端 List + Card
+  // 移动端 Card
   return (
     <Flex vertical gap={12}>
       <List
         dataSource={items}
         loading={loading}
         renderItem={(item) => (
-          <List.Item style={{ padding: 0, border: 'none' }}>
-            <Card size="small" style={{ width: '100%' }}>
-              <Flex justify="space-between" align="center">
-                <Flex vertical gap={4}>
-                  <Text strong>{item.typeName} #{item.ticketNumber}</Text>
+          <List.Item style={{ padding: 0, border: 'none', marginBottom: 2 }}>
+            <Card size="small" style={{ width: '100%', position: 'relative' }}>
+              {/* 右上角：票据号 */}
+              <div style={{ position: 'absolute', top: 8, right: 12 }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>#{item.ticketNumber}</Text>
+              </div>
+
+              {/* 内容区域 */}
+              <Flex vertical gap={8}>
+                <Text strong>{item.typeName}</Text>
+
+                {/* 票据 tags */}
+                {item.ticketData?.grid && (
+                  <TicketGrid grid={item.ticketData.grid} matchedLines={item.matchedLines} />
+                )}
+
+                {/* 底部行：奖金 + 状态 + 日期 */}
+                <Flex justify="space-between" align="center">
+                  <Flex gap={8} align="center" wrap>
+                    <Text>
+                      奖金：{item.prizeAmount > 0 ? <Text strong>{formatPrize(item.prizeAmount)}</Text> : <Text type="secondary">—</Text>}
+                    </Text>
+                    {getStatusTag(item)}
+                    {item.redeemedAt === null && item.prizeAmount > 0 && (
+                      <Button
+                        type="primary"
+                        size="small"
+                        loading={redeeming}
+                        onClick={() => onRedeem(item)}
+                      >
+                        兑奖
+                      </Button>
+                    )}
+                  </Flex>
+
+                  {/* 右下角：日期 */}
                   <Text type="secondary" style={{ fontSize: 12 }}>{formatTime(item.createdAt)}</Text>
-                  <Text>
-                    奖金：{item.prizeAmount > 0 ? <Text strong>{formatPrize(item.prizeAmount)}</Text> : <Text type="secondary">—</Text>}
-                  </Text>
-                </Flex>
-                <Flex vertical align="flex-end" gap={4}>
-                  {getStatusTag(item)}
-                  {item.redeemedAt === null && item.prizeAmount > 0 && (
-                    <Button
-                      type="primary"
-                      size="small"
-                      loading={redeeming}
-                      onClick={() => onRedeem(item)}
-                    >
-                      兑奖
-                    </Button>
-                  )}
                 </Flex>
               </Flex>
             </Card>

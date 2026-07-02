@@ -519,3 +519,124 @@ export const getScratchRanks = async (
   const data = (await scratchRankCaches[metric].get(l)) ?? [];
   return { success: true, message: 'ok', data };
 };
+
+// ============================================
+// 无限刮刮乐（PuzzleCard）排行
+// ============================================
+
+export type PuzzleCardRankRow = {
+  rank: number;
+  characterId: number;
+  name: string;
+  title: string;
+  monthCardActive: boolean;
+  ticketCount: number;
+  totalPurchase: number;
+  totalPrize: number;
+  netProfit: number;
+};
+
+type PuzzleCardRankQueryRow = {
+  rank: number | string;
+  character_id: number | string;
+  name: string;
+  title: string | null;
+  ticketCount: number | string;
+  totalPurchase: number | string;
+  totalPrize: number | string;
+  netProfit: number | string;
+};
+
+// ============================================
+// 无限刮刮乐排行 loader
+// ============================================
+
+const loadPuzzleCardRanks = async (typeKey: string | null, limit: number): Promise<PuzzleCardRankRow[]> => {
+  const typeFilter = typeKey ? 'WHERE type_key = $1' : '';
+  const params = typeKey ? [typeKey, limit] : [limit];
+
+  const res = await query(
+    `
+      WITH puzzle_totals AS (
+        SELECT
+          character_id,
+          COUNT(*)::int AS "ticketCount",
+          COALESCE(SUM(price_paid), 0)::bigint AS "totalPurchase",
+          COALESCE(SUM(prize_amount), 0)::bigint AS "totalPrize",
+          (COALESCE(SUM(prize_amount), 0) - COALESCE(SUM(price_paid), 0))::bigint AS "netProfit"
+        FROM puzzle_card
+        ${typeFilter}
+        GROUP BY character_id
+      ),
+      ranked AS (
+        SELECT
+          ROW_NUMBER() OVER (ORDER BY t."netProfit" DESC, t."totalPrize" DESC, c.id ASC)::int AS rank,
+          c.id AS character_id,
+          c.nickname AS name,
+          c.title,
+          COALESCE(t."ticketCount", 0)::int AS "ticketCount",
+          COALESCE(t."totalPurchase", 0)::bigint AS "totalPurchase",
+          COALESCE(t."totalPrize", 0)::bigint AS "totalPrize",
+          t."netProfit"
+        FROM characters c
+        JOIN puzzle_totals t ON t.character_id = c.id
+        WHERE c.nickname IS NOT NULL AND c.nickname <> ''
+      )
+      SELECT * FROM ranked
+      ORDER BY rank
+      LIMIT $${typeKey ? 2 : 1}
+    `,
+    params,
+  );
+
+  const rows = res.rows as PuzzleCardRankQueryRow[];
+  const characterIds = rows.map((row) => Number(row.character_id));
+  const monthCardActiveMap = await getMonthCardActiveMapByCharacterIds(characterIds);
+
+  return rows.map((row) => ({
+    rank: Number(row.rank),
+    characterId: Number(row.character_id),
+    name: String(row.name),
+    title: typeof row.title === 'string' ? row.title : '',
+    monthCardActive: monthCardActiveMap.get(Number(row.character_id)) ?? false,
+    ticketCount: Number(row.ticketCount),
+    totalPurchase: Number(row.totalPurchase),
+    totalPrize: Number(row.totalPrize),
+    netProfit: Number(row.netProfit),
+  }));
+};
+
+// ============================================
+// 无限刮刮乐排行缓存
+// ============================================
+
+const createPuzzleCardRankCache = (
+  typeKey: string | null,
+) => createCacheLayer<number, PuzzleCardRankRow[]>({
+  keyPrefix: `rank:puzzle-card:${typeKey ?? 'all'}:`,
+  redisTtlSec: RANK_CACHE_REDIS_TTL_SEC,
+  memoryTtlMs: RANK_CACHE_MEMORY_TTL_MS,
+  loader: (limit) => loadPuzzleCardRanks(typeKey, limit),
+});
+
+const puzzleCardRankCaches: Record<string, ReturnType<typeof createPuzzleCardRankCache>> = {
+  all: createPuzzleCardRankCache(null),
+};
+
+const getPuzzleCardRankCache = (typeKey: string | null) => {
+  const key = typeKey ?? 'all';
+  if (!puzzleCardRankCaches[key]) {
+    puzzleCardRankCaches[key] = createPuzzleCardRankCache(typeKey);
+  }
+  return puzzleCardRankCaches[key];
+};
+
+export const getPuzzleCardRanks = async (
+  typeKey: string | null,
+  limit?: number,
+): Promise<{ success: boolean; message: string; data?: PuzzleCardRankRow[] }> => {
+  const l = clampLimit(limit, 50);
+  const cache = getPuzzleCardRankCache(typeKey);
+  const data = (await cache.get(l)) ?? [];
+  return { success: true, message: 'ok', data };
+};

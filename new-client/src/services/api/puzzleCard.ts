@@ -43,6 +43,8 @@ export interface HistoryItemDto {
   typeName: string;
   ticketNumber: number;
   pricePaid: number;
+  ticketData: { grid: number[] };
+  matchedLines: MatchedLineDto[];
   prizeType: string;
   prizeAmount: number;
   redeemCode: string | null;
@@ -66,6 +68,7 @@ export interface PuzzleCardTypeDto {
   numbersPerCell: number;
   price: number;
   ruleType: string;
+  dailyLimit: number;
   rules?: string[];
 }
 
@@ -113,6 +116,7 @@ export const PUZZLE_CARD_TYPES: PuzzleCardTypeDto[] = [
     numbersPerCell: 2,
     price: 50_000,
     ruleType: 'CELL_SUM_MATCH',
+    dailyLimit: 777,
     rules: [
       '每个格子生成2个数字（1~6）',
       '格子内两数之和 = 7 则该格中奖',
@@ -121,6 +125,7 @@ export const PUZZLE_CARD_TYPES: PuzzleCardTypeDto[] = [
       '格子3中奖：10万灵石',
       '格子4中奖：5万灵石',
       '多格中奖奖金累加',
+      '每日限购：777张（UTC+8 08:00 刷新）',
       '购票限制：5秒内最多购买2次',
       '兑奖限制：5秒内最多兑奖2次',
     ],

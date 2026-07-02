@@ -38,7 +38,7 @@ import {
 } from '@ant-design/icons';
 import { RootStoreContext } from '../stores/RootStore';
 import { useIsMobile } from '../shared/responsive';
-import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto, StockMarketRankMetric, ScratchRankDto, ScratchRankMetric } from '../services/api/rank';
+import type { StockMarketRankDto, WealthRankDto, ShopRentRankDto, StockMarketRankMetric, ScratchRankDto, ScratchRankMetric, PuzzleCardRankDto } from '../services/api/rank';
 import { getShopRentRanks } from '../services/api/rank';
 import type { StockMarketStockView, StockMarketTradePreview } from '../domain/stock-market/types';
 import ShopPanel from './ShopPanel';
@@ -51,6 +51,7 @@ import GmSpiritStonesManager from './GmSpiritStonesManager/GmSpiritStonesManager
 import GmMonthCardManager from './GmMonthCardManager/GmMonthCardManager';
 import ScratchCardPage from './ScratchCardPage';
 import PuzzleCardPage from './PuzzleCard';
+import { PUZZLE_CARD_TYPES } from '../services/api/puzzleCard';
 import FarmPage from './FarmPage/FarmPage';
 import {
   buildStockMarketOverviewViewModel,
@@ -100,9 +101,10 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   const [stockSubTab, setStockSubTab] = useState<StockSubTab>('market');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [localActionKey, setLocalActionKey] = useState<ActionKey>('');
-  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket' | 'shopRent' | 'scratch'>('wealth');
+  const [activeRankTab, setActiveRankTab] = useState<'wealth' | 'stockMarket' | 'shopRent' | 'scratch' | 'puzzleCard'>('wealth');
   const [stockMarketRankMetric, setStockMarketRankMetric] = useState<StockMarketRankMetric>('value');
   const [scratchRankMetric, setScratchRankMetric] = useState<ScratchRankMetric>('total');
+  const [puzzleCardTypeKey, setPuzzleCardTypeKey] = useState<string | null>(null);
   const [activeGmTab, setActiveGmTab] = useState<GmTabKey>('gm-spirit-stones');
 
   // 收租排行
@@ -210,6 +212,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
     void stockStore.refreshWealthRanks();
     void stockStore.refreshStockMarketRanks();
     void stockStore.refreshScratchRanks();
+    void stockStore.refreshPuzzleCardRanks();
   }, [activeTab, stockStore]);
 
   // 排行维度切换时重新拉取
@@ -223,6 +226,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
     if (activeTab !== 'ranking') return;
     void stockStore.refreshScratchRanks(scratchRankMetric);
   }, [activeTab, scratchRankMetric, stockStore]);
+
+  // 无限刮刮乐排行类型切换时重新拉取
+  useEffect(() => {
+    if (activeTab !== 'ranking') return;
+    if (activeRankTab !== 'puzzleCard') return;
+    void stockStore.refreshPuzzleCardRanks(puzzleCardTypeKey);
+  }, [activeTab, activeRankTab, puzzleCardTypeKey, stockStore]);
 
   // 移动端关闭详情
   useEffect(() => {
@@ -550,11 +560,13 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   stockMarketRanks={stockStore.stockMarketRanks}
                   shopRentRanks={shopRentRanks}
                   scratchRanks={stockStore.scratchRanks}
+                  puzzleCardRanks={stockStore.puzzleCardRanks}
                   rankLoading={stockStore.rankLoading}
                   onRefreshWealth={() => void stockStore.refreshWealthRanks()}
                   onRefreshStockMarket={(metric?: StockMarketRankMetric) => void stockStore.refreshStockMarketRanks(metric ?? stockMarketRankMetric)}
                   onRefreshShopRent={fetchShopRentRanks}
                   onRefreshScratch={(metric?: ScratchRankMetric) => void stockStore.refreshScratchRanks(metric ?? scratchRankMetric)}
+                  onRefreshPuzzleCard={(typeKey?: string | null) => void stockStore.refreshPuzzleCardRanks(typeKey ?? puzzleCardTypeKey)}
                   onTabChange={(tab) => {
                     setActiveRankTab(tab);
                   }}
@@ -564,6 +576,8 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                   onStockMarketRankMetricChange={setStockMarketRankMetric}
                   scratchRankMetric={scratchRankMetric}
                   onScratchRankMetricChange={setScratchRankMetric}
+                  puzzleCardTypeKey={puzzleCardTypeKey}
+                  onPuzzleCardTypeKeyChange={setPuzzleCardTypeKey}
                 />
               ),
             },
@@ -1441,18 +1455,22 @@ interface RankingTabProps {
   stockMarketRanks: StockMarketRankDto[];
   shopRentRanks: ShopRentRankDto[];
   scratchRanks: ScratchRankDto[];
+  puzzleCardRanks: PuzzleCardRankDto[];
   rankLoading: boolean;
   onRefreshWealth: () => void;
   onRefreshStockMarket: (metric?: StockMarketRankMetric) => void;
   onRefreshShopRent: () => void;
   onRefreshScratch: (metric?: ScratchRankMetric) => void;
-  onTabChange: (tab: 'wealth' | 'stockMarket' | 'shopRent' | 'scratch') => void;
-  activeRankTab: 'wealth' | 'stockMarket' | 'shopRent' | 'scratch';
+  onRefreshPuzzleCard: (typeKey?: string | null) => void;
+  onTabChange: (tab: 'wealth' | 'stockMarket' | 'shopRent' | 'scratch' | 'puzzleCard') => void;
+  activeRankTab: 'wealth' | 'stockMarket' | 'shopRent' | 'scratch' | 'puzzleCard';
   isMobile: boolean;
   stockMarketRankMetric: StockMarketRankMetric;
   onStockMarketRankMetricChange: (metric: StockMarketRankMetric) => void;
   scratchRankMetric: ScratchRankMetric;
   onScratchRankMetricChange: (metric: ScratchRankMetric) => void;
+  puzzleCardTypeKey: string | null;
+  onPuzzleCardTypeKeyChange: (typeKey: string | null) => void;
 }
 
 const formatSpiritStones = (value: number): string => {
@@ -1622,11 +1640,12 @@ const getStockMarketRankColumns = (isMobile: boolean): ColumnsType<StockMarketRa
 
 function RankingTab(props: RankingTabProps): React.ReactNode {
   const {
-    wealthRanks, stockMarketRanks, shopRentRanks, scratchRanks,
-    rankLoading, onRefreshWealth, onRefreshStockMarket, onRefreshShopRent, onRefreshScratch,
+    wealthRanks, stockMarketRanks, shopRentRanks, scratchRanks, puzzleCardRanks,
+    rankLoading, onRefreshWealth, onRefreshStockMarket, onRefreshShopRent, onRefreshScratch, onRefreshPuzzleCard,
     onTabChange, activeRankTab, isMobile,
     stockMarketRankMetric, onStockMarketRankMetricChange,
     scratchRankMetric, onScratchRankMetricChange,
+    puzzleCardTypeKey, onPuzzleCardTypeKeyChange,
   } = props;
 
   const wealthColumns = useMemo(() => getWealthRankColumns(isMobile), [isMobile]);
@@ -1650,13 +1669,19 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
     onRefreshScratch();
   }, [onRefreshScratch]);
 
+  const handlePuzzleCardRefresh = useCallback(() => {
+    onRefreshPuzzleCard(puzzleCardTypeKey);
+  }, [onRefreshPuzzleCard, puzzleCardTypeKey]);
+
   const onRefresh = activeRankTab === 'wealth'
     ? onRefreshWealth
     : activeRankTab === 'stockMarket'
       ? handleStockMarketRefresh
       : activeRankTab === 'scratch'
         ? handleScratchRefresh
-        : onRefreshShopRent;
+        : activeRankTab === 'puzzleCard'
+          ? handlePuzzleCardRefresh
+          : onRefreshShopRent;
 
   if (rankLoading) {
     const currentData = activeRankTab === 'wealth'
@@ -1665,7 +1690,9 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
         ? stockMarketRanks
         : activeRankTab === 'scratch'
           ? scratchRanks
-          : shopRentRanks;
+          : activeRankTab === 'puzzleCard'
+            ? puzzleCardRanks
+            : shopRentRanks;
     if (currentData.length === 0) {
       return (
         <Flex data-section="ranking-loading" justify="center" style={{ padding: 24 }}>
@@ -1679,7 +1706,7 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
     <Flex vertical gap={12} data-section="ranking-tab">
       {/* 排行类型切换 */}
       <Flex justify="space-between" align="center" gap={12} wrap="wrap">
-        <Segmented<'wealth' | 'stockMarket' | 'shopRent' | 'scratch'>
+        <Segmented<'wealth' | 'stockMarket' | 'shopRent' | 'scratch' | 'puzzleCard'>
           value={activeRankTab}
           onChange={onTabChange}
           options={[
@@ -1687,6 +1714,7 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
             { label: '股市', value: 'stockMarket', icon: <LineChartOutlined /> },
             { label: '收租', value: 'shopRent', icon: <ShopOutlined /> },
             { label: '彩票', value: 'scratch', icon: <GiftOutlined /> },
+            { label: '无限刮刮乐', value: 'puzzleCard', icon: <GiftOutlined /> },
           ]}
         />
         <Button
@@ -1836,6 +1864,101 @@ function RankingTab(props: RankingTabProps): React.ReactNode {
               size="small"
               pagination={false}
               scroll={{ x: 560 }}
+              style={{ fontSize: 13 }}
+            />
+          )}
+        </Card>
+      ) : activeRankTab === 'puzzleCard' ? (
+        <Card
+          size="small"
+          style={{ overflow: 'hidden' }}
+          extra={
+            <Segmented<string>
+              value={puzzleCardTypeKey ?? ''}
+              onChange={(value) => {
+                const typeKey = value === '' ? null : value;
+                onPuzzleCardTypeKeyChange(typeKey);
+                onRefreshPuzzleCard(typeKey);
+              }}
+              options={[
+                { label: '全部', value: '' },
+                ...PUZZLE_CARD_TYPES.map(t => ({ label: t.name, value: t.typeKey })),
+              ]}
+            />
+          }
+        >
+          {puzzleCardRanks.length === 0 ? (
+            <Empty description="暂无排行数据" />
+          ) : (
+            <Table<PuzzleCardRankDto>
+              columns={[
+                {
+                  title: '排名',
+                  dataIndex: 'rank',
+                  key: 'rank',
+                  width: 60,
+                  fixed: isMobile ? undefined : 'left',
+                  render: (rank: number) => {
+                    const color = getRankBadgeColor(rank);
+                    const icon = rank <= 3 ? <CrownOutlined /> : null;
+                    return (
+                      <Flex gap={4} align="center">
+                        {icon && <span style={{ color: color === 'gold' ? '#faad14' : color === 'volcano' ? '#fa541c' : '#fa8c16' }}>{icon}</span>}
+                        <Tag color={color} style={{ margin: 0, minWidth: 28, textAlign: 'center' }}>{rank}</Tag>
+                      </Flex>
+                    );
+                  },
+                },
+                {
+                  title: '角色',
+                  dataIndex: 'name',
+                  key: 'name',
+                  width: 120,
+                  fixed: isMobile ? undefined : 'left',
+                  render: (_: unknown, record: PuzzleCardRankDto) => (
+                    <PlayerName name={record.name} monthCardActive={record.monthCardActive} />
+                  ),
+                },
+                {
+                  title: '购票数',
+                  dataIndex: 'ticketCount',
+                  key: 'ticketCount',
+                  width: 80,
+                  align: 'center',
+                },
+                {
+                  title: '中奖金额',
+                  dataIndex: 'totalPrize',
+                  key: 'totalPrize',
+                  width: 100,
+                  align: 'right',
+                  render: (value: number) => (
+                    <span style={{ fontWeight: 600, color: 'var(--text-primary)' }}>
+                      {formatSpiritStones(value)}
+                    </span>
+                  ),
+                },
+                {
+                  title: '净利润',
+                  dataIndex: 'netProfit',
+                  key: 'netProfit',
+                  width: 120,
+                  align: 'right',
+                  render: (value: number) => {
+                    const color = value > 0 ? '#52c41a' : value < 0 ? '#ff4d4f' : 'var(--text-primary)';
+                    return (
+                      <span style={{ fontWeight: 600, color }}>
+                        {value > 0 ? '+' : ''}{formatSpiritStones(value)}
+                      </span>
+                    );
+                  },
+                },
+              ]}
+              dataSource={puzzleCardRanks}
+              rowKey="characterId"
+              size="small"
+              pagination={false}
+              scroll={{ x: 480 }}
               style={{ fontSize: 13 }}
             />
           )}

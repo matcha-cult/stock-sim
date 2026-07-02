@@ -26,7 +26,7 @@ import { asyncHandler } from '../middleware/asyncHandler.js';
 import { requireAuth } from '../middleware/auth.js';
 import { getSingleQueryValue, parsePositiveInt } from '../services/shared/httpParam.js';
 import { sendResult } from '../middleware/response.js';
-import { getWealthRanks, getStockMarketRanks, getShopRentRanks, getScratchRanks } from '../services/rankService.js';
+import { getWealthRanks, getStockMarketRanks, getShopRentRanks, getScratchRanks, getPuzzleCardRanks } from '../services/rankService.js';
 
 const router = Router();
 
@@ -55,6 +55,13 @@ router.get('/scratch', asyncHandler(async (req, res) => {
   const metric = getSingleQueryValue(req.query.metric);
   const limit = parsePositiveInt(getSingleQueryValue(req.query.limit)) ?? undefined;
   const result = await getScratchRanks(metric, limit);
+  return sendResult(res, result);
+}));
+
+router.get('/puzzle-card', asyncHandler(async (req, res) => {
+  const typeKey = getSingleQueryValue(req.query.typeKey);
+  const limit = parsePositiveInt(getSingleQueryValue(req.query.limit)) ?? undefined;
+  const result = await getPuzzleCardRanks(typeKey, limit);
   return sendResult(res, result);
 }));
 

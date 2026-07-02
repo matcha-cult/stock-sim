@@ -50,11 +50,13 @@ import {
   getWealthRanks,
   getStockMarketRanks,
   getScratchRanks,
+  getPuzzleCardRanks,
   type WealthRankDto,
   type StockMarketRankDto,
   type StockMarketRankMetric,
   type ScratchRankDto,
   type ScratchRankMetric,
+  type PuzzleCardRankDto,
 } from '../services/api/rank';
 import { SILENT_API_REQUEST_CONFIG } from '../services/api/requestConfig';
 import { RequestDedup } from './RequestDedup';
@@ -84,6 +86,7 @@ export class StockStore {
   wealthRanks: WealthRankDto[] = [];
   stockMarketRanks: StockMarketRankDto[] = [];
   scratchRanks: ScratchRankDto[] = [];
+  puzzleCardRanks: PuzzleCardRankDto[] = [];
   rankLoading: boolean = false;
 
   // 挂单相关
@@ -271,6 +274,32 @@ export class StockStore {
     return promise;
   }
 
+  async refreshPuzzleCardRanks(typeKey?: string | null, background = false): Promise<void> {
+    const cacheKey = `puzzleCardRanks:${typeKey ?? 'all'}`;
+    if (!this.dedup.enter(cacheKey, background)) return;
+
+    if (!background) this.rankLoading = true;
+    const promise = (async () => {
+      try {
+        const response = await getPuzzleCardRanks(
+          typeKey,
+          50,
+          background ? SILENT_API_REQUEST_CONFIG : undefined,
+        );
+        this.puzzleCardRanks = response.data ?? [];
+      } catch {
+        if (!background) {
+          this.puzzleCardRanks = [];
+        }
+      } finally {
+        if (!background) this.rankLoading = false;
+        this.dedup.complete(cacheKey);
+      }
+    })();
+    this.dedup.start(cacheKey, promise);
+    return promise;
+  }
+
   async executeTrade(
     side: StockMarketTradeSide,
     stockId: string,
@@ -336,6 +365,7 @@ export class StockStore {
     this.wealthRanks = [];
     this.stockMarketRanks = [];
     this.scratchRanks = [];
+    this.puzzleCardRanks = [];
     this.rankLoading = false;
     this.pendingOrders = [];
     this.pendingOrdersLoading = false;
