@@ -137,40 +137,109 @@ export const generateRandomGrid = (length: number, min: number, max: number): nu
  * 七喜专用格子生成：按奖级调整roll次数，高奖金格子更难中奖。
  *
  * 规则：
- * - 格子1（50万）：roll 3次取最差结果（离7绝对值最大）
- * - 格子2（1亿）：roll 8次取最差结果
- * - 格子3（1万）：roll 1次
- * - 格子4（5000）：roll 1次
+ * - 格子1（500万）：roll 3次取最差结果（离7绝对值最大）
+ * - 格子2（1亿）：roll 5次取最差结果
+ * - 格子3（10万）：roll 1次
+ * - 格子4（5万）：若前3格均未中奖，则54%概率强制和为7（保底）；否则强制不中奖
  *
- * 每次roll生成2个数字（1~6），选择和值离7最远的结果。
+ * 每次roll生成2个**不重复**数字（1~6），选择和值离7最远的结果。
+ * 约束：同一格子内两个数字不能相同。
  */
 export const generateQixiGrid = (): number[] => {
-  const rollCounts = [3, 5, 1, 1]; // 每个格子的roll次数
   const MIN = 1;
   const MAX = 6;
 
-  const rollCell = (rollCount: number): [number, number] => {
+  // 生成两个不重复的数字
+  const rollPair = (): [number, number] => {
+    const num1 = MIN + Math.floor(Math.random() * (MAX - MIN + 1));
+    let num2 = MIN + Math.floor(Math.random() * (MAX - MIN + 1));
+    while (num2 === num1) {
+      num2 = MIN + Math.floor(Math.random() * (MAX - MIN + 1));
+    }
+    return [num1, num2];
+  };
+
+  // 普通 roll：rollCount 次取最差（离7最远）
+  const rollCellWorst = (rollCount: number, cellIndex: number): [number, number] => {
     let bestPair: [number, number] = [MIN, MIN];
-    let maxDistance = 0;
+    let maxDistance = -1;
 
     for (let i = 0; i < rollCount; i++) {
-      const num1 = MIN + Math.floor(Math.random() * (MAX - MIN + 1));
-      const num2 = MIN + Math.floor(Math.random() * (MAX - MIN + 1));
+      const [num1, num2] = rollPair();
       const distance = Math.abs(num1 + num2 - 7);
+      // console.log(`[格子${cellIndex + 1}] roll ${i + 1}/${rollCount}: ${num1}+${num2}=${num1 + num2}, 距离=${distance}`);
       if (distance > maxDistance) {
         maxDistance = distance;
         bestPair = [num1, num2];
       }
     }
+    // console.log(`[格子${cellIndex + 1}] 最终选择: ${bestPair[0]}+${bestPair[1]}=${bestPair[0] + bestPair[1]}, 距离=${maxDistance}`);
 
     return bestPair;
   };
 
+  // 强制 roll 中和值 7（从和为7的组合中随机选一个）
+  const rollPairSumSeven = (): [number, number] => {
+    const sumSevenPairs: [number, number][] = [[1, 6], [2, 5], [3, 4], [4, 3], [5, 2], [6, 1]];
+    return sumSevenPairs[Math.floor(Math.random() * sumSevenPairs.length)];
+  };
+
+  // 强制 roll 不中和值 7（和值不为7的组合中随机选一个）
+  const rollPairNotSeven = (): [number, number] => {
+    const notSevenPairs: [number, number][] = [];
+    for (let i = MIN; i <= MAX; i++) {
+      for (let j = MIN; j <= MAX; j++) {
+        if (i !== j && i + j !== 7) {
+          notSevenPairs.push([i, j]);
+        }
+      }
+    }
+    return notSevenPairs[Math.floor(Math.random() * notSevenPairs.length)];
+  };
+
   const grid: number[] = [];
-  for (let cellIndex = 0; cellIndex < 4; cellIndex++) {
-    const [num1, num2] = rollCell(rollCounts[cellIndex]);
-    grid.push(num1, num2);
+  const cellResults: [number, number][] = [];
+
+  // 格子1：roll 3次取最差
+  // console.log('=== 七喜票据生成开始 ===');
+  cellResults[0] = rollCellWorst(3, 0);
+  grid.push(...cellResults[0]);
+
+  // 格子2：roll 5次取最差
+  cellResults[1] = rollCellWorst(5, 1);
+  grid.push(...cellResults[1]);
+
+  // 格子3：roll 1次
+  cellResults[2] = rollCellWorst(1, 2);
+  grid.push(...cellResults[2]);
+
+  // 格子4：若前3格均未中奖，则54%概率强制和为7（保底），使总中奖率达60%；否则强制不中奖
+  const allPreviousMissed = cellResults[0].reduce((a, b) => a + b, 0) !== 7
+    && cellResults[1].reduce((a, b) => a + b, 0) !== 7
+    && cellResults[2].reduce((a, b) => a + b, 0) !== 7;
+
+  // console.log(`[格子4] 前3格中奖情况: 格子1=${cellResults[0][0] + cellResults[0][1] === 7 ? '中奖' : '未中奖'}, 格子2=${cellResults[1][0] + cellResults[1][1] === 7 ? '中奖' : '未中奖'}, 格子3=${cellResults[2][0] + cellResults[2][1] === 7 ? '中奖' : '未中奖'}`);
+
+  if (allPreviousMissed) {
+    // 54%概率触发保底，使总中奖率达到60%
+    const pityRoll = Math.random();
+    if (pityRoll < 0.54) {
+      // console.log(`[格子4] 触发保底（${(pityRoll * 100).toFixed(1)}% < 54%）：强制和为7`);
+      cellResults[3] = rollPairSumSeven();
+      // console.log(`[格子4] 保底结果: ${cellResults[3][0]}+${cellResults[3][1]}=${cellResults[3][0] + cellResults[3][1]}`);
+    } else {
+      // console.log(`[格子4] 未触发保底（${(pityRoll * 100).toFixed(1)}% >= 54%）：强制不中奖`);
+      cellResults[3] = rollPairNotSeven();
+      // console.log(`[格子4] 不中奖结果: ${cellResults[3][0]}+${cellResults[3][1]}=${cellResults[3][0] + cellResults[3][1]}`);
+    }
+  } else {
+    // console.log('[格子4] 前3格已有中奖，强制不中奖');
+    cellResults[3] = rollPairNotSeven();
+    // console.log(`[格子4] 强制不中奖结果: ${cellResults[3][0]}+${cellResults[3][1]}=${cellResults[3][0] + cellResults[3][1]}`);
   }
+  grid.push(...cellResults[3]);
+
+  // console.log(`=== 七喜票据生成完成: grid=[${grid}] ===`);
 
   return grid;
 };
