@@ -161,22 +161,6 @@ interface TicketRow {
   epoch: number;
 }
 
-const buildTicketDto = (row: TicketRow, redeemCode: string): PuzzleTicketDto => ({
-  id: String(row.id),
-  typeKey: row.type_key,
-  ticketNumber: Number(row.ticket_number),
-  gridRows: row.grid_rows,
-  gridCols: row.grid_cols,
-  pricePaid: Number(row.price_paid),
-  ticketData: row.ticket_data,
-  matchedLines: row.matched_lines.map(m => ({ ...m, prizeAmount: Number(m.prizeAmount) })),
-  prizeType: row.prize_type,
-  prizeAmount: Number(row.prize_amount),
-  redeemCode,
-  redeemedAt: row.redeemed_at ? Math.floor(new Date(row.redeemed_at).getTime() / 1000) : null,
-  createdAt: Math.floor(Number(row.epoch)),
-});
-
 // ========== 服务 ==========
 
 class PuzzleCardService {
@@ -298,7 +282,23 @@ class PuzzleCardService {
       memo: `常驻刮刮乐购票：${typeConfig.name}`,
     });
 
-    return buildTicketDto(insertedRow.rows[0], redeemCode);
+    // 8. 构建返回 DTO（用生成后的数据，不用 INSERT 时的空数据）
+    const row = insertedRow.rows[0];
+    return {
+      id: String(row.id),
+      typeKey: row.type_key,
+      ticketNumber,
+      gridRows: row.grid_rows,
+      gridCols: row.grid_cols,
+      pricePaid: Number(row.price_paid),
+      ticketData,
+      matchedLines,
+      prizeType,
+      prizeAmount,
+      redeemCode,
+      redeemedAt: null,
+      createdAt: Math.floor(Number(row.epoch)),
+    };
   }
 
   /**
@@ -459,7 +459,22 @@ class PuzzleCardService {
       });
       runningBalance -= price;
 
-      tickets.push(buildTicketDto(row, redeemCode));
+      // 构建返回 DTO（用生成后的数据，不用 INSERT 时的空数据）
+      tickets.push({
+        id: String(row.id),
+        typeKey: row.type_key,
+        ticketNumber,
+        gridRows: row.grid_rows,
+        gridCols: row.grid_cols,
+        pricePaid: Number(row.price_paid),
+        ticketData,
+        matchedLines,
+        prizeType,
+        prizeAmount,
+        redeemCode,
+        redeemedAt: null,
+        createdAt: Math.floor(Number(row.epoch)),
+      });
     }
 
     // 6. 批量 UPDATE ticket_data + 结算结果

@@ -27,6 +27,7 @@ import { usePuzzleCard } from '../../hooks/usePuzzleCard';
 import TicketSelect from './TicketSelect';
 import TicketGame from './TicketGame';
 import RedeemHistory from './RedeemHistory';
+import PuzzleTicketCard from './PuzzleTicketCard';
 import type { HistoryItemDto } from '../../services/api/puzzleCard';
 
 type SubTabKey = 'scratch' | 'history';
@@ -115,7 +116,8 @@ const PuzzleCardPage = () => {
   const handleContinue = useCallback(() => {
     clearActive();
     clearBatchResult();
-  }, [clearActive, clearBatchResult]);
+    void refreshHistory(1);
+  }, [clearActive, clearBatchResult, refreshHistory]);
 
   const renderScratchTab = () => {
     if (activeTicket) {
@@ -133,23 +135,37 @@ const PuzzleCardPage = () => {
     }
 
     if (batchResult) {
+      const winCount = batchResult.tickets.filter(t => t.prizeAmount > 0).length;
       return (
-        <Card>
-          <Flex vertical gap={16}>
-            <Text strong style={{ fontSize: 16 }}>批量购票结果</Text>
-            <Flex gap={16} wrap>
+        <Flex vertical gap={12}>
+          <Card size="small">
+            <Flex gap={8} wrap>
               <Tag color="blue">共 {batchResult.tickets.length} 张</Tag>
-              <Tag color="green">中奖 {batchResult.tickets.filter(t => t.prizeAmount > 0).length} 张</Tag>
+              <Tag color="green">中奖 {winCount} 张</Tag>
               <Tag color="gold">总奖金 {formatPrize(batchResult.totalPrize)} 灵石</Tag>
               <Tag color={batchResult.netProfit >= 0 ? 'success' : 'error'}>
                 净{batchResult.netProfit >= 0 ? '赚' : '亏'} {formatPrize(Math.abs(batchResult.netProfit))} 灵石
               </Tag>
             </Flex>
-            <Button type="primary" block onClick={handleContinue}>
-              继续购票
-            </Button>
+          </Card>
+
+          <Flex wrap gap={12}>
+            {batchResult.tickets.map((ticket) => (
+              <PuzzleTicketCard
+                key={ticket.id}
+                ticketNumber={ticket.ticketNumber}
+                grid={ticket.ticketData.grid}
+                matchedLines={ticket.matchedLines}
+                prizeAmount={ticket.prizeAmount}
+                redeemedAt={ticket.redeemedAt}
+              />
+            ))}
           </Flex>
-        </Card>
+
+          <Button type="primary" block onClick={handleContinue}>
+            继续购票
+          </Button>
+        </Flex>
       );
     }
 

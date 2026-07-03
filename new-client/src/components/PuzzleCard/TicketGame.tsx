@@ -68,14 +68,16 @@ const TicketGame = ({ ticket, onRedeem, onContinue, onBuyAnother, isRedeeming }:
         )}
 
         <Flex justify="center" gap={12}>
-          <Button
-            type="primary"
-            size="large"
-            onClick={handleRedeem}
-            loading={isRedeeming}
-          >
-            兑奖
-          </Button>
+          {isWinner && (
+            <Button
+              type="primary"
+              size="large"
+              onClick={handleRedeem}
+              loading={isRedeeming}
+            >
+              兑奖
+            </Button>
+          )}
           <Button
             size="large"
             onClick={onBuyAnother}
