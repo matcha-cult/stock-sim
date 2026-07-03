@@ -22,7 +22,7 @@
  * 3. "兑奖历史" tab 使用 destroyInactiveTabPane，切回时重新加载。
  */
 import { useState, useCallback, useEffect } from 'react';
-import { Tabs, App, Spin, Flex } from 'antd';
+import { Tabs, App, Spin, Flex, Card, Typography, Tag, Button } from 'antd';
 import { usePuzzleCard } from '../../hooks/usePuzzleCard';
 import TicketSelect from './TicketSelect';
 import TicketGame from './TicketGame';
@@ -31,6 +31,14 @@ import type { HistoryItemDto } from '../../services/api/puzzleCard';
 
 type SubTabKey = 'scratch' | 'history';
 
+const { Text } = Typography;
+
+const formatPrize = (amount: number): string => {
+  if (amount >= 100000000) return `${(amount / 100000000).toFixed(1)}亿`;
+  if (amount >= 10000) return `${(amount / 10000).toFixed(0)}万`;
+  return amount.toLocaleString();
+};
+
 const PuzzleCardPage = () => {
   const { message } = App.useApp();
   const [activeTab, setActiveTab] = useState<SubTabKey>('scratch');
@@ -38,16 +46,20 @@ const PuzzleCardPage = () => {
 
   const {
     activeTicket,
+    batchResult,
     history,
     purchasing,
+    batchPurchasing,
     redeeming,
     loadingHistory,
     loadingActive,
     purchase,
+    batchPurchase,
     redeem,
     redeemFromHistory,
     refreshHistory,
     clearActive,
+    clearBatchResult,
   } = usePuzzleCard();
 
   // 切换到"兑奖历史"时首次加载
@@ -64,6 +76,17 @@ const PuzzleCardPage = () => {
       message.success(`购票成功：${ticket.typeKey} #${ticket.ticketNumber}`);
     }
   }, [purchase, message]);
+
+  const handleBatchPurchase = useCallback(async (typeKey: string) => {
+    const result = await batchPurchase(typeKey);
+    if (result) {
+      const winCount = result.tickets.filter(t => t.prizeAmount > 0).length;
+      message.success(
+        `批量购票成功！${result.tickets.length}张，中奖${winCount}张，` +
+        `总奖金 ${formatPrize(result.totalPrize)} 灵石，净${result.netProfit >= 0 ? '赚' : '亏'} ${formatPrize(Math.abs(result.netProfit))} 灵石`,
+      );
+    }
+  }, [batchPurchase, message]);
 
   const handleRedeem = useCallback(async () => {
     const result = await redeem();
@@ -92,7 +115,8 @@ const PuzzleCardPage = () => {
 
   const handleContinue = useCallback(() => {
     clearActive();
-  }, [clearActive]);
+    clearBatchResult();
+  }, [clearActive, clearBatchResult]);
 
   if (loadingActive) {
     return (
@@ -102,11 +126,9 @@ const PuzzleCardPage = () => {
     );
   }
 
-  const tabItems = [
-    {
-      key: 'scratch' as const,
-      label: '刮奖',
-      children: activeTicket ? (
+  const renderScratchTab = () => {
+    if (activeTicket) {
+      return (
         <TicketGame
           ticket={activeTicket}
           onRedeem={() => void handleRedeem()}
@@ -116,12 +138,45 @@ const PuzzleCardPage = () => {
           }}
           isRedeeming={redeeming}
         />
-      ) : (
-        <TicketSelect
-          onPurchase={(typeKey) => void handlePurchase(typeKey)}
-          isPurchasing={purchasing}
-        />
-      ),
+      );
+    }
+
+    if (batchResult) {
+      return (
+        <Card>
+          <Flex vertical gap={16}>
+            <Text strong style={{ fontSize: 16 }}>批量购票结果</Text>
+            <Flex gap={16} wrap>
+              <Tag color="blue">共 {batchResult.tickets.length} 张</Tag>
+              <Tag color="green">中奖 {batchResult.tickets.filter(t => t.prizeAmount > 0).length} 张</Tag>
+              <Tag color="gold">总奖金 {formatPrize(batchResult.totalPrize)} 灵石</Tag>
+              <Tag color={batchResult.netProfit >= 0 ? 'success' : 'error'}>
+                净{batchResult.netProfit >= 0 ? '赚' : '亏'} {formatPrize(Math.abs(batchResult.netProfit))} 灵石
+              </Tag>
+            </Flex>
+            <Button type="primary" block onClick={handleContinue}>
+              继续购票
+            </Button>
+          </Flex>
+        </Card>
+      );
+    }
+
+    return (
+      <TicketSelect
+        onPurchase={(typeKey) => void handlePurchase(typeKey)}
+        onBatchPurchase={(typeKey) => void handleBatchPurchase(typeKey)}
+        isPurchasing={purchasing}
+        isBatchPurchasing={batchPurchasing}
+      />
+    );
+  };
+
+  const tabItems = [
+    {
+      key: 'scratch' as const,
+      label: '刮奖',
+      children: renderScratchTab(),
     },
     {
       key: 'history' as const,

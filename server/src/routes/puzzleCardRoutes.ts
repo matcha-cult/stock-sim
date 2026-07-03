@@ -27,6 +27,7 @@ const createQps = (routeKey: string, limit: number) => createQpsLimitMiddleware(
 });
 
 const purchaseQps = createQps('purchase', MUTATION_QPS_LIMIT);
+const batchPurchaseQps = createQps('batch-purchase', MUTATION_QPS_LIMIT);
 const redeemQps = createQps('redeem', MUTATION_QPS_LIMIT);
 const historyQps = createQps('history', QUERY_QPS_LIMIT);
 const activeQps = createQps('active', QUERY_QPS_LIMIT);
@@ -43,6 +44,21 @@ router.post('/purchase', requireCharacter, purchaseQps, asyncHandler(async (req,
   }
 
   const data = await puzzleCardService.purchase(characterId, typeKey);
+  sendSuccess(res, data);
+}));
+
+// POST /api/puzzle-card/batch-purchase — 批量购票
+router.post('/batch-purchase', requireCharacter, batchPurchaseQps, asyncHandler(async (req, res) => {
+  const characterId = req.characterId!;
+  const body = req.body as { typeKey?: unknown };
+  const typeKey = typeof body.typeKey === 'string' ? body.typeKey : null;
+
+  if (!typeKey) {
+    res.status(400).json({ success: false, message: 'typeKey 不能为空' });
+    return;
+  }
+
+  const data = await puzzleCardService.batchPurchase(characterId, typeKey);
   sendSuccess(res, data);
 }));
 

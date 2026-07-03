@@ -2,12 +2,13 @@
  * 常驻刮刮乐业务服务。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：购票（扣灵石 + 生成票据 + 结算 + 生成安保码）、兑奖（验安保码 + 发奖金）、
+ * 1. 做什么：购票（扣灵石 + 生成票据 + 结算 + 生成安保码）、批量购票、兑奖（验安保码 + 发奖金）、
  *    查询兑奖历史、获取活跃票据。
  * 2. 不做什么：不决定玩法规则（由 puzzleCardTypes 内存常量提供）、不处理 JWT 签名细节（由 puzzleCardRedeemCode 负责）。
  *
  * 输入 / 输出：
  * - purchase：角色 ID + typeKey → 完整票据 DTO（含 redeemCode）。
+ * - batchPurchase：角色 ID + typeKey → 批量票据 + 汇总 DTO。
  * - redeem：角色 ID + ticketId + redeemCode → 兑奖结果 DTO。
  * - getHistory：角色 ID + 分页 → 票据列表。
  * - getActiveTicket：角色 ID → 最近一张未兑奖票据或 null。
@@ -15,6 +16,8 @@
  * 数据流 / 状态流：
  * 购票：锁角色行 → 扣灵石 → 取类型配置 → 生成 grid → 结算 → 生成 redeemCode →
  *       INSERT puzzle_card → 写流水（puzzle_buy）→ 返回 DTO。
+ * 批量购票：锁角色行 → 查当日张数 → 计算惩罚 → 扣总灵石 → 批量 INSERT →
+ *           批量生成 grid + 结算 → 批量 UPDATE → 批量写流水 → 返回 DTO[]。
  * 兑奖：SELECT FOR UPDATE 锁票 → 验 redeemCode → 原子 UPDATE redeemed_at →
  *       若奖金 > 0：加灵石 + 写流水（puzzle_prize）→ 返回结果。
  *
@@ -22,6 +25,7 @@
  * - 类型配置/结算函数从 puzzleCardTypes 注册表读取，新增玩法无需改 service。
  * - 灵石增减使用 `spirit_stones = spirit_stones + $1` 原子表达式（CLAUDE.md 规范）。
  * - 流水写入复用 ledgerService.recordSpiritStones。
+ * - 周期起始时间使用 -8h 偏移补偿 PG timestamptz→timestamp 时区转换。
  *
  * 关键边界条件与坑点：
  * 1. ticket_number 用 INSERT ... SELECT MAX+1 原子递增，FOR UPDATE 锁角色行防并发。
@@ -29,11 +33,21 @@
  * 3. 兑奖时 redeemCode 验证必须在 UPDATE redeemed_at 之前，防止无效 code 标记已兑。
  * 4. 兑奖 atomic UPDATE 用 WHERE redeemed_at IS NULL 防并发重复。
  * 5. bigint 字段从 DB 读取后转 number 返回前端（值在 JS 安全范围内）。
+ * 6. getCurrentPeriodStart 返回的 Date 需 -8h，因为 PG 会话时区 Asia/Shanghai 会把 UTC timestamptz
+ *    参数 +8h 后再与 timestamp without time zone 列比较。
  */
 import { query, withTransaction } from '../../config/database.js';
 import { Transactional } from '../../decorators/transactional.js';
 import { recordSpiritStones, type SpiritStonesLedgerBizType } from '../ledgerService.js';
-import { PUZZLE_CARD_TYPES, SETTLE_FNS, generateRandomGrid, generateQixiGrid } from './puzzleCardTypes.js';
+import {
+  PUZZLE_CARD_TYPES,
+  SETTLE_FNS,
+  generateRandomGrid,
+  generateQixiGrid,
+  QIXI_PENALTY_MULTIPLIER,
+  QIXI_PENALTY_THRESHOLD,
+  QIXI_BATCH_SIZE,
+} from './puzzleCardTypes.js';
 import { generateRedeemCode, verifyRedeemCode, type RedeemCodePayload } from './puzzleCardRedeemCode.js';
 
 // ========== 类型定义 ==========
@@ -83,18 +97,32 @@ export interface RedeemResultDto {
   redeemedAt: number;
 }
 
+export interface BatchPurchaseDto {
+  tickets: PuzzleTicketDto[];
+  totalCost: number;
+  totalPrize: number;
+  netProfit: number;
+}
+
 // ========== 常量 ==========
 
 const HISTORY_PAGE_SIZE = 20;
 const TICKET_DATA_MIN = 1;
 const TICKET_DATA_MAX = 6;
 
-// 每日刷新时间：UTC+8 08:00 = UTC 00:00
-const DAILY_RESET_HOUR_UTC = 0;
+// ========== 周期计算 ==========
 
 /**
- * 计算当前周期起始时间（UTC+8 08:00，即 UTC 00:00）。
- * 返回 UTC 时间戳（毫秒）。
+ * 计算当前周期起始时间。
+ *
+ * 设计说明：
+ * - 每日周期从 UTC+8 08:00 开始刷新。
+ * - 返回的 Date 传给 PG 后，PG 按 Asia/Shanghai 时区 +8h 转换为 timestamp without time zone。
+ * - 因此需要 -8h 偏移补偿：想让 PG 比较时得到 UTC+8 00:00，就传 UTC-8:00 的 Date。
+ *
+ * 关键边界条件：
+ * - UTC+8 08:00~次日 07:59 为一个完整周期（24h）。
+ * - UTC 00:00~15:59 → 当天周期；UTC 16:00~23:59 → 前一天周期。
  */
 const getCurrentPeriodStart = (): Date => {
   const now = new Date();
@@ -102,37 +130,39 @@ const getCurrentPeriodStart = (): Date => {
   const today = new Date(now);
   today.setUTCHours(0, 0, 0, 0);
 
-  // 如果当前 UTC 时间 < 00:00（不可能），或 UTC 时间 >= 00:00，则周期从今天 00:00 开始
-  // 实际上 UTC+8 08:00 = UTC 00:00，所以每日周期从 UTC 00:00 开始
-  if (utcHour >= DAILY_RESET_HOUR_UTC) {
-    return today;
+  if (utcHour < 16) {
+    // UTC 00:00~15:59 → UTC+8 08:00~23:59 → 今天周期
+    // 减 8h：PG 收到 UTC-8:00 Date → 按 Asia/Shanghai +8h → UTC 00:00 ✓
+    const offset = new Date(today);
+    offset.setUTCHours(offset.getUTCHours() - 8);
+    return offset;
   }
-  // 当前 UTC 时间在 00:00 之前（即 UTC+8 在 08:00 之前），属于昨天的周期
+  // UTC 16:00~23:59 → UTC+8 00:00~07:59 → 昨天周期
   const yesterday = new Date(today);
   yesterday.setUTCDate(yesterday.getUTCDate() - 1);
+  yesterday.setUTCHours(yesterday.getUTCHours() - 8);
   return yesterday;
 };
 
 // ========== DTO 构建 ==========
 
-const buildTicketDto = (
-  row: {
-    id: string | bigint;
-    type_key: string;
-    ticket_number: string | bigint;
-    grid_rows: number;
-    grid_cols: number;
-    price_paid: string | bigint;
-    ticket_data: { grid: number[] };
-    matched_lines: Array<{ tierKey: string; tierName: string; prizeType: string; prizeAmount: number | string | bigint }>;
-    prize_type: string;
-    prize_amount: string | bigint;
-    redeemed_at: Date | string | null;
-    created_at: Date | string;
-    epoch: number;
-  },
-  redeemCode: string,
-): PuzzleTicketDto => ({
+interface TicketRow {
+  id: string | bigint;
+  type_key: string;
+  ticket_number: string | bigint;
+  grid_rows: number;
+  grid_cols: number;
+  price_paid: string | bigint;
+  ticket_data: { grid: number[] };
+  matched_lines: Array<{ tierKey: string; tierName: string; prizeType: string; prizeAmount: number | string | bigint }>;
+  prize_type: string;
+  prize_amount: string | bigint;
+  redeemed_at: Date | string | null;
+  created_at: Date | string;
+  epoch: number;
+}
+
+const buildTicketDto = (row: TicketRow, redeemCode: string): PuzzleTicketDto => ({
   id: String(row.id),
   typeKey: row.type_key,
   ticketNumber: Number(row.ticket_number),
@@ -145,14 +175,14 @@ const buildTicketDto = (
   prizeAmount: Number(row.prize_amount),
   redeemCode,
   redeemedAt: row.redeemed_at ? Math.floor(new Date(row.redeemed_at).getTime() / 1000) : null,
-  createdAt: row.epoch,
+  createdAt: Math.floor(Number(row.epoch)),
 });
 
 // ========== 服务 ==========
 
 class PuzzleCardService {
   /**
-   * 购票：扣灵石 + 生成票据 + 结算 + 生成安保码。
+   * 单张购票：扣灵石 + 生成票据 + 结算 + 生成安保码。
    * 返回完整票据 DTO（含 redeemCode），奖金未入账。
    */
   @Transactional
@@ -163,7 +193,7 @@ class PuzzleCardService {
     const settleFn = SETTLE_FNS[typeConfig.ruleType];
     if (!settleFn) throw new Error(`未知结算规则：${typeConfig.ruleType}`);
 
-    // 0. 每日上限检查（按 typeKey 分别计算）
+    // 0. 查询当日购票数（限购日志）
     const periodStart = getCurrentPeriodStart();
     const todayCountResult = await query<{ count: string | bigint }>(
       `SELECT COUNT(*)::bigint AS count FROM puzzle_card
@@ -171,9 +201,10 @@ class PuzzleCardService {
       [characterId, typeKey, periodStart],
     );
     const todayCount = Number(todayCountResult.rows[0].count);
-    if (todayCount >= typeConfig.dailyLimit) {
-      throw new Error(`今日${typeConfig.name}购票已达上限（${typeConfig.dailyLimit}张）`);
-    }
+
+    console.log(`[puzzleCard] purchase: characterId=${characterId}, typeKey=${typeKey}, ` +
+      `todayCount=${todayCount}, threshold=${QIXI_PENALTY_THRESHOLD}, ` +
+      `approachingLimit=${todayCount >= QIXI_PENALTY_THRESHOLD}`);
 
     // 1. 锁角色行（FOR UPDATE 保证 ticket_number 递增安全 + 余额原子操作）
     const charLock = await query<{ spirit_stones: string | bigint }>(
@@ -193,12 +224,14 @@ class PuzzleCardService {
       [price.toString(), characterId],
     );
 
-    // 3. 原子递增 ticket_number
-    const ticketNumResult = await query<{ ticket_number: string | bigint }>(
+    // 3. 原子递增 ticket_number + 插入初始记录
+    const insertedRow = await query<TicketRow>(
       `INSERT INTO puzzle_card (character_id, ticket_number, type_key, grid_rows, grid_cols, price_paid, ticket_data, matched_lines, prize_type, prize_amount, created_at)
        SELECT $1, COALESCE(MAX(ticket_number), 0) + 1, $2, $3, $4, $5, $6, $7, $8, $9, NOW()
        FROM puzzle_card WHERE character_id = $1
-       RETURNING ticket_number`,
+       RETURNING id, type_key, ticket_number, grid_rows, grid_cols, price_paid,
+                 ticket_data, matched_lines, prize_type, prize_amount, redeemed_at,
+                 created_at, EXTRACT(EPOCH FROM created_at) AS epoch`,
       [
         characterId,
         typeConfig.typeKey,
@@ -211,7 +244,7 @@ class PuzzleCardService {
         0,
       ],
     );
-    const ticketNumber = Number(ticketNumResult.rows[0].ticket_number);
+    const ticketNumber = Number(insertedRow.rows[0].ticket_number);
 
     // 4. 生成格子数据 + 结算
     let grid: number[];
@@ -254,37 +287,9 @@ class PuzzleCardService {
       prizeType,
       prizeAmount,
     };
-
-    // TODO: 调试用，需要时取消注释
-    // console.log('[puzzleCard] purchase generate payload:', JSON.stringify(redeemCodePayload, null, 2));
-
     const redeemCode = generateRedeemCode(redeemCodePayload);
 
-    // 7. 查 epoch + 构建 DTO
-    const insertedRow = await query<{
-      id: string | bigint;
-      type_key: string;
-      ticket_number: string | bigint;
-      grid_rows: number;
-      grid_cols: number;
-      price_paid: string | bigint;
-      ticket_data: { grid: number[] };
-      matched_lines: typeof matchedLines;
-      prize_type: string;
-      prize_amount: string | bigint;
-      redeemed_at: null;
-      created_at: Date | string;
-      epoch: number;
-    }>(
-      `SELECT id, type_key, ticket_number, grid_rows, grid_cols, price_paid,
-              ticket_data, matched_lines, prize_type, prize_amount, redeemed_at,
-              created_at, EXTRACT(EPOCH FROM created_at) AS epoch
-       FROM puzzle_card
-       WHERE character_id = $1 AND ticket_number = $2`,
-      [characterId, ticketNumber],
-    );
-
-    // 8. 写购票流水
+    // 7. 写购票流水
     await recordSpiritStones({
       characterId,
       amount: -price,
@@ -294,7 +299,228 @@ class PuzzleCardService {
       memo: `常驻刮刮乐购票：${typeConfig.name}`,
     });
 
-    return buildTicketDto(insertedRow.rows[0] as never, redeemCode);
+    return buildTicketDto(insertedRow.rows[0], redeemCode);
+  }
+
+  /**
+   * 批量购票：一次购买 QIXI_BATCH_SIZE 张。
+   * 当日购票数超过 QIXI_PENALTY_THRESHOLD 后，中奖概率乘以 QIXI_PENALTY_MULTIPLIER。
+   *
+   * 关键设计：
+   * - 无硬限购上限，但超阈值后概率惩罚使期望收益大幅降低。
+   * - 整个批量在单个事务内完成，原子性保证。
+   * - 使用批量 INSERT/UPDATE 减少 DB 往返。
+   */
+  @Transactional
+  async batchPurchase(characterId: number, typeKey: string): Promise<BatchPurchaseDto> {
+    const typeConfig = PUZZLE_CARD_TYPES[typeKey];
+    if (!typeConfig) throw new Error(`未知玩法类型：${typeKey}`);
+
+    const settleFn = SETTLE_FNS[typeConfig.ruleType];
+    if (!settleFn) throw new Error(`未知结算规则：${typeConfig.ruleType}`);
+
+    const batchSize = QIXI_BATCH_SIZE;
+    const price = typeConfig.price;
+    const totalCostBigInt = price * BigInt(batchSize);
+
+    // 1. 锁角色行
+    const charLock = await query<{ spirit_stones: string | bigint }>(
+      `SELECT spirit_stones FROM characters WHERE id = $1 FOR UPDATE`,
+      [characterId],
+    );
+    if (charLock.rows.length === 0) throw new Error('角色不存在');
+
+    const currentBalance = BigInt(charLock.rows[0].spirit_stones);
+    if (currentBalance < totalCostBigInt) throw new Error('灵石不足');
+
+    // 2. 查询当日购票数，判定是否触发惩罚
+    const periodStart = getCurrentPeriodStart();
+    const todayCountResult = await query<{ count: string | bigint }>(
+      `SELECT COUNT(*)::bigint AS count FROM puzzle_card
+       WHERE character_id = $1 AND type_key = $2 AND created_at >= $3`,
+      [characterId, typeKey, periodStart],
+    );
+    const todayCount = Number(todayCountResult.rows[0].count);
+    const isPenalized = todayCount >= QIXI_PENALTY_THRESHOLD;
+    const probabilityMultiplier = isPenalized ? QIXI_PENALTY_MULTIPLIER : 1;
+
+    console.log(`[puzzleCard] batchPurchase: characterId=${characterId}, typeKey=${typeKey}, ` +
+      `todayCount=${todayCount}, threshold=${QIXI_PENALTY_THRESHOLD}, ` +
+      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplier}, batchSize=${batchSize}`);
+
+    // 3. 原子扣总灵石
+    const newBalance = currentBalance - totalCostBigInt;
+    await query(
+      `UPDATE characters SET spirit_stones = spirit_stones - $1, updated_at = now() WHERE id = $2`,
+      [totalCostBigInt.toString(), characterId],
+    );
+
+    // 4. 批量 INSERT 初始记录
+    const emptyTicketData = JSON.stringify({ grid: [] });
+    const emptyMatchedLines = JSON.stringify([]);
+
+    const typeKeys = Array(batchSize).fill(typeConfig.typeKey);
+    const gridRowsArr = Array(batchSize).fill(typeConfig.gridRows);
+    const gridColsArr = Array(batchSize).fill(typeConfig.gridCols);
+    const pricesArr = Array(batchSize).fill(price.toString());
+    const ticketDataArr = Array(batchSize).fill(emptyTicketData);
+    const matchedLinesArr = Array(batchSize).fill(emptyMatchedLines);
+    const prizeAmountsArr = Array(batchSize).fill(0);
+
+    const insertResult = await query<TicketRow>(
+      `INSERT INTO puzzle_card
+         (character_id, ticket_number, type_key, grid_rows, grid_cols, price_paid, ticket_data, matched_lines, prize_type, prize_amount, created_at)
+       SELECT $1,
+              (SELECT COALESCE(MAX(ticket_number), 0) FROM puzzle_card WHERE character_id = $1) + s.idx,
+              s.type_key, s.grid_rows, s.grid_cols, s.price_paid::bigint,
+              s.ticket_data::jsonb, s.matched_lines::jsonb, ${typeConfig.prizeTiers[0]?.prizeType === 'silver' ? "'silver'" : "'spirit_stones'"}, s.prize_amount::bigint,
+              NOW()
+       FROM unnest($2::text[], $3::int[], $4::int[], $5::text[], $6::text[], $7::text[], $8::bigint[])
+            WITH ORDINALITY AS s(type_key, grid_rows, grid_cols, price_paid, ticket_data, matched_lines, prize_amount, idx)
+       RETURNING id, type_key, ticket_number, grid_rows, grid_cols, price_paid,
+                 ticket_data, matched_lines, prize_type, prize_amount, redeemed_at,
+                 created_at, EXTRACT(EPOCH FROM created_at) AS epoch`,
+      [
+        characterId,
+        typeKeys,
+        gridRowsArr,
+        gridColsArr,
+        pricesArr,
+        ticketDataArr,
+        matchedLinesArr,
+        prizeAmountsArr,
+      ],
+    );
+
+    // 5. 生成格子数据 + 结算 + 安保码
+    const updateIds: string[] = [];
+    const updateTicketData: string[] = [];
+    const updateMatchedLines: string[] = [];
+    const updatePrizeTypes: string[] = [];
+    const updatePrizeAmounts: number[] = [];
+    const redeemCodes: string[] = [];
+    const tickets: PuzzleTicketDto[] = [];
+
+    let runningBalance = newBalance;
+
+    for (let i = 0; i < batchSize; i++) {
+      const row = insertResult.rows[i];
+      const ticketNumber = Number(row.ticket_number);
+
+      // 生成格子 + 结算
+      let grid: number[];
+      if (typeConfig.typeKey === 'QIXI') {
+        grid = generateQixiGrid(probabilityMultiplier);
+      } else {
+        const gridLength = typeConfig.gridRows * typeConfig.gridCols * typeConfig.numbersPerCell;
+        grid = generateRandomGrid(gridLength, TICKET_DATA_MIN, TICKET_DATA_MAX);
+      }
+      const settleResult = settleFn(grid);
+
+      const ticketData = { grid };
+      const matchedLines = settleResult.matchedLines.map(m => ({
+        tierKey: m.tierKey,
+        tierName: m.tierName,
+        prizeType: m.prizeType,
+        prizeAmount: Number(m.prizeAmount),
+      }));
+      const prizeType = settleResult.prizeType;
+      const prizeAmount = Number(settleResult.prizeAmount);
+
+      // 生成安保码
+      const redeemCodePayload: RedeemCodePayload = {
+        characterId,
+        ticketNumber,
+        typeKey: typeConfig.typeKey,
+        gridRows: typeConfig.gridRows,
+        gridCols: typeConfig.gridCols,
+        pricePaid: Number(price),
+        ticketData,
+        matchedLines,
+        prizeType,
+        prizeAmount,
+      };
+      const redeemCode = generateRedeemCode(redeemCodePayload);
+
+      updateIds.push(String(row.id));
+      updateTicketData.push(JSON.stringify(ticketData));
+      updateMatchedLines.push(JSON.stringify(matchedLines));
+      updatePrizeTypes.push(prizeType);
+      updatePrizeAmounts.push(prizeAmount);
+      redeemCodes.push(redeemCode);
+
+      // 写购票流水（balanceAfter 为扣完当前票后的余额）
+      await recordSpiritStones({
+        characterId,
+        amount: -price,
+        balanceAfter: runningBalance,
+        bizType: 'puzzle_buy' as SpiritStonesLedgerBizType,
+        bizId: `puzzle:${row.id}`,
+        memo: `常驻刮刮乐批量购票：${typeConfig.name}`,
+      });
+      runningBalance -= price;
+
+      tickets.push(buildTicketDto(row, redeemCode));
+    }
+
+    // 6. 批量 UPDATE ticket_data + 结算结果
+    await query(
+      `UPDATE puzzle_card
+       SET ticket_data = s.ticket_data::jsonb,
+           matched_lines = s.matched_lines::jsonb,
+           prize_type = s.prize_type,
+           prize_amount = s.prize_amount::bigint
+       FROM unnest($1::bigint[], $2::text[], $3::text[], $4::text[], $5::bigint[])
+            WITH ORDINALITY AS s(id, ticket_data, matched_lines, prize_type, prize_amount, idx)
+       WHERE puzzle_card.id = s.id`,
+      [
+        updateIds.map(id => Number(id)),
+        updateTicketData,
+        updateMatchedLines,
+        updatePrizeTypes,
+        updatePrizeAmounts,
+      ],
+    );
+
+    // 7. 自动兑奖：标记所有票据为已兑奖
+    await query(
+      `UPDATE puzzle_card SET redeemed_at = NOW()
+       WHERE id = ANY($1::bigint[]) AND redeemed_at IS NULL`,
+      [updateIds.map(id => Number(id))],
+    );
+
+    // 8. 汇总奖金，批量入账
+    const totalPrize = updatePrizeAmounts.reduce((sum, amount) => sum + amount, 0);
+    let prizeBalance = newBalance;
+    if (totalPrize > 0) {
+      prizeBalance = newBalance + BigInt(totalPrize);
+      await query(
+        `UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = now() WHERE id = $2`,
+        [totalPrize, characterId],
+      );
+    }
+
+    // 9. 写兑奖流水（仅中奖票据）
+    for (let i = 0; i < batchSize; i++) {
+      if (updatePrizeAmounts[i] > 0) {
+        await recordSpiritStones({
+          characterId,
+          amount: BigInt(updatePrizeAmounts[i]),
+          balanceAfter: prizeBalance,
+          bizType: 'puzzle_prize' as SpiritStonesLedgerBizType,
+          bizId: `puzzle:${updateIds[i]}`,
+          memo: `常驻刮刮乐批量兑奖：${typeConfig.name}`,
+        });
+      }
+    }
+
+    // 10. 构建汇总
+    return {
+      tickets,
+      totalCost: Number(totalCostBigInt),
+      totalPrize,
+      netProfit: totalPrize - Number(totalCostBigInt),
+    };
   }
 
   /**
@@ -479,22 +705,7 @@ class PuzzleCardService {
    * 用于页面刷新后恢复刮奖界面。
    */
   async getActiveTicket(characterId: number): Promise<PuzzleTicketDto | null> {
-    // 活跃票据：未兑奖的最后一张
-    const result = await query<{
-      id: string | bigint;
-      type_key: string;
-      ticket_number: string | bigint;
-      grid_rows: number;
-      grid_cols: number;
-      price_paid: string | bigint;
-      ticket_data: { grid: number[] };
-      matched_lines: Array<{ tierKey: string; tierName: string; prizeType: string; prizeAmount: number | string | bigint }>;
-      prize_type: string;
-      prize_amount: string | bigint;
-      redeemed_at: null;
-      created_at: Date | string;
-      epoch: number;
-    }>(
+    const result = await query<TicketRow>(
       `SELECT id, type_key, ticket_number, grid_rows, grid_cols, price_paid,
               ticket_data, matched_lines, prize_type, prize_amount, redeemed_at,
               created_at, EXTRACT(EPOCH FROM created_at) AS epoch
@@ -523,7 +734,7 @@ class PuzzleCardService {
     };
     const redeemCode = generateRedeemCode(payload);
 
-    return buildTicketDto(row as never, redeemCode);
+    return buildTicketDto(row, redeemCode);
   }
 }
 

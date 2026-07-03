@@ -18,28 +18,34 @@
  * 3. 活跃票据通过 getActiveTicket 恢复（后端重新生成 redeemCode）。
  */
 import { useState, useCallback, useEffect } from 'react';
-import type { PuzzleTicketDto, HistoryResultDto, RedeemResultDto } from '../services/api/puzzleCard';
-import { purchaseTicket, redeemTicket, getRedeemHistory, getActiveTicket } from '../services/api/puzzleCard';
+import type { PuzzleTicketDto, HistoryResultDto, RedeemResultDto, BatchPurchaseResultDto } from '../services/api/puzzleCard';
+import { purchaseTicket, batchPurchaseTicket, redeemTicket, getRedeemHistory, getActiveTicket } from '../services/api/puzzleCard';
 import { RequestDedup } from '../stores/RequestDedup';
 
 interface UsePuzzleCardReturn {
   activeTicket: PuzzleTicketDto | null;
+  batchResult: BatchPurchaseResultDto | null;
   history: HistoryResultDto | null;
   purchasing: boolean;
+  batchPurchasing: boolean;
   redeeming: boolean;
   loadingHistory: boolean;
   loadingActive: boolean;
   purchase: (typeKey: string) => Promise<PuzzleTicketDto | null>;
+  batchPurchase: (typeKey: string) => Promise<BatchPurchaseResultDto | null>;
   redeem: () => Promise<RedeemResultDto | null>;
   redeemFromHistory: (ticketId: number, redeemCode: string) => Promise<RedeemResultDto | null>;
   refreshHistory: (page?: number) => Promise<void>;
   clearActive: () => void;
+  clearBatchResult: () => void;
 }
 
 export const usePuzzleCard = (): UsePuzzleCardReturn => {
   const [activeTicket, setActiveTicket] = useState<PuzzleTicketDto | null>(null);
+  const [batchResult, setBatchResult] = useState<BatchPurchaseResultDto | null>(null);
   const [history, setHistory] = useState<HistoryResultDto | null>(null);
   const [purchasing, setPurchasing] = useState(false);
+  const [batchPurchasing, setBatchPurchasing] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [loadingActive, setLoadingActive] = useState(true);
@@ -74,6 +80,22 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
     } finally {
       dedupRef.complete('purchase');
       setPurchasing(false);
+    }
+  }, [dedupRef]);
+
+  const batchPurchase = useCallback(async (typeKey: string): Promise<BatchPurchaseResultDto | null> => {
+    if (!dedupRef.enter('batch-purchase')) return null;
+    setBatchPurchasing(true);
+    try {
+      const res = await batchPurchaseTicket(typeKey);
+      if (res.success) {
+        setBatchResult(res.data);
+        return res.data;
+      }
+      return null;
+    } finally {
+      dedupRef.complete('batch-purchase');
+      setBatchPurchasing(false);
     }
   }, [dedupRef]);
 
@@ -127,17 +149,25 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
     setActiveTicket(null);
   }, []);
 
+  const clearBatchResult = useCallback(() => {
+    setBatchResult(null);
+  }, []);
+
   return {
     activeTicket,
+    batchResult,
     history,
     purchasing,
+    batchPurchasing,
     redeeming,
     loadingHistory,
     loadingActive,
     purchase,
+    batchPurchase,
     redeem,
     redeemFromHistory,
     refreshHistory,
     clearActive,
+    clearBatchResult,
   };
 };

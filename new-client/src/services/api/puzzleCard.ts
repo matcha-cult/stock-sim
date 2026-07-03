@@ -59,6 +59,13 @@ export interface HistoryResultDto {
   pageSize: number;
 }
 
+export interface BatchPurchaseResultDto {
+  tickets: PuzzleTicketDto[];
+  totalCost: number;
+  totalPrize: number;
+  netProfit: number;
+}
+
 export interface PuzzleCardTypeDto {
   typeKey: string;
   name: string;
@@ -78,6 +85,12 @@ export const purchaseTicket = (
   typeKey: string,
 ): Promise<{ data: PuzzleTicketDto; success: boolean }> => {
   return api.post<PuzzleTicketDto>('/api/puzzle-card/purchase', { typeKey });
+};
+
+export const batchPurchaseTicket = (
+  typeKey: string,
+): Promise<{ data: BatchPurchaseResultDto; success: boolean }> => {
+  return api.post<BatchPurchaseResultDto>('/api/puzzle-card/batch-purchase', { typeKey });
 };
 
 export const redeemTicket = (
@@ -125,7 +138,8 @@ export const PUZZLE_CARD_TYPES: PuzzleCardTypeDto[] = [
       '格子3中奖：10万灵石',
       '格子4中奖：5万灵石',
       '多格中奖奖金累加',
-      '每日限购：777张（UTC+8 08:00 刷新）',
+      '可单张购买或批量购买20张',
+      '每日限购与中奖率惩罚起点777票',
       '购票限制：5秒内最多购买2次',
       '兑奖限制：5秒内最多兑奖2次',
     ],

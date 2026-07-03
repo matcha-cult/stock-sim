@@ -1,0 +1,12 @@
+{
+  "typeKey": "QIXI",
+  "cells": [
+    { "cellIndex": 0, "name": "格子1", "prizeAmount": 5000000, "winProbability": 0.008 },
+    { "cellIndex": 1, "name": "格子2", "prizeAmount": 100000000, "winProbability": 0.0003 },
+    { "cellIndex": 2, "name": "格子3", "prizeAmount": 100000, "winProbability": 0.2 },
+    { "cellIndex": 3, "name": "格子4", "prizeAmount": 50000, "winProbability": 0.2, "pityTriggerRate": 0.54 }
+  ],
+  "penaltyMultiplier": 0.1,
+  "penaltyThreshold": 777,
+  "batchSize": 20
+}

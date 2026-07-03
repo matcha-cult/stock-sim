@@ -25,7 +25,9 @@ const { Text, Paragraph } = Typography;
 
 interface TicketSelectProps {
   onPurchase: (typeKey: string) => void;
+  onBatchPurchase: (typeKey: string) => void;
   isPurchasing: boolean;
+  isBatchPurchasing: boolean;
 }
 
 // 仅第一个票种开放，其余占位
@@ -36,7 +38,7 @@ const formatPrice = (price: number): string => {
   return price.toLocaleString();
 };
 
-const TicketSelect = ({ onPurchase, isPurchasing }: TicketSelectProps) => {
+const TicketSelect = ({ onPurchase, onBatchPurchase, isPurchasing, isBatchPurchasing }: TicketSelectProps) => {
   const isMobile = useIsMobile();
   const colSpan = isMobile ? 24 : 8;
 
@@ -67,15 +69,25 @@ const TicketSelect = ({ onPurchase, isPurchasing }: TicketSelectProps) => {
                     ))}
                   </Flex>
                 )}
-                <Button
-                  type="primary"
-                  block
-                  loading={isPurchasing}
-                  disabled={!isReady}
-                  onClick={() => onPurchase(type.typeKey)}
-                >
-                  {isReady ? '购买' : '敬请期待'}
-                </Button>
+                <Flex gap={8}>
+                  <Button
+                    type="primary"
+                    block
+                    loading={isPurchasing}
+                    disabled={!isReady || isBatchPurchasing}
+                    onClick={() => onPurchase(type.typeKey)}
+                  >
+                    {isReady ? '购买 1 张' : '敬请期待'}
+                  </Button>
+                  <Button
+                    block
+                    loading={isBatchPurchasing}
+                    disabled={!isReady || isPurchasing}
+                    onClick={() => onBatchPurchase(type.typeKey)}
+                  >
+                    {isReady ? '批量 20 张' : '敬请期待'}
+                  </Button>
+                </Flex>
               </Flex>
             </Card>
           </Col>
