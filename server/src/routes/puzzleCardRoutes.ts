@@ -1,7 +1,7 @@
 /**
  * 常驻刮刮乐 HTTP 路由。
  *
- * 作用：提供购票、兑奖、兑奖历史、活跃票据接口。
+ * 作用：提供购票、批量购票、兑奖、兑奖历史接口。
  * 路由只做鉴权、QPS 和参数归一化，业务逻辑集中在 puzzleCardService。
  */
 import { Router, type Router as RouterType } from 'express';
@@ -30,7 +30,6 @@ const purchaseQps = createQps('purchase', MUTATION_QPS_LIMIT);
 const batchPurchaseQps = createQps('batch-purchase', MUTATION_QPS_LIMIT);
 const redeemQps = createQps('redeem', MUTATION_QPS_LIMIT);
 const historyQps = createQps('history', QUERY_QPS_LIMIT);
-const activeQps = createQps('active', QUERY_QPS_LIMIT);
 
 // POST /api/puzzle-card/purchase — 购票
 router.post('/purchase', requireCharacter, purchaseQps, asyncHandler(async (req, res) => {
@@ -87,13 +86,6 @@ router.get('/history', requireCharacter, historyQps, asyncHandler(async (req, re
   const characterId = req.characterId!;
   const page = typeof req.query.page === 'string' ? Number(req.query.page) : 1;
   const data = await puzzleCardService.getHistory(characterId, page);
-  sendSuccess(res, data);
-}));
-
-// GET /api/puzzle-card/active — 获取活跃票据（刷新恢复）
-router.get('/active', requireCharacter, activeQps, asyncHandler(async (req, res) => {
-  const characterId = req.characterId!;
-  const data = await puzzleCardService.getActiveTicket(characterId);
   sendSuccess(res, data);
 }));
 

@@ -106,10 +106,6 @@ export const getRedeemHistory = (
   return api.get<HistoryResultDto>('/api/puzzle-card/history', { params: { page } });
 };
 
-export const getActiveTicket = (): Promise<{ data: PuzzleTicketDto | null; success: boolean }> => {
-  return api.get<PuzzleTicketDto | null>('/api/puzzle-card/active');
-};
-
 // ========== 内存常量（类型配置） ==========
 // 与后端 puzzleCardTypes.ts 保持一致，仅用于前端展示。
 

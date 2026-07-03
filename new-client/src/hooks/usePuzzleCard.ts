@@ -2,11 +2,12 @@
  * 常驻刮刮乐状态管理 Hook。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：管理购票、兑奖、历史查询、活跃票据恢复等核心状态。
- * 2. 不做什么：不处理 UI 动画（由组件负责）、不决定玩法规则（后端决定）。
+ * 1. 做什么：管理购票、批量购票、兑奖、历史查询等核心状态。
+ * 2. 不做什么：不处理 UI 动画（由组件负责）、不决定玩法规则（后端决定）、
+ *    不在 mount 时恢复活跃票据（批量购买已自动兑奖，单张购票仅在当前会话内有效）。
  *
  * 数据流 / 状态流：
- * mount → 加载活跃票据（恢复）→ 购票 → 展示票据 → 用户刮开/兑奖 → 刷新历史。
+ * 购票/批量购票 → 展示结果 → 用户兑奖（单张）或刷新历史 → 历史列表。
  *
  * 复用设计说明：
  * - API 调用统一走 services/api/puzzleCard.ts。
@@ -15,11 +16,10 @@
  * 关键边界条件与坑点：
  * 1. dedup.enter() 必须在设置 loading 之前调用；dedup.complete() 必须在 finally 中。
  * 2. 购票失败由 axios 拦截器自动弹 toast，组件不需重复处理。
- * 3. 活跃票据通过 getActiveTicket 恢复（后端重新生成 redeemCode）。
  */
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import type { PuzzleTicketDto, HistoryResultDto, RedeemResultDto, BatchPurchaseResultDto } from '../services/api/puzzleCard';
-import { purchaseTicket, batchPurchaseTicket, redeemTicket, getRedeemHistory, getActiveTicket } from '../services/api/puzzleCard';
+import { purchaseTicket, batchPurchaseTicket, redeemTicket, getRedeemHistory } from '../services/api/puzzleCard';
 import { RequestDedup } from '../stores/RequestDedup';
 
 interface UsePuzzleCardReturn {
@@ -30,7 +30,6 @@ interface UsePuzzleCardReturn {
   batchPurchasing: boolean;
   redeeming: boolean;
   loadingHistory: boolean;
-  loadingActive: boolean;
   purchase: (typeKey: string) => Promise<PuzzleTicketDto | null>;
   batchPurchase: (typeKey: string) => Promise<BatchPurchaseResultDto | null>;
   redeem: () => Promise<RedeemResultDto | null>;
@@ -48,24 +47,7 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
   const [batchPurchasing, setBatchPurchasing] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
-  const [loadingActive, setLoadingActive] = useState(true);
   const dedupRef = useState(() => new RequestDedup())[0];
-
-  // 挂载时恢复活跃票据
-  useEffect(() => {
-    const loadActive = async () => {
-      if (!dedupRef.enter('active')) return;
-      setLoadingActive(true);
-      try {
-        const res = await getActiveTicket();
-        if (res.success) setActiveTicket(res.data);
-      } finally {
-        dedupRef.complete('active');
-        setLoadingActive(false);
-      }
-    };
-    void loadActive();
-  }, [dedupRef]);
 
   const purchase = useCallback(async (typeKey: string): Promise<PuzzleTicketDto | null> => {
     if (!dedupRef.enter('purchase')) return null;
@@ -134,7 +116,6 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
     try {
       const res = await redeemTicket(ticketId, redeemCode);
       if (res.success) {
-        // 刷新历史
         if (history) void refreshHistory(history.page);
         return res.data;
       }
@@ -161,7 +142,6 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
     batchPurchasing,
     redeeming,
     loadingHistory,
-    loadingActive,
     purchase,
     batchPurchase,
     redeem,

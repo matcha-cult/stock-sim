@@ -52,7 +52,6 @@ const PuzzleCardPage = () => {
     batchPurchasing,
     redeeming,
     loadingHistory,
-    loadingActive,
     purchase,
     batchPurchase,
     redeem,
@@ -117,14 +116,6 @@ const PuzzleCardPage = () => {
     clearActive();
     clearBatchResult();
   }, [clearActive, clearBatchResult]);
-
-  if (loadingActive) {
-    return (
-      <Flex justify="center" align="center" style={{ minHeight: 200 }}>
-        <Spin size="large" />
-      </Flex>
-    );
-  }
 
   const renderScratchTab = () => {
     if (activeTicket) {

@@ -2,8 +2,8 @@
  * 常驻刮刮乐业务服务。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：购票（扣灵石 + 生成票据 + 结算 + 生成安保码）、批量购票、兑奖（验安保码 + 发奖金）、
- *    查询兑奖历史、获取活跃票据。
+ * 1. 做什么：购票（扣灵石 + 生成票据 + 结算 + 生成安保码）、批量购票（自动兑奖）、
+ *    兑奖（验安保码 + 发奖金）、查询兑奖历史。
  * 2. 不做什么：不决定玩法规则（由 puzzleCardTypes 内存常量提供）、不处理 JWT 签名细节（由 puzzleCardRedeemCode 负责）。
  *
  * 输入 / 输出：
@@ -11,7 +11,6 @@
  * - batchPurchase：角色 ID + typeKey → 批量票据 + 汇总 DTO。
  * - redeem：角色 ID + ticketId + redeemCode → 兑奖结果 DTO。
  * - getHistory：角色 ID + 分页 → 票据列表。
- * - getActiveTicket：角色 ID → 最近一张未兑奖票据或 null。
  *
  * 数据流 / 状态流：
  * 购票：锁角色行 → 扣灵石 → 取类型配置 → 生成 grid → 结算 → 生成 redeemCode →
@@ -698,43 +697,6 @@ class PuzzleCardService {
       page: safePage,
       pageSize: HISTORY_PAGE_SIZE,
     };
-  }
-
-  /**
-   * 获取当前活跃票据（最近一张未兑奖）。
-   * 用于页面刷新后恢复刮奖界面。
-   */
-  async getActiveTicket(characterId: number): Promise<PuzzleTicketDto | null> {
-    const result = await query<TicketRow>(
-      `SELECT id, type_key, ticket_number, grid_rows, grid_cols, price_paid,
-              ticket_data, matched_lines, prize_type, prize_amount, redeemed_at,
-              created_at, EXTRACT(EPOCH FROM created_at) AS epoch
-       FROM puzzle_card
-       WHERE character_id = $1 AND redeemed_at IS NULL
-       ORDER BY ticket_number DESC
-       LIMIT 1`,
-      [characterId],
-    );
-
-    if (result.rows.length === 0) return null;
-
-    const row = result.rows[0];
-    // 活跃票据需要重新生成 redeemCode（不持久化）
-    const payload: RedeemCodePayload = {
-      characterId,
-      ticketNumber: Number(row.ticket_number),
-      typeKey: row.type_key,
-      gridRows: row.grid_rows,
-      gridCols: row.grid_cols,
-      pricePaid: Number(row.price_paid),
-      ticketData: row.ticket_data,
-      matchedLines: row.matched_lines,
-      prizeType: row.prize_type,
-      prizeAmount: Number(row.prize_amount),
-    };
-    const redeemCode = generateRedeemCode(payload);
-
-    return buildTicketDto(row, redeemCode);
   }
 }
 
