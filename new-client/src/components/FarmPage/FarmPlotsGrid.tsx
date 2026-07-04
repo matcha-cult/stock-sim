@@ -65,7 +65,7 @@ const GuideContent = () => (
     <div>
       <Text strong>五行灵根</Text>
       <Flex gap={4} wrap="wrap" style={{ marginTop: 4 }}>
-        {(['金', '木', '水', '火', '土'] as const).map((e) => (
+        {(['木', '火', '土', '金', '水'] as const).map((e) => (
           <Tag
             key={e}
             style={{

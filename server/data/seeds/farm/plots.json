@@ -15,9 +15,9 @@
   },
   "farmTiers": [
     { "tier": 1, "name": "黄级", "displayName": "黄级（灵壤）", "minLevel": 0, "xiRangCost": 1 },
-    { "tier": 2, "name": "玄级", "displayName": "玄级（灵壤）", "minLevel": 25, "xiRangCost": 3 },
-    { "tier": 3, "name": "地级", "displayName": "地级（仙壤）", "minLevel": 50, "xiRangCost": 8 },
-    { "tier": 4, "name": "天级", "displayName": "天级（神壤）", "minLevel": 75, "xiRangCost": 16 }
+    { "tier": 2, "name": "玄级", "displayName": "玄级（灵壤）", "minLevel": 20, "xiRangCost": 3 },
+    { "tier": 3, "name": "地级", "displayName": "地级（仙壤）", "minLevel": 40, "xiRangCost": 8 },
+    { "tier": 4, "name": "天级", "displayName": "天级（神壤）", "minLevel": 60, "xiRangCost": 16 }
   ],
   "initialSeeds": [
     { "itemId": "seed_spirit_root_gold", "quantity": 50 },

@@ -87,7 +87,7 @@ function checkDualElementGeneration(adjacentCrops: CropConfig[], elements?: Crop
  *
  * 算法：
  * 1. 收集所有相邻作物带来的元素影响（去重）
- * 2. 检查五种元素（金、木、水、火、土）是否全部出现
+ * 2. 检查五种元素（木、火、土、金、水）是否全部出现
  * 3. 五种齐全即归零，返回 true
  *
  * 注意：当前实现只检查"五种齐全"即归零，不考虑多余元素。
@@ -106,7 +106,7 @@ function checkWuXingGuiYuan(adjacentCrops: CropConfig[]): boolean {
   }
 
   // 检查五种元素是否全部出现
-  const requiredElements: readonly CropElement[] = ['金', '木', '水', '火', '土'];
+  const requiredElements: readonly CropElement[] = ['木', '火', '土', '金', '水'];
   return requiredElements.every((elem) => elementSet.has(elem));
 }
 
@@ -120,8 +120,8 @@ function checkWuXingGuiYuan(adjacentCrops: CropConfig[]): boolean {
  *
  * 示例：
  * - 相邻有 2个金灵稻[金] + 1个灵根·木[木] + 灵根·水 + 灵根·火 + 灵根·土
- * - 元素计数：金×2, 木×1, 水×1, 火×1, 土×1
- * - 五种齐全 → 抵消：金×1, 木×0, 水×0, 火×0, 土×0
+ * - 元素计数：木×1, 火×1, 土×1, 金×2, 水×1
+ * - 五种齐全 → 抵消：木×0, 火×0, 土×0, 金×1, 水×0
  * - 剩余：金×1 → 返回 ['金']
  *
  * @param adjacentCrops 相邻作物配置数组
@@ -137,7 +137,7 @@ export function getRemainingElementsAfterWuXing(adjacentCrops: CropConfig[]): Cr
   }
 
   // 检查五种元素是否全部出现
-  const requiredElements: readonly CropElement[] = ['金', '木', '水', '火', '土'];
+  const requiredElements: readonly CropElement[] = ['木', '火', '土', '金', '水'];
   const allPresent = requiredElements.every((elem) => (elementCount.get(elem) ?? 0) >= 1);
 
   if (allPresent) {

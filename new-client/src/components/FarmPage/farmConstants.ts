@@ -12,12 +12,15 @@
 
 /** 五行元素对应颜色（HEX） */
 export const ELEMENT_COLORS: Record<string, string> = {
-  '金': '#FFD700',
   '木': '#228B22',
-  '水': '#4169E1',
   '火': '#FF4500',
   '土': '#8B4513',
+  '金': '#FFD700',
+  '水': '#4169E1',
 };
+
+/** 五行元素显示顺序（相生顺序：木→火→土→金→水） */
+export const ELEMENT_ORDER: readonly string[] = ['木', '火', '土', '金', '水'];
 
 /** 变异类型标签（显示名 + 颜色） */
 export const MUTATION_LABELS: Record<string, { label: string; color: string }> = {

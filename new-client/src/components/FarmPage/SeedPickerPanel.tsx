@@ -40,16 +40,16 @@ interface SeedPickerPanelProps {
 const ELEMENT_FILTERS = [
   { key: 'all', label: '全' },
   { key: 'none', label: '无' },
-  { key: '金', label: '金' },
   { key: '木', label: '木' },
-  { key: '水', label: '水' },
   { key: '火', label: '火' },
   { key: '土', label: '土' },
-  { key: '金水', label: '金水' },
-  { key: '水木', label: '水木' },
+  { key: '金', label: '金' },
+  { key: '水', label: '水' },
   { key: '木火', label: '木火' },
   { key: '火土', label: '火土' },
   { key: '土金', label: '土金' },
+  { key: '金水', label: '金水' },
+  { key: '水木', label: '水木' },
 ];
 
 // 特性筛选选项
