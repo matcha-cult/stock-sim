@@ -188,7 +188,7 @@ class PuzzleCardService {
     const settleFn = SETTLE_FNS[typeConfig.ruleType];
     if (!settleFn) throw new Error(`未知结算规则：${typeConfig.ruleType}`);
 
-    // 0. 查询当日购票数（限购日志）
+    // 0. 查询当日购票数，判定是否触发惩罚
     const periodStart = getCurrentPeriodStart();
     const todayCountResult = await query<{ count: string | bigint }>(
       `SELECT COUNT(*)::bigint AS count FROM puzzle_card
@@ -197,9 +197,14 @@ class PuzzleCardService {
     );
     const todayCount = Number(todayCountResult.rows[0].count);
 
+    const penaltyThreshold = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_THRESHOLD : QIXI_PENALTY_THRESHOLD;
+    const penaltyMultiplier = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_MULTIPLIER : QIXI_PENALTY_MULTIPLIER;
+    const isPenalized = todayCount >= penaltyThreshold;
+    const probabilityMultiplierValue = isPenalized ? penaltyMultiplier : 1;
+
     console.log(`[puzzleCard] purchase: characterId=${characterId}, typeKey=${typeKey}, ` +
-      `todayCount=${todayCount}, threshold=${QIXI_PENALTY_THRESHOLD}, ` +
-      `approachingLimit=${todayCount >= QIXI_PENALTY_THRESHOLD}`);
+      `todayCount=${todayCount}, threshold=${penaltyThreshold}, ` +
+      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplierValue}`);
 
     // 1. 锁角色行（FOR UPDATE 保证 ticket_number 递增安全 + 余额原子操作）
     const charLock = await query<{ spirit_stones: string | bigint }>(
@@ -244,9 +249,9 @@ class PuzzleCardService {
     // 4. 生成格子数据 + 结算
     let grid: number[];
     if (typeConfig.typeKey === 'QIXI') {
-      grid = generateQixiGrid();
+      grid = generateQixiGrid(probabilityMultiplierValue);
     } else if (typeConfig.typeKey === 'SANYUAN') {
-      grid = generateSanyuanGrid();
+      grid = generateSanyuanGrid(probabilityMultiplierValue);
     } else {
       const gridLength = typeConfig.gridRows * typeConfig.gridCols * typeConfig.numbersPerCell;
       grid = generateRandomGrid(gridLength, TICKET_DATA_MIN, TICKET_DATA_MAX);
