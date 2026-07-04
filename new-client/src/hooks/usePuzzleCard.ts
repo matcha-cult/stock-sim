@@ -18,9 +18,14 @@
  * 2. 购票失败由 axios 拦截器自动弹 toast，组件不需重复处理。
  */
 import { useState, useCallback } from 'react';
-import type { PuzzleTicketDto, HistoryResultDto, RedeemResultDto, BatchPurchaseResultDto } from '../services/api/puzzleCard';
+import type { PuzzleTicketDto, HistoryResultDto, RedeemResultDto, BatchPurchaseResultDto, PurchaseResultDto } from '../services/api/puzzleCard';
 import { purchaseTicket, batchPurchaseTicket, redeemTicket, getRedeemHistory } from '../services/api/puzzleCard';
 import { RequestDedup } from '../stores/RequestDedup';
+
+interface DailyPurchaseInfo {
+  todayCount: number;
+  todayThreshold: number;
+}
 
 interface UsePuzzleCardReturn {
   activeTicket: PuzzleTicketDto | null;
@@ -30,7 +35,8 @@ interface UsePuzzleCardReturn {
   batchPurchasing: boolean;
   redeeming: boolean;
   loadingHistory: boolean;
-  purchase: (typeKey: string) => Promise<PuzzleTicketDto | null>;
+  dailyPurchaseInfo: DailyPurchaseInfo | null;
+  purchase: (typeKey: string) => Promise<PurchaseResultDto | null>;
   batchPurchase: (typeKey: string) => Promise<BatchPurchaseResultDto | null>;
   redeem: () => Promise<RedeemResultDto | null>;
   redeemFromHistory: (ticketId: number, redeemCode: string) => Promise<RedeemResultDto | null>;
@@ -47,15 +53,17 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
   const [batchPurchasing, setBatchPurchasing] = useState(false);
   const [redeeming, setRedeeming] = useState(false);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [dailyPurchaseInfo, setDailyPurchaseInfo] = useState<DailyPurchaseInfo | null>(null);
   const dedupRef = useState(() => new RequestDedup())[0];
 
-  const purchase = useCallback(async (typeKey: string): Promise<PuzzleTicketDto | null> => {
+  const purchase = useCallback(async (typeKey: string): Promise<PurchaseResultDto | null> => {
     if (!dedupRef.enter('purchase')) return null;
     setPurchasing(true);
     try {
       const res = await purchaseTicket(typeKey);
       if (res.success) {
-        setActiveTicket(res.data);
+        setActiveTicket(res.data.ticket);
+        setDailyPurchaseInfo({ todayCount: res.data.todayCount, todayThreshold: res.data.todayThreshold });
         return res.data;
       }
       return null;
@@ -72,6 +80,7 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
       const res = await batchPurchaseTicket(typeKey);
       if (res.success) {
         setBatchResult(res.data);
+        setDailyPurchaseInfo({ todayCount: res.data.todayCount, todayThreshold: res.data.todayThreshold });
         return res.data;
       }
       return null;
@@ -142,6 +151,7 @@ export const usePuzzleCard = (): UsePuzzleCardReturn => {
     batchPurchasing,
     redeeming,
     loadingHistory,
+    dailyPurchaseInfo,
     purchase,
     batchPurchase,
     redeem,

@@ -100,11 +100,19 @@ export interface RedeemResultDto {
   redeemedAt: number;
 }
 
+export interface PurchaseResultDto {
+  ticket: PuzzleTicketDto;
+  todayCount: number;
+  todayThreshold: number;
+}
+
 export interface BatchPurchaseDto {
   tickets: PuzzleTicketDto[];
   totalCost: number;
   totalPrize: number;
   netProfit: number;
+  todayCount: number;
+  todayThreshold: number;
 }
 
 // ========== 常量 ==========
@@ -173,7 +181,7 @@ class PuzzleCardService {
    * 返回完整票据 DTO（含 redeemCode），奖金未入账。
    */
   @Transactional
-  async purchase(characterId: number, typeKey: string): Promise<PuzzleTicketDto> {
+  async purchase(characterId: number, typeKey: string): Promise<PurchaseResultDto> {
     const typeConfig = PUZZLE_CARD_TYPES[typeKey];
     if (!typeConfig) throw new Error(`未知玩法类型：${typeKey}`);
 
@@ -290,20 +298,25 @@ class PuzzleCardService {
 
     // 8. 构建返回 DTO（用生成后的数据，不用 INSERT 时的空数据）
     const row = insertedRow.rows[0];
+    const todayThreshold = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_THRESHOLD : QIXI_PENALTY_THRESHOLD;
     return {
-      id: String(row.id),
-      typeKey: row.type_key,
-      ticketNumber,
-      gridRows: row.grid_rows,
-      gridCols: row.grid_cols,
-      pricePaid: Number(row.price_paid),
-      ticketData,
-      matchedLines,
-      prizeType,
-      prizeAmount,
-      redeemCode,
-      redeemedAt: null,
-      createdAt: Math.floor(Number(row.epoch)),
+      ticket: {
+        id: String(row.id),
+        typeKey: row.type_key,
+        ticketNumber,
+        gridRows: row.grid_rows,
+        gridCols: row.grid_cols,
+        pricePaid: Number(row.price_paid),
+        ticketData,
+        matchedLines,
+        prizeType,
+        prizeAmount,
+        redeemCode,
+        redeemedAt: null,
+        createdAt: Math.floor(Number(row.epoch)),
+      },
+      todayCount: todayCount + 1,
+      todayThreshold,
     };
   }
 
@@ -554,6 +567,8 @@ class PuzzleCardService {
       totalCost: Number(totalCostBigInt),
       totalPrize,
       netProfit: totalPrize - Number(totalCostBigInt),
+      todayCount: todayCount + batchSize,
+      todayThreshold: penaltyThreshold,
     };
   }
 

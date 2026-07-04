@@ -59,11 +59,19 @@ export interface HistoryResultDto {
   pageSize: number;
 }
 
+export interface PurchaseResultDto {
+  ticket: PuzzleTicketDto;
+  todayCount: number;
+  todayThreshold: number;
+}
+
 export interface BatchPurchaseResultDto {
   tickets: PuzzleTicketDto[];
   totalCost: number;
   totalPrize: number;
   netProfit: number;
+  todayCount: number;
+  todayThreshold: number;
 }
 
 export interface PuzzleCardTypeDto {
@@ -83,8 +91,8 @@ export interface PuzzleCardTypeDto {
 
 export const purchaseTicket = (
   typeKey: string,
-): Promise<{ data: PuzzleTicketDto; success: boolean }> => {
-  return api.post<PuzzleTicketDto>('/api/puzzle-card/purchase', { typeKey });
+): Promise<{ data: PurchaseResultDto; success: boolean }> => {
+  return api.post<PurchaseResultDto>('/api/puzzle-card/purchase', { typeKey });
 };
 
 export const batchPurchaseTicket = (

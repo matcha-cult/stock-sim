@@ -53,6 +53,7 @@ const PuzzleCardPage = () => {
     batchPurchasing,
     redeeming,
     loadingHistory,
+    dailyPurchaseInfo,
     purchase,
     batchPurchase,
     redeem,
@@ -71,9 +72,9 @@ const PuzzleCardPage = () => {
   }, [activeTab, historyLoaded, refreshHistory]);
 
   const handlePurchase = useCallback(async (typeKey: string) => {
-    const ticket = await purchase(typeKey);
-    if (ticket) {
-      message.success(`购票成功：${ticket.typeKey} #${ticket.ticketNumber}`);
+    const result = await purchase(typeKey);
+    if (result) {
+      message.success(`购票成功：${result.ticket.typeKey} #${result.ticket.ticketNumber}`);
     }
   }, [purchase, message]);
 
@@ -176,6 +177,7 @@ const PuzzleCardPage = () => {
         onBatchPurchase={(typeKey) => void handleBatchPurchase(typeKey)}
         isPurchasing={purchasing}
         isBatchPurchasing={batchPurchasing}
+        dailyPurchaseInfo={dailyPurchaseInfo}
       />
     );
   };
