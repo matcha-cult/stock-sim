@@ -1352,6 +1352,21 @@ export async function sellHarvest(
       memo: `出售 ${cropConfig.name}(${quality}) x${tradeUnits} 单位`,
     });
 
+    await logActivity({
+      characterId,
+      activityType: 'sell',
+      row: -1,
+      col: -1,
+      cropId,
+      metadata: {
+        quality,
+        tradeUnits,
+        individualCount,
+        unitPrice,
+        totalEarn: Number(totalEarn),
+      },
+    });
+
     await query(
       `DELETE FROM farm_harvest_inventory WHERE character_id = $1 AND crop_id = $2 AND quality = $3 AND quantity = 0`,
       [characterId, cropId, quality],
@@ -1408,6 +1423,28 @@ export async function sellAllHarvest(
     await addSpiritStones(characterId, BigInt(totalEarn), {
       bizType: 'farm_sell_harvest',
       memo: '一键出售全部灵材',
+    });
+
+    await logActivity({
+      characterId,
+      activityType: 'sell',
+      row: -1,
+      col: -1,
+      metadata: {
+        isSellAll: true,
+        items: rows.rows.map(r => {
+          const cropConfig = getCropConfig(r.crop_id);
+          const tradeUnitSize = cropConfig?.harvestTradeUnit ?? 1;
+          const tradeUnits = Math.floor(r.quantity / tradeUnitSize);
+          return {
+            cropId: r.crop_id,
+            cropName: cropConfig?.name ?? r.crop_id,
+            quality: r.quality,
+            tradeUnits,
+          };
+        }),
+        totalEarn,
+      },
     });
 
     return { success: true, message: `出售成功，获得 ${totalEarn} 灵石`, totalEarn };

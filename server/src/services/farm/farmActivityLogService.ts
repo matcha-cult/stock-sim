@@ -20,7 +20,7 @@
 import { query } from '../../config/database.js';
 
 /** 活动类型枚举 */
-export type ActivityType = 'plant' | 'harvest' | 'remove' | 'wither' | 'hybrid' | 'mutation' | 'transplant';
+export type ActivityType = 'plant' | 'harvest' | 'remove' | 'wither' | 'hybrid' | 'mutation' | 'transplant' | 'sell';
 
 /** 日志写入参数 */
 export interface LogActivityParams {

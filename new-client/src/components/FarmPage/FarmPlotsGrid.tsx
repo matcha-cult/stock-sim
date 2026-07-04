@@ -23,7 +23,7 @@
 import { useContext, useEffect, useMemo, useState } from 'react';
 import { observer } from 'mobx-react-lite';
 import {
-  Card, Row, Col, Button, Tag, Flex, Typography, Popover, Segmented,
+  Card, Row, Col, Button, Tag, Flex, Typography, Popover, Segmented, Space,
   Descriptions, Tooltip, Empty, App, Drawer, Tabs, theme, Statistic,
 } from 'antd';
 import {
@@ -310,68 +310,52 @@ const FarmPlotsGrid = observer(function FarmPlotsGrid() {
       extra={farmMainCardExtra}
     >
       {/* 灵田信息 */}
-      <Descriptions column={{ xs: 1, sm: 2 }} size="small" style={{ marginBottom: 16 }}>
-        <Descriptions.Item label="灵田等阶">
+      <Space wrap style={{ marginBottom: 16 }}>
+        <Space size={4}>
+          <Text type="secondary">等阶</Text>
           <Tag color="purple">{farmInfo.farmTierName}</Tag>
-        </Descriptions.Item>
-        <Descriptions.Item label="灵田等级">
+        </Space>
+        <Space size={4}>
+          <Text type="secondary">等级</Text>
           <Tag color="blue">Lv.{farmInfo.farmLevel}</Tag>
-        </Descriptions.Item>
-        <Descriptions.Item label="经验">
-          {farmInfo.farmExp}{farmInfo.nextLevelExpRequired > 0 ? ` / ${farmInfo.nextLevelExpRequired}` : '（满级）'}
-        </Descriptions.Item>
+        </Space>
+        <Space size={4}>
+          <Text type="secondary">经验</Text>
+          <Text>{farmInfo.farmExp}{farmInfo.nextLevelExpRequired > 0 ? ` / ${farmInfo.nextLevelExpRequired}` : '（满级）'}</Text>
+        </Space>
         {farmInfo.nextTier && (
-          <Descriptions.Item label="下一级等阶" span={2}>
-            <Flex align="center" gap={8}>
+          <>
+            <Space size={4}>
+              <Text type="secondary">下一级</Text>
               <Tooltip title={`总消耗 ${farmInfo.nextTier.totalSpiritStoneCost} 灵石（息壤 ×${farmInfo.nextTier.xiRangCost} 单价 ${farmInfo.xiRangPricePerUnit}）`}>
-                <Text>{farmInfo.nextTier.displayName}（需要 Lv.{farmInfo.nextTier.minLevel} + {farmInfo.nextTier.xiRangCost} 息壤）</Text>
+                <Text>{farmInfo.nextTier.displayName}（Lv.{farmInfo.nextTier.minLevel} + {farmInfo.nextTier.xiRangCost} 息壤）</Text>
               </Tooltip>
-              <Button
-                size="small"
-                type="primary"
-                icon={<ThunderboltOutlined />}
-                onClick={() => farmStore.upgradeTier()}
-              >
-                突破
-              </Button>
-              <Button
-                size="small"
-                icon={<CheckOutlined />}
-                onClick={async () => {
-                  const count = await farmStore.harvestAll();
-                  if (count > 0) {
-                    messageApi.success(`收获 ${count} 块作物`);
-                  } else {
-                    messageApi.info('没有成熟的作物');
-                  }
-                }}
-              >
-                一键收菜
-              </Button>
-            </Flex>
-          </Descriptions.Item>
+            </Space>
+            <Button
+              size="small"
+              type="primary"
+              icon={<ThunderboltOutlined />}
+              onClick={() => farmStore.upgradeTier()}
+            >
+              突破
+            </Button>
+          </>
         )}
-      </Descriptions>
-
-      {/* 已达最高等阶时，单独显示一键收菜按钮 */}
-      {!farmInfo.nextTier && (
-        <Flex justify="flex-end" style={{ marginBottom: 12 }}>
-          <Button
-            size="small"
-            icon={<CheckOutlined />}
-            onClick={async () => {
-              const count = await farmStore.harvestAll();
-              if (count > 0) {
-                messageApi.success(`收获 ${count} 块作物`);
-              } else {
-                messageApi.info('没有成熟的作物');
-              }
-            }}
-          >
-            一键收菜
-          </Button>
-        </Flex>
-      )}
+        <Button
+          size="small"
+          icon={<CheckOutlined />}
+          onClick={async () => {
+            const count = await farmStore.harvestAll();
+            if (count > 0) {
+              messageApi.success(`收获 ${count} 块作物`);
+            } else {
+              messageApi.info('没有成熟的作物');
+            }
+          }}
+        >
+          一键收菜
+        </Button>
+      </Space>
 
       {/* 灵田网格 */}
       {gridRows.map((rowCells, rowIdx) => (
