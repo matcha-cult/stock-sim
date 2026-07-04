@@ -24,7 +24,6 @@ export interface ScratchTicketDto {
   prizeTier: string | null;
   prizeTierName: string | null;
   prizeAmount: number | null;
-  resetFlag: boolean;      // 是否已被重置
   createdAt: number;
   updatedAt: number;
 }
@@ -35,7 +34,6 @@ export interface ScratchOverviewDto {
   totalCount: number;
   currentTicketNumber: number | null;
   allSettled: boolean;
-  canReset: boolean;
 }
 
 export interface ScratchCellResultDto {
@@ -83,8 +81,6 @@ export interface ScratchConfigDto {
 }
 
 export interface ScratchConfigResponse {
-  allowResetTicket: boolean;
-  settleWithoutPrize: boolean;
   tickInfo: ScratchConfigDto[];
 }
 
@@ -110,8 +106,4 @@ export const settleTicket = (
 
 export const getScratchConfig = (): Promise<{ data: ScratchConfigResponse; success: boolean }> => {
   return api.get<ScratchConfigResponse>('/api/scratch/config');
-};
-
-export const resetScratchTickets = (): Promise<{ data: { tickets: ScratchTicketDto[] }; success: boolean }> => {
-  return api.post<{ tickets: ScratchTicketDto[] }>('/api/scratch/reset', {});
 };

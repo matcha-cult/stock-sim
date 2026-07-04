@@ -106,15 +106,10 @@ class ScratchPrizeConfigCache {
   private configs: Map<string, TicketConfig> = new Map();
   private prizeTiers: Map<string, PrizeTier[]> = new Map();
   private loaded = false;
-  private allowResetTicket = false;
-  private settleWithoutPrize = false;
 
   /** 启动时调用：种子 UPSERT + 加载到内存。 */
   async init(): Promise<void> {
     const seed: SeedFile = JSON.parse(readFileSync(SEED_PATH, 'utf-8'));
-
-    this.allowResetTicket = process.env.SCRATCH_ALLOW_RESET_TICKET === 'true';
-    this.settleWithoutPrize = process.env.SCRATCH_SETTLE_WITHOUT_PRIZE === 'true';
 
     for (const config of seed.configs) validate(config);
     for (const group of seed.prizeTiers) {
@@ -230,15 +225,8 @@ class ScratchPrizeConfigCache {
     return this.loaded;
   }
 
-  /** 获取全局开关配置 */
-  getGlobalFlags(): { allowResetTicket: boolean; settleWithoutPrize: boolean } {
-    return { allowResetTicket: this.allowResetTicket, settleWithoutPrize: this.settleWithoutPrize };
-  }
-
-  /** 返回所有票据配置 + 奖级 + 可选项列表 + 全局开关，用于前端展示开奖规则 */
+  /** 返回所有票据配置 + 奖级 + 可选项列表，用于前端展示开奖规则 */
   getAllRules(): {
-    allowResetTicket: boolean;
-    settleWithoutPrize: boolean;
     tickInfo: Array<{
       ticketNumber: number;
       configKey: string;
@@ -276,7 +264,7 @@ class ScratchPrizeConfigCache {
         lines,
       });
     }
-    return { allowResetTicket: this.allowResetTicket, settleWithoutPrize: this.settleWithoutPrize, tickInfo };
+    return { tickInfo };
   }
 
   reset(): void {

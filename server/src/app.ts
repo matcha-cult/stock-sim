@@ -27,6 +27,7 @@ import { pool } from './config/database.js';
 import { redis } from './config/redis.js';
 import { logger } from './utils/logger.js';
 import { registerRoutes } from './bootstrap/registerRoutes.js';
+import { errorHandler } from './middleware/errorHandler.js';
 import { initStockDefinitions } from './services/staticConfigLoader.js';
 import { initializeStockMarketScheduler, stopStockMarketScheduler } from './services/stockMarket/stockMarketScheduler.js';
 import { initializeShopRentScheduler, stopShopRentScheduler } from './services/shop/shopRentScheduler.js';
@@ -97,6 +98,9 @@ async function startServer() {
 
   // 注册路由
   registerRoutes(app);
+
+  // 全局错误处理（必须在所有路由之后）
+  app.use(errorHandler);
 
   // 健康检查端点
   app.get('/health', async (_req, res) => {

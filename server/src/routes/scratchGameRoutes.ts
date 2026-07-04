@@ -30,7 +30,6 @@ const createScratchQpsLimit = (routeKey: string, limit: number) => createQpsLimi
 const scratchOverviewQpsLimit = createScratchQpsLimit('overview', SCRATCH_QUERY_QPS_LIMIT);
 const scratchCellQpsLimit = createScratchQpsLimit('cell', SCRATCH_MUTATION_QPS_LIMIT);
 const scratchSettleQpsLimit = createScratchQpsLimit('settle', SCRATCH_MUTATION_QPS_LIMIT);
-const scratchResetQpsLimit = createScratchQpsLimit('reset', SCRATCH_MUTATION_QPS_LIMIT);
 const scratchConfigQpsLimit = createQpsLimitMiddleware({
   keyPrefix: 'qps:scratch:config',
   limit: SCRATCH_QUERY_QPS_LIMIT,
@@ -96,13 +95,6 @@ router.post('/settle', requireCharacter, scratchSettleQpsLimit, asyncHandler(asy
 router.get('/config', scratchConfigQpsLimit, asyncHandler(async (_req, res) => {
   const data = scratchPrizeConfigCache.getAllRules();
   sendSuccess(res, data);
-}));
-
-// POST /api/scratch/reset — 重置当天未开奖票
-router.post('/reset', requireCharacter, scratchResetQpsLimit, asyncHandler(async (req, res) => {
-  const characterId = req.characterId!;
-  const data = await scratchTicketService.resetTickets(characterId);
-  sendSuccess(res, { tickets: data });
 }));
 
 export default router;

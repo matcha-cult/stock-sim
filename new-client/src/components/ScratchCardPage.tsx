@@ -28,8 +28,8 @@
  * 5. 网格边长 N = sqrt(gridSize)，线数 = 2N + 2。
  */
 import { useState, useCallback, useMemo, useEffect } from 'react';
-import { App, Button, Card, Descriptions, Empty, Flex, Space, Spin, Tag, Result, Typography, Modal, Table, Collapse, Alert } from 'antd';
-import { ReloadOutlined, CheckOutlined, ArrowDownOutlined, ArrowRightOutlined, BookOutlined, SyncOutlined } from '@ant-design/icons';
+import { Button, Card, Descriptions, Empty, Flex, Space, Spin, Tag, Result, Typography, Modal, Table, Collapse } from 'antd';
+import { ReloadOutlined, CheckOutlined, ArrowDownOutlined, ArrowRightOutlined, BookOutlined } from '@ant-design/icons';
 import { useScratch } from '../hooks/useScratch';
 import type { ScratchTicketDto, ScratchSettleResultDto, ScratchConfigDto } from '../services/api/scratch';
 
@@ -87,8 +87,7 @@ const TICKET_CONFIGS: Record<string, { label: string; desc: string }> = {
 // ========== 主组件 ==========
 
 export default function ScratchCardPage(): React.ReactNode {
-  const { overview, config, allowResetTicket, settleWithoutPrize, loading, cellLoading, settleLoading, refreshOverview, resetTickets, scratchCell, settleTicket, advanceToNextTicket } = useScratch();
-  const { message } = App.useApp();
+  const { overview, config, loading, cellLoading, settleLoading, refreshOverview, scratchCell, settleTicket, advanceToNextTicket } = useScratch();
   const [selectedLine, setSelectedLine] = useState<string | null>(null);
   const [lastResult, setLastResult] = useState<ScratchSettleResultDto | null>(null);
   const [selectedTicketNumber, setSelectedTicketNumber] = useState<number | null>(null);
@@ -157,17 +156,6 @@ export default function ScratchCardPage(): React.ReactNode {
   // 显示选线：未开奖用组件状态，已开奖用后端返回的 selectedLine
   const displaySelectedLine = currentTicket?.settled ? (currentTicket.selectedLine ?? null) : selectedLine;
 
-  // 重置奖票
-  const handleReset = useCallback(async () => {
-    const ok = await resetTickets();
-    if (ok) {
-      message.success('已重置今日奖票');
-      setSelectedLine(null);
-      setSelectedTicketNumber(null);
-      setLastResult(null);
-    }
-  }, [resetTickets, message]);
-
   // 已选线的和值统计（未刮开的格子按 0 计算）
   const lineSumDetail = useMemo(() => {
     if (!displaySelectedLine || !currentTicket) return null;
@@ -187,18 +175,8 @@ export default function ScratchCardPage(): React.ReactNode {
   }, [displaySelectedLine, currentTicket, lines]);
 
   // 所有 hooks / 计算必须在 early return 之前
-  const N = useMemo(() => {
-    if (!currentTicket) return 3;
-    return Math.round(Math.sqrt(currentTicket.gridSize));
-  }, [currentTicket]);
   const cellSize = 48;
   const gap = 4;
-
-  const selectedLineIndices = useMemo(() => {
-    if (!displaySelectedLine) return new Set<number>();
-    const lineDef = lines.find(l => l.key === displaySelectedLine);
-    return new Set(lineDef?.indices ?? []);
-  }, [displaySelectedLine, lines]);
 
   const isScratchFull = (currentTicket?.scratchCount ?? 0) >= (currentTicket?.maxScratchCount ?? 0);
   const canSettle = isScratchFull && selectedLine !== null && !(currentTicket?.settled);
@@ -248,18 +226,7 @@ export default function ScratchCardPage(): React.ReactNode {
       <Flex vertical gap={20}>
         {/* 全部已开奖提示 */}
         {overview.allSettled && (
-          <Flex gap={8} align="center">
-            <Tag color="success">今天 {overview.totalCount} 张票已全部开奖完成</Tag>
-            {overview.canReset && (
-              <Button
-                size="small"
-                icon={<SyncOutlined />}
-                onClick={() => void handleReset()}
-              >
-                重置
-              </Button>
-            )}
-          </Flex>
+          <Tag color="success">今天 {overview.totalCount} 张票已全部开奖完成</Tag>
         )}
 
         {/* 票切换 */}
@@ -365,22 +332,10 @@ export default function ScratchCardPage(): React.ReactNode {
           )}
         </Flex>
 
-        {/* 不兑奖模式提示 */}
-        {settleWithoutPrize && (
-          <Alert
-            type="warning"
-            message="测试模式"
-            description="当前开奖仅记录结果，不发放奖金。"
-            showIcon
-            closable
-          />
-        )}
-
         {/* 开奖结果（inline 显示在按钮下方） */}
         {lastResult && (
           <Result
             status={lastResult.tierKey !== 'none' ? 'success' : 'info'}
-            icon={settleWithoutPrize ? false : undefined}
             title={lastResult.tierName}
             subTitle={lastResult.tierKey !== 'none'
               ? `获得 ${formatSpiritStones(lastResult.prize)} 灵石`

@@ -28,19 +28,16 @@
  */
 import { useState, useCallback, useEffect } from 'react';
 import type { ScratchOverviewDto, ScratchCellResultDto, ScratchSettleResultDto, ScratchConfigDto, ScratchConfigResponse } from '../services/api/scratch';
-import { getScratchOverview, getScratchConfig, resetScratchTickets, scratchCell as apiScratchCell, settleTicket as apiSettleTicket } from '../services/api/scratch';
+import { getScratchOverview, getScratchConfig, scratchCell as apiScratchCell, settleTicket as apiSettleTicket } from '../services/api/scratch';
 import { RequestDedup } from '../stores/RequestDedup';
 
 interface UseScratchReturn {
   overview: ScratchOverviewDto | null;
   config: ScratchConfigDto[] | null;
-  allowResetTicket: boolean;
-  settleWithoutPrize: boolean;
   loading: boolean;
   cellLoading: boolean;
   settleLoading: boolean;
   refreshOverview: (background?: boolean) => Promise<void>;
-  resetTickets: () => Promise<boolean>;
   scratchCell: (ticketNumber: number, cellIndex: number) => Promise<ScratchCellResultDto | null>;
   settleTicket: (ticketNumber: number, lineKey: string) => Promise<ScratchSettleResultDto | null>;
   advanceToNextTicket: () => void;
@@ -49,8 +46,6 @@ interface UseScratchReturn {
 export const useScratch = (): UseScratchReturn => {
   const [overview, setOverview] = useState<ScratchOverviewDto | null>(null);
   const [config, setConfig] = useState<ScratchConfigDto[] | null>(null);
-  const [allowResetTicket, setAllowResetTicket] = useState(false);
-  const [settleWithoutPrize, setSettleWithoutPrize] = useState(false);
   const [loading, setLoading] = useState(true);
   const [cellLoading, setCellLoading] = useState(false);
   const [settleLoading, setSettleLoading] = useState(false);
@@ -140,8 +135,6 @@ export const useScratch = (): UseScratchReturn => {
         if (result.success) {
           const data: ScratchConfigResponse = result.data;
           setConfig(data.tickInfo);
-          setAllowResetTicket(data.allowResetTicket);
-          setSettleWithoutPrize(data.settleWithoutPrize);
         }
       } finally {
         dedupRef.complete('config');
@@ -150,26 +143,6 @@ export const useScratch = (): UseScratchReturn => {
 
     dedupRef.start('config', promise);
     return promise;
-  }, [dedupRef]);
-
-  const resetTickets = useCallback(async (): Promise<boolean> => {
-    if (!dedupRef.enter('reset')) return false;
-
-    let success = false;
-    const promise = (async () => {
-      try {
-        const result = await resetScratchTickets();
-        if (result.success) {
-          setOverview(prev => prev ? { ...prev, tickets: result.data.tickets } : prev);
-          success = true;
-        }
-      } finally {
-        dedupRef.complete('reset');
-      }
-    })();
-
-    dedupRef.start('reset', promise);
-    return promise.then(() => success);
   }, [dedupRef]);
 
   const advanceToNextTicket = useCallback(() => {
@@ -184,13 +157,10 @@ export const useScratch = (): UseScratchReturn => {
   return {
     overview,
     config,
-    allowResetTicket,
-    settleWithoutPrize,
     loading,
     cellLoading,
     settleLoading,
     refreshOverview,
-    resetTickets,
     scratchCell: handleScratchCell,
     settleTicket: handleSettleTicket,
     advanceToNextTicket,

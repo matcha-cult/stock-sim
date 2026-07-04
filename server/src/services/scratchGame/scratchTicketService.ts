@@ -30,12 +30,13 @@
  * 4. grid_values 长度必须与 grid_size 一致。
  * 5. 状态只有 active → settled 两种，没有中间态（无 completed）。
  */
-import { withTransaction, query } from '../../config/database.js';
+import { query } from '../../config/database.js';
 import { Transactional } from '../../decorators/transactional.js';
 import { scratchPrizeConfigCache } from './scratchPrizeConfigCache.js';
 import { scratchPrizeService } from './scratchPrizeService.js';
 import { shuffleArray } from './scratchTicketTypes.js';
 import type { SettleResultDto } from './scratchTicketTypes.js';
+import { BusinessError } from '../../errors/BusinessError.js';
 
 // ========== 常量 ==========
 
@@ -62,7 +63,6 @@ export interface ScratchTicketDto {
   prizeTier: string | null;
   prizeTierName: string | null;  // 奖级名称（如"特等奖"）
   prizeAmount: number | null;
-  resetFlag: boolean;            // 是否已被重置
   createdAt: number;
   updatedAt: number;
 }
@@ -73,7 +73,6 @@ export interface OverviewDto {
   totalCount: number;       // 固定 3
   currentTicketNumber: number | null;  // 当前可操作票号（未 settled 的第一张）
   allSettled: boolean;
-  canReset: boolean;        // 是否允许重置（allowResetTicket 开关打开且全部已兑奖）
 }
 
 export interface ScratchResultDto {
@@ -146,7 +145,6 @@ const buildTicketDto = (
     prizeTier: row.prize_tier ? String(row.prize_tier) : null,
     prizeTierName: lookupPrizeTierName(configKey, row.prize_tier ? String(row.prize_tier) : null),
     prizeAmount: row.prize_amount != null ? Number(row.prize_amount) : null,
-    resetFlag: Boolean(row.reset_flag),
     createdAt: new Date(row.created_at as string).getTime(),
     updatedAt: new Date(row.updated_at as string).getTime(),
   };
@@ -165,7 +163,7 @@ const getUtcDay = (): string => {
 const ensureDayTickets = async (characterId: number, day: string): Promise<ScratchTicketDto[]> => {
   const result = await query(
     `SELECT id, character_id, day, ticket_number, config_key, grid_size, grid_values,
-            scratch_count, max_scratch_count, scratched_mask, status, settled, reset_flag,
+            scratch_count, max_scratch_count, scratched_mask, status, settled,
             selected_line, line_sum, prize_tier, prize_amount, created_at, updated_at
      FROM scratch_ticket
      WHERE character_id = $1 AND day = $2
@@ -195,10 +193,10 @@ const ensureDayTickets = async (characterId: number, day: string): Promise<Scrat
       const insertResult = await query(
         `INSERT INTO scratch_ticket
           (character_id, day, ticket_number, config_key, grid_size, grid_values,
-           scratched_mask, scratch_count, max_scratch_count, status, settled, reset_flag, created_at, updated_at)
-         VALUES ($1, $2, $3, $4, $5, $6, 0, 0, $7, 'active', false, false, now(), now())
+           scratched_mask, scratch_count, max_scratch_count, status, settled, created_at, updated_at)
+         VALUES ($1, $2, $3, $4, $5, $6, 0, 0, $7, 'active', false, now(), now())
          RETURNING id, character_id, day, ticket_number, config_key, grid_size, grid_values,
-                   scratch_count, max_scratch_count, scratched_mask, status, settled, reset_flag,
+                   scratch_count, max_scratch_count, scratched_mask, status, settled,
                    selected_line, line_sum, prize_tier, prize_amount, created_at, updated_at`,
         [characterId, day, i, configKey, config.gridSize,
          JSON.stringify(gridValues), config.maxScratchCount],
@@ -225,7 +223,6 @@ class ScratchTicketService {
     const settledCount = tickets.filter((t) => t.settled).length;
     const allSettled = tickets.length === TICKETS_PER_DAY && tickets.every((t) => t.settled);
     const currentTicketNumber = tickets.find((t) => !t.settled)?.ticketNumber ?? null;
-    const { allowResetTicket } = scratchPrizeConfigCache.getGlobalFlags();
 
     return {
       tickets,
@@ -233,7 +230,6 @@ class ScratchTicketService {
       totalCount: TICKETS_PER_DAY,
       currentTicketNumber,
       allSettled,
-      canReset: allowResetTicket && allSettled,
     };
   }
 
@@ -249,14 +245,14 @@ class ScratchTicketService {
     cellIndex: number,
   ): Promise<ScratchResultDto> {
     if (ticketNumber < 1 || ticketNumber > TICKETS_PER_DAY) {
-      throw new Error('票号无效');
+      throw new BusinessError('票号无效');
     }
 
     const day = getUtcDay();
 
     const lockResult = await query(
       `SELECT id, character_id, day, ticket_number, config_key, grid_size, grid_values,
-              scratch_count, max_scratch_count, scratched_mask, status, settled, reset_flag,
+              scratch_count, max_scratch_count, scratched_mask, status, settled,
               selected_line, line_sum, prize_tier, prize_amount, created_at, updated_at
        FROM scratch_ticket
        WHERE character_id = $1 AND day = $2 AND ticket_number = $3
@@ -266,7 +262,7 @@ class ScratchTicketService {
     );
 
     if (lockResult.rows.length === 0) {
-      throw new Error('彩票不存在，请先获取彩票');
+      throw new BusinessError('彩票不存在，请先获取彩票');
     }
 
     const row = lockResult.rows[0];
@@ -276,19 +272,19 @@ class ScratchTicketService {
     const scratchedMask = Number(row.scratched_mask);
 
     if (Boolean(row.settled)) {
-      throw new Error('当前彩票已开奖，无法再刮');
+      throw new BusinessError('当前彩票已开奖，无法再刮');
     }
     if (cellIndex < 0 || cellIndex >= gridSize) {
-      throw new Error('格子索引超出该票范围');
+      throw new BusinessError('格子索引超出该票范围');
     }
 
     const cellBit = 1 << cellIndex;
     if ((scratchedMask & cellBit) !== 0) {
-      throw new Error('该格子已经刮过了');
+      throw new BusinessError('该格子已经刮过了');
     }
 
     if (scratchCount >= maxScratchCount) {
-      throw new Error('该票已刮满，请选择开奖线并点击开奖');
+      throw new BusinessError('该票已刮满，请选择开奖线并点击开奖');
     }
 
     const gridValues: number[] = row.grid_values as number[];
@@ -334,36 +330,6 @@ class ScratchTicketService {
     lineKey: string,
   ): Promise<SettleResultDto> {
     return scratchPrizeService.settleSingle(characterId, ticketNumber, lineKey);
-  }
-
-  /**
-   * 重置当天所有未开奖的票（清空刮痕、恢复初始状态）。
-   */
-  async resetTickets(characterId: number): Promise<ScratchTicketDto[]> {
-    const day = getUtcDay();
-    return withTransaction(async () => {
-      await query(
-        `UPDATE scratch_ticket
-         SET scratched_mask = 0, scratch_count = 0,
-             selected_line = null, line_sum = null,
-             prize_tier = null, prize_amount = null,
-             settled = false, status = 'active', reset_flag = true, updated_at = now()
-         WHERE character_id = $1 AND day = $2 AND settled = true`,
-        [characterId, day],
-      );
-
-      const result = await query(
-        `SELECT id, character_id, day, ticket_number, config_key, grid_size, grid_values,
-                scratch_count, max_scratch_count, scratched_mask, status, settled, reset_flag,
-                selected_line, line_sum, prize_tier, prize_amount, created_at, updated_at
-         FROM scratch_ticket
-         WHERE character_id = $1 AND day = $2
-         ORDER BY ticket_number`,
-        [characterId, day],
-      );
-
-      return result.rows.map((r) => buildTicketDto(r, r.grid_values as number[]));
-    });
   }
 }
 

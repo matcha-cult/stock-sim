@@ -32,6 +32,7 @@ import { Transactional } from '../../decorators/transactional.js';
 import { recordSpiritStones } from '../ledgerService.js';
 import { scratchPrizeConfigCache } from './scratchPrizeConfigCache.js';
 import { buildLines, type SettleResultDto } from './scratchTicketTypes.js';
+import { BusinessError } from '../../errors/BusinessError.js';
 
 const TICKETS_PER_DAY = 3;
 const getUtcDay = (): string => new Date().toISOString().slice(0, 10);
@@ -61,20 +62,20 @@ class ScratchPrizeService {
     );
 
     if (lockResult.rows.length === 0) {
-      throw new Error(`票号 ${ticketNumber} 不存在`);
+      throw new BusinessError(`票号 ${ticketNumber} 不存在`);
     }
 
     const row = lockResult.rows[0];
 
     // 2. 校验
     if (Boolean(row.settled)) {
-      throw new Error(`票号 ${ticketNumber} 已开奖`);
+      throw new BusinessError(`票号 ${ticketNumber} 已开奖`);
     }
 
     const scratchCount = Number(row.scratch_count);
     const maxScratchCount = Number(row.max_scratch_count);
     if (scratchCount < maxScratchCount) {
-      throw new Error(`票号 ${ticketNumber} 尚未刮满（已刮 ${scratchCount}/${maxScratchCount}）`);
+      throw new BusinessError(`票号 ${ticketNumber} 尚未刮满（已刮 ${scratchCount}/${maxScratchCount}）`);
     }
 
     // 3. 计算开奖
@@ -85,7 +86,7 @@ class ScratchPrizeService {
     const allLines = buildLines(gridSize);
     const lineDef = allLines.find(l => l.key === lineKey);
     if (!lineDef) {
-      throw new Error(`线 "${lineKey}" 不存在，可选线: ${allLines.map(l => l.key).join(', ')}`);
+      throw new BusinessError(`线 "${lineKey}" 不存在，可选线: ${allLines.map(l => l.key).join(', ')}`);
     }
 
     const lineSum = lineDef.indices.reduce((sum, idx) => sum + gridValues[idx], 0);
@@ -105,9 +106,8 @@ class ScratchPrizeService {
       [lineKey, lineSum, tierKey, prizeAmount, allMask, String(row.id)],
     );
 
-    // 5. 如果奖金 > 0 且非测试模式：更新角色灵石 + 写流水
-    const { settleWithoutPrize } = scratchPrizeConfigCache.getGlobalFlags();
-    if (prizeAmount > 0 && !settleWithoutPrize) {
+    // 5. 如果奖金 > 0：更新角色灵石 + 写流水
+    if (prizeAmount > 0) {
       await query(
         `UPDATE characters SET spirit_stones = spirit_stones + $1, updated_at = now() WHERE id = $2`,
         [prizeAmount, characterId],
