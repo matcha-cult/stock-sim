@@ -75,6 +75,8 @@ interface QixiConfig {
   cells: QixiCellConfig[];
   penaltyMultiplier: number;
   penaltyThreshold: number;
+  priceMultiplier: number;
+  priceMultiplierThreshold: number;
   batchSize: number;
 }
 
@@ -86,10 +88,14 @@ const SANYUAN_CONFIG = sanyuanConfigRaw as QixiConfig;
 
 export const QIXI_PENALTY_MULTIPLIER = QIXI_CONFIG.penaltyMultiplier;
 export const QIXI_PENALTY_THRESHOLD = QIXI_CONFIG.penaltyThreshold;
+export const QIXI_PRICE_MULTIPLIER = QIXI_CONFIG.priceMultiplier;
+export const QIXI_PRICE_MULTIPLIER_THRESHOLD = QIXI_CONFIG.priceMultiplierThreshold;
 export const QIXI_BATCH_SIZE = QIXI_CONFIG.batchSize;
 
 export const SANYUAN_PENALTY_MULTIPLIER = SANYUAN_CONFIG.penaltyMultiplier;
 export const SANYUAN_PENALTY_THRESHOLD = SANYUAN_CONFIG.penaltyThreshold;
+export const SANYUAN_PRICE_MULTIPLIER = SANYUAN_CONFIG.priceMultiplier;
+export const SANYUAN_PRICE_MULTIPLIER_THRESHOLD = SANYUAN_CONFIG.priceMultiplierThreshold;
 export const SANYUAN_BATCH_SIZE = SANYUAN_CONFIG.batchSize;
 
 // ========== 七喜（QIXI）常量 ==========

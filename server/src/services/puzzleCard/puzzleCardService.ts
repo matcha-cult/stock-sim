@@ -46,9 +46,13 @@ import {
   generateSanyuanGrid,
   QIXI_PENALTY_MULTIPLIER,
   QIXI_PENALTY_THRESHOLD,
+  QIXI_PRICE_MULTIPLIER,
+  QIXI_PRICE_MULTIPLIER_THRESHOLD,
   QIXI_BATCH_SIZE,
   SANYUAN_PENALTY_MULTIPLIER,
   SANYUAN_PENALTY_THRESHOLD,
+  SANYUAN_PRICE_MULTIPLIER,
+  SANYUAN_PRICE_MULTIPLIER_THRESHOLD,
   SANYUAN_BATCH_SIZE,
 } from './puzzleCardTypes.js';
 import { generateRedeemCode, verifyRedeemCode, type RedeemCodePayload } from './puzzleCardRedeemCode.js';
@@ -199,12 +203,17 @@ class PuzzleCardService {
 
     const penaltyThreshold = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_THRESHOLD : QIXI_PENALTY_THRESHOLD;
     const penaltyMultiplier = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_MULTIPLIER : QIXI_PENALTY_MULTIPLIER;
+    const priceMultiplierThreshold = typeKey === 'SANYUAN' ? SANYUAN_PRICE_MULTIPLIER_THRESHOLD : QIXI_PRICE_MULTIPLIER_THRESHOLD;
+    const priceMultiplierValue = typeKey === 'SANYUAN' ? SANYUAN_PRICE_MULTIPLIER : QIXI_PRICE_MULTIPLIER;
     const isPenalized = todayCount >= penaltyThreshold;
     const probabilityMultiplierValue = isPenalized ? penaltyMultiplier : 1;
+    const isPriceMultiplied = todayCount >= priceMultiplierThreshold;
+    const actualPrice = typeConfig.price * BigInt(isPriceMultiplied ? priceMultiplierValue : 1);
 
     console.log(`[puzzleCard] purchase: characterId=${characterId}, typeKey=${typeKey}, ` +
       `todayCount=${todayCount}, threshold=${penaltyThreshold}, ` +
-      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplierValue}`);
+      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplierValue}, ` +
+      `priceMultiplierThreshold=${priceMultiplierThreshold}, isPriceMultiplied=${isPriceMultiplied}, actualPrice=${actualPrice}`);
 
     // 1. 锁角色行（FOR UPDATE 保证 ticket_number 递增安全 + 余额原子操作）
     const charLock = await query<{ spirit_stones: string | bigint }>(
@@ -214,14 +223,13 @@ class PuzzleCardService {
     if (charLock.rows.length === 0) throw new Error('角色不存在');
 
     const currentBalance = BigInt(charLock.rows[0].spirit_stones);
-    const price = typeConfig.price;
-    if (currentBalance < price) throw new Error('灵石不足');
+    if (currentBalance < actualPrice) throw new Error('灵石不足');
 
     // 2. 原子扣灵石
-    const newBalance = currentBalance - price;
+    const newBalance = currentBalance - actualPrice;
     await query(
       `UPDATE characters SET spirit_stones = spirit_stones - $1, updated_at = now() WHERE id = $2`,
-      [price.toString(), characterId],
+      [actualPrice.toString(), characterId],
     );
 
     // 3. 原子递增 ticket_number + 插入初始记录
@@ -237,7 +245,7 @@ class PuzzleCardService {
         typeConfig.typeKey,
         typeConfig.gridRows,
         typeConfig.gridCols,
-        price.toString(),
+        actualPrice.toString(),
         JSON.stringify({ grid: [] }),
         JSON.stringify([]),
         typeConfig.prizeTiers[0]?.prizeType ?? 'spirit_stones',
@@ -283,7 +291,7 @@ class PuzzleCardService {
       typeKey: typeConfig.typeKey,
       gridRows: typeConfig.gridRows,
       gridCols: typeConfig.gridCols,
-      pricePaid: Number(price),
+      pricePaid: Number(actualPrice),
       ticketData,
       matchedLines,
       prizeType,
@@ -294,7 +302,7 @@ class PuzzleCardService {
     // 7. 写购票流水
     await recordSpiritStones({
       characterId,
-      amount: -price,
+      amount: -actualPrice,
       balanceAfter: newBalance,
       bizType: 'puzzle_buy' as SpiritStonesLedgerBizType,
       bizId: `puzzle:${insertedRow.rows[0].id}`,
@@ -345,19 +353,6 @@ class PuzzleCardService {
     // 根据玩法类型选择批量大小
     const batchSize = typeKey === 'SANYUAN' ? SANYUAN_BATCH_SIZE : QIXI_BATCH_SIZE;
 
-    const price = typeConfig.price;
-    const totalCostBigInt = price * BigInt(batchSize);
-
-    // 1. 锁角色行
-    const charLock = await query<{ spirit_stones: string | bigint }>(
-      `SELECT spirit_stones FROM characters WHERE id = $1 FOR UPDATE`,
-      [characterId],
-    );
-    if (charLock.rows.length === 0) throw new Error('角色不存在');
-
-    const currentBalance = BigInt(charLock.rows[0].spirit_stones);
-    if (currentBalance < totalCostBigInt) throw new Error('灵石不足');
-
     // 2. 查询当日购票数，判定是否触发惩罚
     const periodStart = getCurrentPeriodStart();
     const todayCountResult = await query<{ count: string | bigint }>(
@@ -370,13 +365,30 @@ class PuzzleCardService {
     // 根据玩法类型选择惩罚配置
     const penaltyThreshold = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_THRESHOLD : QIXI_PENALTY_THRESHOLD;
     const penaltyMultiplier = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_MULTIPLIER : QIXI_PENALTY_MULTIPLIER;
+    const priceMultiplierThreshold = typeKey === 'SANYUAN' ? SANYUAN_PRICE_MULTIPLIER_THRESHOLD : QIXI_PRICE_MULTIPLIER_THRESHOLD;
+    const priceMultiplierValue = typeKey === 'SANYUAN' ? SANYUAN_PRICE_MULTIPLIER : QIXI_PRICE_MULTIPLIER;
 
     const isPenalized = todayCount >= penaltyThreshold;
     const probabilityMultiplierValue = isPenalized ? penaltyMultiplier : 1;
+    const isPriceMultiplied = todayCount >= priceMultiplierThreshold;
+    const pricePerTicket = typeConfig.price * BigInt(isPriceMultiplied ? priceMultiplierValue : 1);
+    const totalCostBigInt = pricePerTicket * BigInt(batchSize);
 
     console.log(`[puzzleCard] batchPurchase: characterId=${characterId}, typeKey=${typeKey}, ` +
       `todayCount=${todayCount}, threshold=${penaltyThreshold}, ` +
-      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplierValue}, batchSize=${batchSize}`);
+      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplierValue}, ` +
+      `priceMultiplierThreshold=${priceMultiplierThreshold}, isPriceMultiplied=${isPriceMultiplied}, ` +
+      `pricePerTicket=${pricePerTicket}, totalCost=${totalCostBigInt}, batchSize=${batchSize}`);
+
+    // 1. 锁角色行
+    const charLock = await query<{ spirit_stones: string | bigint }>(
+      `SELECT spirit_stones FROM characters WHERE id = $1 FOR UPDATE`,
+      [characterId],
+    );
+    if (charLock.rows.length === 0) throw new Error('角色不存在');
+
+    const currentBalance = BigInt(charLock.rows[0].spirit_stones);
+    if (currentBalance < totalCostBigInt) throw new Error('灵石不足');
 
     // 3. 原子扣总灵石
     const newBalance = currentBalance - totalCostBigInt;
@@ -392,7 +404,7 @@ class PuzzleCardService {
     const typeKeys = Array(batchSize).fill(typeConfig.typeKey);
     const gridRowsArr = Array(batchSize).fill(typeConfig.gridRows);
     const gridColsArr = Array(batchSize).fill(typeConfig.gridCols);
-    const pricesArr = Array(batchSize).fill(price.toString());
+    const pricesArr = Array(batchSize).fill(pricePerTicket.toString());
     const ticketDataArr = Array(batchSize).fill(emptyTicketData);
     const matchedLinesArr = Array(batchSize).fill(emptyMatchedLines);
     const prizeAmountsArr = Array(batchSize).fill(0);
@@ -466,7 +478,7 @@ class PuzzleCardService {
         typeKey: typeConfig.typeKey,
         gridRows: typeConfig.gridRows,
         gridCols: typeConfig.gridCols,
-        pricePaid: Number(price),
+        pricePaid: Number(pricePerTicket),
         ticketData,
         matchedLines,
         prizeType,
@@ -484,13 +496,13 @@ class PuzzleCardService {
       // 写购票流水（balanceAfter 为扣完当前票后的余额）
       await recordSpiritStones({
         characterId,
-        amount: -price,
+        amount: -pricePerTicket,
         balanceAfter: runningBalance,
         bizType: 'puzzle_buy' as SpiritStonesLedgerBizType,
         bizId: `puzzle:${row.id}`,
         memo: `常驻刮刮乐批量购票：${typeConfig.name}`,
       });
-      runningBalance -= price;
+      runningBalance -= pricePerTicket;
 
       // 构建返回 DTO（用生成后的数据，不用 INSERT 时的空数据）
       tickets.push({

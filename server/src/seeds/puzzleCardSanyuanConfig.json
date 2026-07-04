@@ -8,7 +8,9 @@
     { "cellIndex": 4, "name": "格子5", "prizeAmount": 10000000, "winProbability": 0.0002 },
     { "cellIndex": 5, "name": "格子6", "prizeAmount": 100000, "winProbability": 0.18, "pityTriggerRate": 0.43 }
   ],
-  "penaltyMultiplier": 0.01,
+  "penaltyMultiplier": 0.1,
   "penaltyThreshold": 333,
+  "priceMultiplier": 10,
+  "priceMultiplierThreshold": 666,
   "batchSize": 20
 }
