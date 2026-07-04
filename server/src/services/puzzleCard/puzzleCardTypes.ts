@@ -263,7 +263,7 @@ const pickNotSevenPair = (): [number, number] =>
  * - 每格按 winProbability × probabilityMultiplier 判定是否中奖
  * - 中奖：随机生成和为7的一对数字
  * - 未中奖：随机生成和不为7的一对数字（两数不重复）
- * - 格子4保底：若前3格均未中奖，按 pityTriggerRate × probabilityMultiplier 概率强制中奖
+ * - 格子4保底：若前3格均未中奖，按 pityTriggerRate 概率强制中奖（惩罚模式下不生效）
  *
  * @param probabilityMultiplier 概率乘数（1=正常，0.1=惩罚模式）
  */
@@ -276,12 +276,12 @@ export const generateQixiGrid = (probabilityMultiplier = 1): number[] => {
     const cellConfig = cells[i];
     const effectiveProbability = cellConfig.winProbability * probabilityMultiplier;
 
-    if (cellConfig.pityTriggerRate !== undefined) {
-      // 格子4：保底逻辑
+    if (cellConfig.pityTriggerRate !== undefined && probabilityMultiplier >= 1) {
+      // 格子4：保底逻辑（惩罚模式下不生效）
       const allPreviousMissed = cellResults.every(([a, b]) => a + b !== 7);
 
       if (allPreviousMissed) {
-        const effectivePityRate = cellConfig.pityTriggerRate * probabilityMultiplier;
+        const effectivePityRate = cellConfig.pityTriggerRate;
         if (Math.random() < effectivePityRate) {
           cellResults[i] = pickSumSevenPair();
         } else {
@@ -344,7 +344,7 @@ const pickNotTripleSame = (): [number, number, number] =>
  * - 每格按 winProbability × probabilityMultiplier 判定是否中奖
  * - 中奖：生成三个相同的数字（0-9）
  * - 未中奖：生成三个不全相同的数字
- * - 格子6兜底：若前5格均未中奖，按 pityTriggerRate × probabilityMultiplier 概率强制中奖
+ * - 格子6兜底：若前5格均未中奖，按 pityTriggerRate 概率强制中奖（惩罚模式下不生效）
  * - 最多允许3格中奖，超过则随机选3格保留，其余设为未中奖
  * - 最多允许1格中1亿（格子3），若有多个1亿格子中奖，只保留第一个
  *
@@ -359,12 +359,12 @@ export const generateSanyuanGrid = (probabilityMultiplier = 1): number[] => {
     const cellConfig = cells[i];
     const effectiveProbability = cellConfig.winProbability * probabilityMultiplier;
 
-    if (cellConfig.pityTriggerRate !== undefined) {
-      // 格子6：兜底逻辑
+    if (cellConfig.pityTriggerRate !== undefined && probabilityMultiplier >= 1) {
+      // 格子6：兜底逻辑（惩罚模式下不生效）
       const allPreviousMissed = cellResults.every(([a, b, c]) => !(a === b && b === c));
 
       if (allPreviousMissed) {
-        const effectivePityRate = cellConfig.pityTriggerRate * probabilityMultiplier;
+        const effectivePityRate = cellConfig.pityTriggerRate;
         if (Math.random() < effectivePityRate) {
           cellResults[i] = pickTripleSame();
         } else {
