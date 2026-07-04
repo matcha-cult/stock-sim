@@ -57,7 +57,7 @@
     {
       "configKey": "5x5",
       "tiers": [
-        { "tierKey": "grand",       "tierName": "特等奖", "sumMin": 15,  "sumMax": 15,  "prizeAmount": 100000000, "sortOrder": 0 },
+        { "tierKey": "grand",       "tierName": "特等奖", "sumMin": 15,  "sumMax": 15,  "prizeAmount": 80000000, "sortOrder": 0 },
         { "tierKey": "regular_1",   "tierName": "一等奖", "sumMin": 115, "sumMax": 115, "prizeAmount": 2500000, "sortOrder": 1 },
         { "tierKey": "regular_2a",  "tierName": "二等奖", "sumMin": 16,  "sumMax": 30,  "prizeAmount": 50000,   "sortOrder": 2 },
         { "tierKey": "regular_2b",  "tierName": "二等奖", "sumMin": 100, "sumMax": 114, "prizeAmount": 50000,   "sortOrder": 2 },
