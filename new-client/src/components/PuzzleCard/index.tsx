@@ -131,6 +131,8 @@ const PuzzleCardPage = () => {
             clearActive();
           }}
           isRedeeming={redeeming}
+          todayCount={dailyPurchaseInfo?.todayCount}
+          todayThreshold={dailyPurchaseInfo?.todayThreshold}
         />
       );
     }
@@ -148,6 +150,13 @@ const PuzzleCardPage = () => {
                 净{batchResult.netProfit >= 0 ? '赚' : '亏'} {formatPrize(Math.abs(batchResult.netProfit))} 灵石
               </Tag>
             </Flex>
+            {dailyPurchaseInfo && (
+              <Flex style={{ marginTop: 8 }}>
+                <Text type="secondary" style={{ fontSize: 11 }}>
+                  今日已购 {dailyPurchaseInfo.todayCount} 张{dailyPurchaseInfo.todayCount >= dailyPurchaseInfo.todayThreshold ? '（已触发惩罚）' : `（距离惩罚还差 ${dailyPurchaseInfo.todayThreshold - dailyPurchaseInfo.todayCount} 张）`}
+                </Text>
+              </Flex>
+            )}
           </Card>
 
           <Flex wrap gap={12}>
@@ -177,7 +186,6 @@ const PuzzleCardPage = () => {
         onBatchPurchase={(typeKey) => void handleBatchPurchase(typeKey)}
         isPurchasing={purchasing}
         isBatchPurchasing={batchPurchasing}
-        dailyPurchaseInfo={dailyPurchaseInfo}
       />
     );
   };

@@ -28,7 +28,6 @@ interface TicketSelectProps {
   onBatchPurchase: (typeKey: string) => void;
   isPurchasing: boolean;
   isBatchPurchasing: boolean;
-  dailyPurchaseInfo: { todayCount: number; todayThreshold: number } | null;
 }
 
 // 开放所有已实装的票种
@@ -39,7 +38,7 @@ const formatPrice = (price: number): string => {
   return price.toLocaleString();
 };
 
-const TicketSelect = ({ onPurchase, onBatchPurchase, isPurchasing, isBatchPurchasing, dailyPurchaseInfo }: TicketSelectProps) => {
+const TicketSelect = ({ onPurchase, onBatchPurchase, isPurchasing, isBatchPurchasing }: TicketSelectProps) => {
   const isMobile = useIsMobile();
   const colSpan = isMobile ? 24 : 8;
 
@@ -57,11 +56,6 @@ const TicketSelect = ({ onPurchase, onBatchPurchase, isPurchasing, isBatchPurcha
                   {formatPrice(type.price)} 灵石/张
                 </Text>
                 <Tag color="blue">{type.gridRows}×{type.gridCols} 格子</Tag>
-                {dailyPurchaseInfo && (
-                  <Text type="secondary" style={{ fontSize: 11 }}>
-                    今日已购 {dailyPurchaseInfo.todayCount} 张{dailyPurchaseInfo.todayCount >= dailyPurchaseInfo.todayThreshold ? '（已触发惩罚）' : `（距离惩罚还差 ${dailyPurchaseInfo.todayThreshold - dailyPurchaseInfo.todayCount} 张）`}
-                  </Text>
-                )}
                 <Paragraph type="secondary" style={{ marginBottom: 0, fontSize: 12 }}>
                   {type.description}
                 </Paragraph>

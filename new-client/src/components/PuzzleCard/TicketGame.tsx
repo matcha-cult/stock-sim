@@ -17,6 +17,8 @@ interface TicketGameProps {
   onContinue: () => void;
   onBuyAnother: () => void;
   isRedeeming: boolean;
+  todayCount?: number;
+  todayThreshold?: number;
 }
 
 const formatPrize = (amount: number): string => {
@@ -25,7 +27,7 @@ const formatPrize = (amount: number): string => {
   return amount.toLocaleString();
 };
 
-const TicketGame = ({ ticket, onRedeem, onContinue, onBuyAnother, isRedeeming }: TicketGameProps) => {
+const TicketGame = ({ ticket, onRedeem, onContinue, onBuyAnother, isRedeeming, todayCount, todayThreshold }: TicketGameProps) => {
   const [redeemed, setRedeemed] = useState(false);
 
   const typeConfig = PUZZLE_CARD_TYPES.find(t => t.typeKey === ticket.typeKey);
@@ -89,6 +91,14 @@ const TicketGame = ({ ticket, onRedeem, onContinue, onBuyAnother, isRedeeming }:
         <Flex justify="center">
           <Text type="secondary">票价 {formatPrize(ticket.pricePaid)}</Text>
         </Flex>
+
+        {todayCount !== undefined && todayThreshold !== undefined && (
+          <Flex justify="center">
+            <Text type="secondary" style={{ fontSize: 11 }}>
+              今日已购 {todayCount} 张{todayCount >= todayThreshold ? '（已触发惩罚）' : `（距离惩罚还差 ${todayThreshold - todayCount} 张）`}
+            </Text>
+          </Flex>
+        )}
 
         <Alert
           type="warning"
