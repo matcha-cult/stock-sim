@@ -357,6 +357,9 @@ export async function buySeed(
   return withTransaction(async () => {
     const seedConfig = getSeedConfig(itemId);
     if (!seedConfig) return { success: false, message: '种子不存在' };
+    if (seedConfig.buyPrice <= 0) {
+      return { success: false, message: '该种子不可购买' };
+    }
     if (quantity <= 0 || quantity > seedConfig.maxStack) {
       return { success: false, message: '数量无效' };
     }
