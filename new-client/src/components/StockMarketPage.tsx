@@ -49,6 +49,7 @@ import GmStockViewer from './GmStockViewer/GmStockViewer';
 import GmPendingOrderViewer from './GmPendingOrderViewer/GmPendingOrderViewer';
 import GmSpiritStonesManager from './GmSpiritStonesManager/GmSpiritStonesManager';
 import GmMonthCardManager from './GmMonthCardManager/GmMonthCardManager';
+import GmFarmViewer from './GmFarmViewer/GmFarmViewer';
 import ScratchCardPage from './ScratchCardPage';
 import PuzzleCardPage from './PuzzleCard';
 import { PUZZLE_CARD_TYPES } from '../services/api/puzzleCard';
@@ -75,7 +76,7 @@ type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
 type ActiveTab = 'stock-market' | 'pending-orders' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'puzzle-card' | 'farm' | 'gm-online-ops';
 type StockSubTab = 'market' | 'pending-orders-sub' | 'profit' | 'records';
-type GmTabKey = 'gm-spirit-stones' | 'gm-month-card' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders';
+type GmTabKey = 'gm-spirit-stones' | 'gm-month-card' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders' | 'gm-farm-viewer';
 
 const DEFAULT_TRADE_PAGE_SIZE = 20;
 
@@ -86,6 +87,7 @@ const GM_TABS: { key: GmTabKey; label: string }[] = [
   { key: 'gm-stock-viewer', label: '股市持仓查看器' },
   { key: 'gm-ledger', label: '流水账' },
   { key: 'gm-pending-orders', label: '挂单管理' },
+  { key: 'gm-farm-viewer', label: '灵田查看' },
 ];
 
 const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
@@ -620,7 +622,9 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
                               ? <GmStockViewer />
                               : tab.key === 'gm-ledger'
                                 ? <GmLedgerViewer />
-                                : <GmPendingOrderViewer />,
+                                : tab.key === 'gm-pending-orders'
+                                  ? <GmPendingOrderViewer />
+                                  : <GmFarmViewer />,
                     }))}
                   />
                 ),

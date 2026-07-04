@@ -20,6 +20,7 @@ import scratchGameRoutes from '../routes/scratchGameRoutes.js';
 import puzzleCardRoutes from '../routes/puzzleCardRoutes.js';
 import monthCardRoutes from '../routes/monthCardRoutes.js';
 import gmMonthCardRoutes from '../routes/gmMonthCardRoutes.js';
+import gmFarmRoutes from '../routes/gmFarmRoutes.js';
 import farmRoutes from '../routes/farmRoutes.js';
 import serverConfigRoutes from '../routes/serverConfigRoutes.js';
 import marketDataRoutes from '../routes/marketDataRoutes.js';
@@ -54,6 +55,9 @@ export function registerRoutes(app: express.Application): void {
 
   // 月卡路由（GM 侧）
   app.use('/api/gm/month-card', gmMonthCardRoutes);
+
+  // 灵田路由（GM 侧）
+  app.use('/api/gm/farm', gmFarmRoutes);
 
   // 灵田路由
   app.use('/api/farm', farmRoutes);
