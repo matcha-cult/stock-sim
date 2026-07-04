@@ -43,9 +43,13 @@ import {
   SETTLE_FNS,
   generateRandomGrid,
   generateQixiGrid,
+  generateSanyuanGrid,
   QIXI_PENALTY_MULTIPLIER,
   QIXI_PENALTY_THRESHOLD,
   QIXI_BATCH_SIZE,
+  SANYUAN_PENALTY_MULTIPLIER,
+  SANYUAN_PENALTY_THRESHOLD,
+  SANYUAN_BATCH_SIZE,
 } from './puzzleCardTypes.js';
 import { generateRedeemCode, verifyRedeemCode, type RedeemCodePayload } from './puzzleCardRedeemCode.js';
 
@@ -233,6 +237,8 @@ class PuzzleCardService {
     let grid: number[];
     if (typeConfig.typeKey === 'QIXI') {
       grid = generateQixiGrid();
+    } else if (typeConfig.typeKey === 'SANYUAN') {
+      grid = generateSanyuanGrid();
     } else {
       const gridLength = typeConfig.gridRows * typeConfig.gridCols * typeConfig.numbersPerCell;
       grid = generateRandomGrid(gridLength, TICKET_DATA_MIN, TICKET_DATA_MAX);
@@ -318,7 +324,9 @@ class PuzzleCardService {
     const settleFn = SETTLE_FNS[typeConfig.ruleType];
     if (!settleFn) throw new Error(`未知结算规则：${typeConfig.ruleType}`);
 
-    const batchSize = QIXI_BATCH_SIZE;
+    // 根据玩法类型选择批量大小
+    const batchSize = typeKey === 'SANYUAN' ? SANYUAN_BATCH_SIZE : QIXI_BATCH_SIZE;
+
     const price = typeConfig.price;
     const totalCostBigInt = price * BigInt(batchSize);
 
@@ -340,12 +348,17 @@ class PuzzleCardService {
       [characterId, typeKey, periodStart],
     );
     const todayCount = Number(todayCountResult.rows[0].count);
-    const isPenalized = todayCount >= QIXI_PENALTY_THRESHOLD;
-    const probabilityMultiplier = isPenalized ? QIXI_PENALTY_MULTIPLIER : 1;
+
+    // 根据玩法类型选择惩罚配置
+    const penaltyThreshold = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_THRESHOLD : QIXI_PENALTY_THRESHOLD;
+    const penaltyMultiplier = typeKey === 'SANYUAN' ? SANYUAN_PENALTY_MULTIPLIER : QIXI_PENALTY_MULTIPLIER;
+
+    const isPenalized = todayCount >= penaltyThreshold;
+    const probabilityMultiplierValue = isPenalized ? penaltyMultiplier : 1;
 
     console.log(`[puzzleCard] batchPurchase: characterId=${characterId}, typeKey=${typeKey}, ` +
-      `todayCount=${todayCount}, threshold=${QIXI_PENALTY_THRESHOLD}, ` +
-      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplier}, batchSize=${batchSize}`);
+      `todayCount=${todayCount}, threshold=${penaltyThreshold}, ` +
+      `penalized=${isPenalized}, probabilityMultiplier=${probabilityMultiplierValue}, batchSize=${batchSize}`);
 
     // 3. 原子扣总灵石
     const newBalance = currentBalance - totalCostBigInt;
@@ -409,7 +422,9 @@ class PuzzleCardService {
       // 生成格子 + 结算
       let grid: number[];
       if (typeConfig.typeKey === 'QIXI') {
-        grid = generateQixiGrid(probabilityMultiplier);
+        grid = generateQixiGrid(probabilityMultiplierValue);
+      } else if (typeConfig.typeKey === 'SANYUAN') {
+        grid = generateSanyuanGrid(probabilityMultiplierValue);
       } else {
         const gridLength = typeConfig.gridRows * typeConfig.gridCols * typeConfig.numbersPerCell;
         grid = generateRandomGrid(gridLength, TICKET_DATA_MIN, TICKET_DATA_MAX);
@@ -496,12 +511,17 @@ class PuzzleCardService {
       ],
     );
 
-    // 7. 自动兑奖：标记所有票据为已兑奖
-    await query(
-      `UPDATE puzzle_card SET redeemed_at = NOW()
-       WHERE id = ANY($1::bigint[]) AND redeemed_at IS NULL`,
-      [updateIds.map(id => Number(id))],
-    );
+    // 7. 自动兑奖：仅标记中奖票据为已兑奖（未中奖票据保持 redeemed_at = NULL）
+    const winningIds = tickets
+      .filter((t) => t.prizeAmount > 0)
+      .map((t) => Number(t.id));
+    if (winningIds.length > 0) {
+      await query(
+        `UPDATE puzzle_card SET redeemed_at = NOW()
+         WHERE id = ANY($1::bigint[]) AND redeemed_at IS NULL`,
+        [winningIds],
+      );
+    }
 
     // 8. 汇总奖金，批量入账
     const totalPrize = updatePrizeAmounts.reduce((sum, amount) => sum + amount, 0);

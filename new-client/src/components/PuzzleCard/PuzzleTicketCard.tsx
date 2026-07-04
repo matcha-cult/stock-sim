@@ -20,6 +20,7 @@ const { Text } = Typography;
 interface PuzzleTicketCardProps {
   ticketNumber: number;
   typeName?: string;
+  typeKey?: string;
   grid: number[];
   matchedLines: MatchedLineDto[];
   prizeAmount: number;
@@ -32,18 +33,19 @@ const formatPrize = (amount: number): string => {
   return amount.toLocaleString();
 };
 
-const isCellMatched = (cellIndex: number, matchedLines: MatchedLineDto[]): boolean => {
-  return matchedLines.some(m => m.tierKey === `cell_${cellIndex}`);
+const isCellMatched = (cellIndex: number, matchedLines: MatchedLineDto[], typeKey?: string): boolean => {
+  const prefix = typeKey === 'SANYUAN' ? 'sanyuan_cell_' : 'cell_';
+  return matchedLines.some(m => m.tierKey === `${prefix}${cellIndex}`);
 };
 
-const TicketGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: MatchedLineDto[] }) => {
+const QixiGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: MatchedLineDto[] }) => {
   return (
     <Flex gap={4} wrap>
       {Array.from({ length: 4 }, (_, i) => {
         const num1 = grid[i * 2];
         const num2 = grid[i * 2 + 1];
         const sum = num1 + num2;
-        const matched = isCellMatched(i, matchedLines);
+        const matched = isCellMatched(i, matchedLines, 'QIXI');
         return (
           <Tag key={i} color={matched ? 'green' : undefined} style={{ margin: 0, width: 64, textAlign: 'center' }}>
             {num1}+{num2}={sum}
@@ -54,7 +56,25 @@ const TicketGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: Matc
   );
 };
 
-const PuzzleTicketCard = ({ ticketNumber, typeName, grid, matchedLines, prizeAmount, redeemedAt }: PuzzleTicketCardProps) => {
+const SanyuanGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: MatchedLineDto[] }) => {
+  return (
+    <Flex gap={4} wrap>
+      {Array.from({ length: 6 }, (_, i) => {
+        const num1 = grid[i * 3];
+        const num2 = grid[i * 3 + 1];
+        const num3 = grid[i * 3 + 2];
+        const matched = isCellMatched(i, matchedLines, 'SANYUAN');
+        return (
+          <Tag key={i} color={matched ? 'green' : undefined} style={{ margin: 0, width: 64, textAlign: 'center' }}>
+            {num1} {num2} {num3}
+          </Tag>
+        );
+      })}
+    </Flex>
+  );
+};
+
+const PuzzleTicketCard = ({ ticketNumber, typeName, typeKey, grid, matchedLines, prizeAmount, redeemedAt }: PuzzleTicketCardProps) => {
   const statusTag = redeemedAt !== null && redeemedAt !== undefined
     ? <Tag color="green">已兑奖</Tag>
     : null;
@@ -68,7 +88,11 @@ const PuzzleTicketCard = ({ ticketNumber, typeName, grid, matchedLines, prizeAmo
       <Flex vertical gap={8}>
         {typeName && <Text strong>{typeName}</Text>}
 
-        <TicketGrid grid={grid} matchedLines={matchedLines} />
+        {typeKey === 'SANYUAN' ? (
+          <SanyuanGrid grid={grid} matchedLines={matchedLines} />
+        ) : (
+          <QixiGrid grid={grid} matchedLines={matchedLines} />
+        )}
 
         <Flex justify="space-between" align="center">
           <Flex gap={8} align="center">

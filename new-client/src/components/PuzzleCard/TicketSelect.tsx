@@ -30,8 +30,8 @@ interface TicketSelectProps {
   isBatchPurchasing: boolean;
 }
 
-// 仅第一个票种开放，其余占位
-const READY_TYPE_KEYS = new Set(['QIXI']);
+// 开放所有已实装的票种
+const READY_TYPE_KEYS = new Set(['QIXI', 'SANYUAN']);
 
 const formatPrice = (price: number): string => {
   if (price >= 10000) return `${(price / 10000).toFixed(0)}万`;

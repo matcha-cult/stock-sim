@@ -140,6 +140,32 @@ export const PUZZLE_CARD_TYPES: PuzzleCardTypeDto[] = [
       '兑奖限制：5秒内最多兑奖2次',
     ],
   },
+  {
+    typeKey: 'SANYUAN',
+    name: '三元',
+    description: '6格各含3个数字(0~9)，每格三个数字相同则该格中奖，兼中兼得',
+    gridRows: 2,
+    gridCols: 3,
+    numbersPerCell: 3,
+    price: 100_000,
+    ruleType: 'SANYUAN_MATCH',
+    dailyLimit: 333,
+    rules: [
+      '每个格子生成3个数字（0~9）',
+      '格子内三个数字相同则该格中奖',
+      '格子1中奖：5000万灵石',
+      '格子2中奖：50万灵石',
+      '格子3中奖：1亿灵石',
+      '格子4中奖：500万灵石',
+      '格子5中奖：1000万灵石',
+      '格子6中奖：10万灵石',
+      '多格中奖奖金累加（兼中兼得）',
+      '可单张购买或批量购买20张',
+      '每日限购与中奖率惩罚起点333票',
+      '购票限制：5秒内最多购买2次',
+      '兑奖限制：5秒内最多兑奖2次',
+    ],
+  },
 ];
 
 export const QIXI_PRIZE_TIERS: Record<number, PuzzlePrizeTierDto> = {
@@ -147,4 +173,13 @@ export const QIXI_PRIZE_TIERS: Record<number, PuzzlePrizeTierDto> = {
   1: { tierKey: 'cell_1', tierName: '格子2中奖', prizeAmount: 100_000_000 },
   2: { tierKey: 'cell_2', tierName: '格子3中奖', prizeAmount: 100_000 },
   3: { tierKey: 'cell_3', tierName: '格子4中奖', prizeAmount: 50_000 },
+};
+
+export const SANYUAN_PRIZE_TIERS: Record<number, PuzzlePrizeTierDto> = {
+  0: { tierKey: 'sanyuan_cell_0', tierName: '格子1中奖', prizeAmount: 50_000_000 },
+  1: { tierKey: 'sanyuan_cell_1', tierName: '格子2中奖', prizeAmount: 500_000 },
+  2: { tierKey: 'sanyuan_cell_2', tierName: '格子3中奖', prizeAmount: 100_000_000 },
+  3: { tierKey: 'sanyuan_cell_3', tierName: '格子4中奖', prizeAmount: 5_000_000 },
+  4: { tierKey: 'sanyuan_cell_4', tierName: '格子5中奖', prizeAmount: 10_000_000 },
+  5: { tierKey: 'sanyuan_cell_5', tierName: '格子6中奖', prizeAmount: 100_000 },
 };

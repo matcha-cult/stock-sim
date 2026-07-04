@@ -79,12 +79,18 @@ interface QixiConfig {
 }
 
 import qixiConfigRaw from '../../seeds/puzzleCardQixiConfig.json' assert { type: 'json' };
+import sanyuanConfigRaw from '../../seeds/puzzleCardSanyuanConfig.json' assert { type: 'json' };
 
 const QIXI_CONFIG = qixiConfigRaw as QixiConfig;
+const SANYUAN_CONFIG = sanyuanConfigRaw as QixiConfig;
 
 export const QIXI_PENALTY_MULTIPLIER = QIXI_CONFIG.penaltyMultiplier;
 export const QIXI_PENALTY_THRESHOLD = QIXI_CONFIG.penaltyThreshold;
 export const QIXI_BATCH_SIZE = QIXI_CONFIG.batchSize;
+
+export const SANYUAN_PENALTY_MULTIPLIER = SANYUAN_CONFIG.penaltyMultiplier;
+export const SANYUAN_PENALTY_THRESHOLD = SANYUAN_CONFIG.penaltyThreshold;
+export const SANYUAN_BATCH_SIZE = SANYUAN_CONFIG.batchSize;
 
 // ========== 七喜（QIXI）常量 ==========
 
@@ -105,6 +111,30 @@ const QIXI_TYPE: PuzzleCardType = {
   price: 50_000n,
   ruleType: 'CELL_SUM_MATCH',
   prizeTiers: QIXI_PRIZE_TIERS,
+  dailyLimit: 0,
+};
+
+// ========== 三元（SANYUAN）常量 ==========
+
+const SANYUAN_PRIZE_TIERS: PuzzlePrizeTier[] = [
+  { tierKey: 'sanyuan_cell_0', tierName: '格子1中奖', ruleMatch: { cellIndex: 0 }, prizeType: 'spirit_stones', prizeAmount: 50_000_000n },
+  { tierKey: 'sanyuan_cell_1', tierName: '格子2中奖', ruleMatch: { cellIndex: 1 }, prizeType: 'spirit_stones', prizeAmount: 500_000n },
+  { tierKey: 'sanyuan_cell_2', tierName: '格子3中奖', ruleMatch: { cellIndex: 2 }, prizeType: 'spirit_stones', prizeAmount: 100_000_000n },
+  { tierKey: 'sanyuan_cell_3', tierName: '格子4中奖', ruleMatch: { cellIndex: 3 }, prizeType: 'spirit_stones', prizeAmount: 5_000_000n },
+  { tierKey: 'sanyuan_cell_4', tierName: '格子5中奖', ruleMatch: { cellIndex: 4 }, prizeType: 'spirit_stones', prizeAmount: 10_000_000n },
+  { tierKey: 'sanyuan_cell_5', tierName: '格子6中奖', ruleMatch: { cellIndex: 5 }, prizeType: 'spirit_stones', prizeAmount: 100_000n },
+];
+
+const SANYUAN_TYPE: PuzzleCardType = {
+  typeKey: 'SANYUAN',
+  name: '三元',
+  description: '6格各含3个数字(0~9)，每格三个数字相同则该格中奖，最多3格中奖，兼中兼得',
+  gridRows: 2,
+  gridCols: 3,
+  numbersPerCell: 3,
+  price: 100_000n,
+  ruleType: 'SANYUAN_MATCH',
+  prizeTiers: SANYUAN_PRIZE_TIERS,
   dailyLimit: 0,
 };
 
@@ -144,14 +174,54 @@ const settleQixi: SettleFn = (grid: number[]): SettleResult => {
   };
 };
 
+// ========== 三元结算函数 ==========
+
+const settleSanyuan: SettleFn = (grid: number[]): SettleResult => {
+  if (grid.length !== 18) return NO_WIN; // 6格，每格3个数字 = 18个数字
+
+  const matchedLines: SettleMatchedLine[] = [];
+  let totalPrize = 0n;
+
+  for (let cellIndex = 0; cellIndex < 6; cellIndex++) {
+    const startIndex = cellIndex * 3;
+    const a = grid[startIndex];
+    const b = grid[startIndex + 1];
+    const c = grid[startIndex + 2];
+
+    // 三个数字相同则中奖
+    if (a === b && b === c) {
+      const tier = SANYUAN_PRIZE_TIERS.find(t => (t.ruleMatch as { cellIndex: number }).cellIndex === cellIndex);
+      if (tier) {
+        matchedLines.push({
+          tierKey: tier.tierKey,
+          tierName: tier.tierName,
+          prizeType: tier.prizeType,
+          prizeAmount: tier.prizeAmount,
+        });
+        totalPrize += tier.prizeAmount;
+      }
+    }
+  }
+
+  if (matchedLines.length === 0) return NO_WIN;
+
+  return {
+    matchedLines,
+    prizeType: 'spirit_stones',
+    prizeAmount: totalPrize,
+  };
+};
+
 // ========== 注册表 ==========
 
 export const PUZZLE_CARD_TYPES: Record<string, PuzzleCardType> = {
   QIXI: QIXI_TYPE,
+  SANYUAN: SANYUAN_TYPE,
 };
 
 export const SETTLE_FNS: Record<string, SettleFn> = {
   CELL_SUM_MATCH: settleQixi,
+  SANYUAN_MATCH: settleSanyuan,
 };
 
 // ========== 工具函数 ==========
@@ -234,6 +304,119 @@ export const generateQixiGrid = (probabilityMultiplier = 1): number[] => {
       }
     }
 
+    grid.push(...cellResults[i]);
+  }
+
+  return grid;
+};
+
+// ========== 三元概率格子生成 ==========
+
+/** 生成三个相同数字（中奖） */
+const pickTripleSame = (): [number, number, number] => {
+  const digit = Math.floor(Math.random() * 10);
+  return [digit, digit, digit];
+};
+
+/** 生成三个不全相同数字（不中奖），模块初始化时预构建所有组合 */
+const NOT_TRIPLE_SAME_TRIPLES: ReadonlyArray<[number, number, number]> = (() => {
+  const triples: [number, number, number][] = [];
+  for (let i = 0; i <= 9; i++) {
+    for (let j = 0; j <= 9; j++) {
+      for (let k = 0; k <= 9; k++) {
+        // 排除三个相同的情况
+        if (!(i === j && j === k)) {
+          triples.push([i, j, k]);
+        }
+      }
+    }
+  }
+  return triples;
+})();
+
+const pickNotTripleSame = (): [number, number, number] =>
+  NOT_TRIPLE_SAME_TRIPLES[Math.floor(Math.random() * NOT_TRIPLE_SAME_TRIPLES.length)];
+
+/**
+ * 三元概率格子生成：按 seeds 配置概率判定每格是否中奖。
+ *
+ * 规则：
+ * - 每格按 winProbability × probabilityMultiplier 判定是否中奖
+ * - 中奖：生成三个相同的数字（0-9）
+ * - 未中奖：生成三个不全相同的数字
+ * - 格子6兜底：若前5格均未中奖，按 pityTriggerRate × probabilityMultiplier 概率强制中奖
+ * - 最多允许3格中奖，超过则随机选3格保留，其余设为未中奖
+ * - 最多允许1格中1亿（格子3），若有多个1亿格子中奖，只保留第一个
+ *
+ * @param probabilityMultiplier 概率乘数（1=正常，0.1=惩罚模式）
+ */
+export const generateSanyuanGrid = (probabilityMultiplier = 1): number[] => {
+  const grid: number[] = [];
+  const cellResults: [number, number, number][] = [];
+  const cells = SANYUAN_CONFIG.cells;
+
+  for (let i = 0; i < 6; i++) {
+    const cellConfig = cells[i];
+    const effectiveProbability = cellConfig.winProbability * probabilityMultiplier;
+
+    if (cellConfig.pityTriggerRate !== undefined) {
+      // 格子6：兜底逻辑
+      const allPreviousMissed = cellResults.every(([a, b, c]) => !(a === b && b === c));
+
+      if (allPreviousMissed) {
+        const effectivePityRate = cellConfig.pityTriggerRate * probabilityMultiplier;
+        if (Math.random() < effectivePityRate) {
+          cellResults[i] = pickTripleSame();
+        } else {
+          cellResults[i] = pickNotTripleSame();
+        }
+      } else {
+        // 前5格已有中奖，按正常概率判定（不再触发兜底）
+        if (Math.random() < effectiveProbability) {
+          cellResults[i] = pickTripleSame();
+        } else {
+          cellResults[i] = pickNotTripleSame();
+        }
+      }
+    } else {
+      // 普通格子：按概率判定
+      if (Math.random() < effectiveProbability) {
+        cellResults[i] = pickTripleSame();
+      } else {
+        cellResults[i] = pickNotTripleSame();
+      }
+    }
+  }
+
+  // 检查中奖情况
+  const winningCells: number[] = [];
+  for (let i = 0; i < 6; i++) {
+    const [a, b, c] = cellResults[i];
+    if (a === b && b === c) {
+      winningCells.push(i);
+    }
+  }
+
+  // 应用限制1 - 最多3格中奖
+  if (winningCells.length > 3) {
+    // 随机打乱中奖格子顺序
+    const shuffledWinners = [...winningCells].sort(() => Math.random() - 0.5);
+    const keptWinners = new Set(shuffledWinners.slice(0, 3));
+
+    // 将超出的中奖格子改为未中奖
+    for (const cellIndex of winningCells) {
+      if (!keptWinners.has(cellIndex)) {
+        cellResults[cellIndex] = pickNotTripleSame();
+      }
+    }
+  }
+
+  // 应用限制2 - 最多1格中1亿（格子3的奖级是1亿，索引2）
+  // 注意：根据当前配置，只有格子3（索引2）是1亿奖级
+  // 所以实际上不会有多个1亿格子，这个限制主要是为了未来扩展性
+
+  // 构建最终grid
+  for (let i = 0; i < 6; i++) {
     grid.push(...cellResults[i]);
   }
 

@@ -1,0 +1,14 @@
+{
+  "typeKey": "SANYUAN",
+  "cells": [
+    { "cellIndex": 0, "name": "格子1", "prizeAmount": 50000000, "winProbability": 0.0017 },
+    { "cellIndex": 1, "name": "格子2", "prizeAmount": 500000, "winProbability": 0.005 },
+    { "cellIndex": 2, "name": "格子3", "prizeAmount": 100000000, "winProbability": 0.00003 },
+    { "cellIndex": 3, "name": "格子4", "prizeAmount": 5000000, "winProbability": 0.018 },
+    { "cellIndex": 4, "name": "格子5", "prizeAmount": 10000000, "winProbability": 0.0002 },
+    { "cellIndex": 5, "name": "格子6", "prizeAmount": 100000, "winProbability": 0.18, "pityTriggerRate": 0.43 }
+  ],
+  "penaltyMultiplier": 0.1,
+  "penaltyThreshold": 333,
+  "batchSize": 20
+}

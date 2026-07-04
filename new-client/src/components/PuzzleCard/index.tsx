@@ -154,6 +154,7 @@ const PuzzleCardPage = () => {
               <PuzzleTicketCard
                 key={ticket.id}
                 ticketNumber={ticket.ticketNumber}
+                typeKey={ticket.typeKey}
                 grid={ticket.ticketData.grid}
                 matchedLines={ticket.matchedLines}
                 prizeAmount={ticket.prizeAmount}

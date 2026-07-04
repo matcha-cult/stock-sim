@@ -56,19 +56,20 @@ const getStatusTag = (item: HistoryItemDto) => {
 };
 
 // 判断某格子是否中奖
-const isCellMatched = (cellIndex: number, matchedLines: MatchedLineDto[]): boolean => {
-  return matchedLines.some(m => m.tierKey === `cell_${cellIndex}`);
+const isCellMatched = (cellIndex: number, matchedLines: MatchedLineDto[], typeKey?: string): boolean => {
+  const prefix = typeKey === 'SANYUAN' ? 'sanyuan_cell_' : 'cell_';
+  return matchedLines.some(m => m.tierKey === `${prefix}${cellIndex}`);
 };
 
-// 票据格子渲染：Space + Tag，中奖标绿
-const TicketGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: MatchedLineDto[] }) => {
+// 七喜票据格子渲染：Space + Tag，中奖标绿
+const QixiTicketGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: MatchedLineDto[] }) => {
   return (
     <Space size={[4, 4]} wrap>
       {Array.from({ length: 4 }, (_, i) => {
         const num1 = grid[i * 2];
         const num2 = grid[i * 2 + 1];
         const sum = num1 + num2;
-        const matched = isCellMatched(i, matchedLines);
+        const matched = isCellMatched(i, matchedLines, 'QIXI');
         return (
           <Tag key={i} color={matched ? 'green' : undefined} style={{ margin: 0, width: 64, textAlign: 'center' }}>
             {num1}+{num2}={sum}
@@ -77,6 +78,33 @@ const TicketGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: Matc
       })}
     </Space>
   );
+};
+
+// 三元票据格子渲染：Space + Tag，中奖标绿
+const SanyuanTicketGrid = ({ grid, matchedLines }: { grid: number[]; matchedLines: MatchedLineDto[] }) => {
+  return (
+    <Space size={[4, 4]} wrap>
+      {Array.from({ length: 6 }, (_, i) => {
+        const num1 = grid[i * 3];
+        const num2 = grid[i * 3 + 1];
+        const num3 = grid[i * 3 + 2];
+        const matched = isCellMatched(i, matchedLines, 'SANYUAN');
+        return (
+          <Tag key={i} color={matched ? 'green' : undefined} style={{ margin: 0, width: 64, textAlign: 'center' }}>
+            {num1} {num2} {num3}
+          </Tag>
+        );
+      })}
+    </Space>
+  );
+};
+
+// 根据类型渲染票据格子
+const TicketGrid = ({ grid, matchedLines, typeKey }: { grid: number[]; matchedLines: MatchedLineDto[]; typeKey?: string }) => {
+  if (typeKey === 'SANYUAN') {
+    return <SanyuanTicketGrid grid={grid} matchedLines={matchedLines} />;
+  }
+  return <QixiTicketGrid grid={grid} matchedLines={matchedLines} />;
 };
 
 const RedeemHistory = ({
@@ -92,7 +120,7 @@ const RedeemHistory = ({
       {
         title: '票据', key: 'ticket',
         render: (_: unknown, item: HistoryItemDto) => item.ticketData?.grid ? (
-          <TicketGrid grid={item.ticketData.grid} matchedLines={item.matchedLines} />
+          <TicketGrid grid={item.ticketData.grid} matchedLines={item.matchedLines} typeKey={item.typeKey} />
         ) : null,
       },
       {
@@ -169,7 +197,7 @@ const RedeemHistory = ({
 
                 {/* 票据 tags */}
                 {item.ticketData?.grid && (
-                  <TicketGrid grid={item.ticketData.grid} matchedLines={item.matchedLines} />
+                  <TicketGrid grid={item.ticketData.grid} matchedLines={item.matchedLines} typeKey={item.typeKey} />
                 )}
 
                 {/* 底部行：奖金 + 状态 + 日期 */}
