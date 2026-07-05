@@ -1,8 +1,9 @@
 /**
- * GM 灵田查看接口封装。
+ * GM 灵田管理接口封装。
  *
  * 作用（做什么 / 不做什么）：
- * 1. 做什么：封装 GM 按角色 ID 或昵称查询指定玩家灵田总览、活动日志的 API。
+ * 1. 做什么：封装 GM 按角色 ID 或昵称查询指定玩家灵田总览、活动日志的 API，
+ *    以及为指定角色添加种子 / 灵材的写入 API。
  * 2. 不做什么：不处理业务逻辑、不管理状态。
  *
  * 数据流 / 状态流：
@@ -67,3 +68,24 @@ export const gmGetFarmLog = (
   params: { ...params, page, pageSize },
   ...config,
 });
+
+/** GM 为指定角色添加种子 */
+export const gmAddSeed = (
+  params: GmFarmLookupParams & {
+    itemId: string;
+    quantity: number;
+    mutationType?: string;
+    generation?: number;
+  },
+  config?: AxiosRequestConfig,
+) => api.post<{ characterId: number }>('/api/gm/farm/add-seed', params, config);
+
+/** GM 为指定角色添加灵材 */
+export const gmAddHarvest = (
+  params: GmFarmLookupParams & {
+    cropId: string;
+    quantity: number;
+    quality?: string;
+  },
+  config?: AxiosRequestConfig,
+) => api.post<{ characterId: number }>('/api/gm/farm/add-harvest', params, config);

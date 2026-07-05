@@ -3,38 +3,45 @@
  *
  * 作用（做什么 / 不做什么）：
  * 1. 做什么：GM 查询指定玩家的灵田数据，细分为 4 个子 tab：灵田格子、种子袋、灵材仓库、操作日志。
- * 2. 不做什么：不提供任何修改/删除功能，不处理业务逻辑（由后端 service 负责）。
+ *    在种子袋和灵材仓库 tab 中提供"添加"入口，支持 GM 为指定角色直接添加种子 / 灵材。
+ * 2. 不做什么：不提供删除 / 修改功能，不处理业务逻辑（由后端 service 负责）。
  *
  * 输入 / 输出：
  * - 输入：无（内部维护查询条件与选中角色状态）。
- * - 输出：查询栏 + 角色信息 + 4 个子 tab 数据展示。
+ * - 输出：查询栏 + 角色信息 + 4 个子 tab 数据展示 + 添加种子 / 灵材弹窗。
  *
  * 数据流 / 状态流：
  * 用户输入角色 ID 或昵称 -> 点击查询 -> gmGetFarmOverview() -> 渲染 4 个子 tab。
  * 子 tab 切换时按需加载操作日志（分页）。
+ * 添加种子 / 灵材成功后自动刷新 overview 数据。
  *
  * 复用设计说明：
  * - API 调用复用 services/api/gmFarm.ts。
  * - 元素颜色 / 变异标签复用 FarmPage/farmConstants。
  * - 活动日志列渲染复用 FarmActivityLog 的 ACTIVITY_LABELS / renderDetail 模式。
  * - 请求去重复用 RequestDedup（仅 in-flight 守卫，与项目规范一致）。
+ * - 添加种子 / 灵材表单复用 antd Form + Select / InputNumber，
+ *   种子 / 作物选项直接来自 overview 返回的 staticConfig，无需额外请求。
  *
  * 关键边界条件与坑点：
  * 1. 昵称查询走后端 ILIKE 模糊匹配（取 id 最小的一个），建议运维人员精确查询时使用角色 ID。
  * 2. 灵田格子展示使用表格模式（只读），不显示进度条，阶段信息由后端返回的 cropState.stageLabel 直接渲染。
  * 3. 时间戳使用 Asia/Shanghai 时区格式化（与 CLAUDE.md 规范一致）。
+ * 4. 添加成功后调用 fetchOverview 刷新数据，无需手动更新本地列表状态。
  */
 
 import { useState, useCallback, useMemo, useEffect } from 'react';
 import {
-  App, Button, Card, Descriptions, Empty, Flex, Input, Pagination,
-  Spin, Table, Tabs, Tag, Typography,
+  App, Button, Card, Descriptions, Empty, Flex, Form, Input, InputNumber, Modal, Pagination,
+  Select, Spin, Table, Tabs, Tag, Typography,
 } from 'antd';
 import type { ColumnsType } from 'antd/es/table';
-import { ReloadOutlined, SearchOutlined } from '@ant-design/icons';
+import { PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons';
 import {
   gmGetFarmOverview,
   gmGetFarmLog,
+  gmAddSeed,
+  gmAddHarvest,
   type GmFarmOverviewResponse,
   type GmFarmLookupParams,
 } from '../../services/api/gmFarm';
@@ -101,6 +108,15 @@ const GmFarmViewer: React.FC = () => {
   const [logTotal, setLogTotal] = useState(0);
   const [logPage, setLogPage] = useState(1);
   const [logLoading, setLogLoading] = useState(false);
+
+  // ── 添加种子 / 灵材弹窗状态 ──
+  const [addSeedOpen, setAddSeedOpen] = useState(false);
+  const [addSeedLoading, setAddSeedLoading] = useState(false);
+  const [addHarvestOpen, setAddHarvestOpen] = useState(false);
+  const [addHarvestLoading, setAddHarvestLoading] = useState(false);
+
+  const [addSeedForm] = Form.useForm<{ itemId: string; quantity: number; mutationType: string; generation: number }>();
+  const [addHarvestForm] = Form.useForm<{ cropId: string; quantity: number; quality: string }>();
 
   // 种子 / 作物配置索引（来自 overview 返回的 staticConfig）
   const seedConfigMap = useMemo<Map<string, SeedConfigDto>>(() => {
@@ -225,6 +241,61 @@ const GmFarmViewer: React.FC = () => {
     }
   };
 
+  // ── 添加种子 / 灵材处理 ──
+
+  const handleAddSeedSubmit = useCallback(async () => {
+    if (data == null) return;
+    try {
+      const values = await addSeedForm.validateFields();
+      setAddSeedLoading(true);
+      const result = await gmAddSeed({
+        characterId: data.characterId,
+        itemId: values.itemId,
+        quantity: values.quantity,
+        mutationType: values.mutationType || undefined,
+        generation: values.generation || undefined,
+      });
+      if (result.success) {
+        message.success('添加种子成功');
+        setAddSeedOpen(false);
+        addSeedForm.resetFields();
+        void fetchOverview();
+      } else {
+        message.error(result.message ?? '添加种子失败');
+      }
+    } catch {
+      // validateFields 失败或 API 异常，不做额外处理
+    } finally {
+      setAddSeedLoading(false);
+    }
+  }, [data, addSeedForm, message, fetchOverview]);
+
+  const handleAddHarvestSubmit = useCallback(async () => {
+    if (data == null) return;
+    try {
+      const values = await addHarvestForm.validateFields();
+      setAddHarvestLoading(true);
+      const result = await gmAddHarvest({
+        characterId: data.characterId,
+        cropId: values.cropId,
+        quantity: values.quantity,
+        quality: values.quality || undefined,
+      });
+      if (result.success) {
+        message.success('添加灵材成功');
+        setAddHarvestOpen(false);
+        addHarvestForm.resetFields();
+        void fetchOverview();
+      } else {
+        message.error(result.message ?? '添加灵材失败');
+      }
+    } catch {
+      // validateFields 失败或 API 异常，不做额外处理
+    } finally {
+      setAddHarvestLoading(false);
+    }
+  }, [data, addHarvestForm, message, fetchOverview]);
+
   // 种子袋：合并静态配置与动态库存
   const seedBagRows = useMemo(() => {
     if (!data) return [];
@@ -252,6 +323,12 @@ const GmFarmViewer: React.FC = () => {
       };
     });
   }, [data, cropConfigMap]);
+
+  // ── 变异类型选项（复用 MUTATION_LABELS 常量） ──
+  const mutationOptions = useMemo(
+    () => Object.entries(MUTATION_LABELS).map(([value, { label }]) => ({ value, label })),
+    [],
+  );
 
   return (
     <Card
@@ -346,14 +423,38 @@ const GmFarmViewer: React.FC = () => {
                     key: 'seeds',
                     label: `种子袋 (${seedBagRows.length})`,
                     children: (
-                      <SeedsTable rows={seedBagRows} />
+                      <Flex vertical gap={8}>
+                        <Flex justify="flex-end">
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => setAddSeedOpen(true)}
+                          >
+                            添加种子
+                          </Button>
+                        </Flex>
+                        <SeedsTable rows={seedBagRows} />
+                      </Flex>
                     ),
                   },
                   {
                     key: 'harvest',
                     label: `灵材仓库 (${harvestBagRows.length})`,
                     children: (
-                      <HarvestTable rows={harvestBagRows} />
+                      <Flex vertical gap={8}>
+                        <Flex justify="flex-end">
+                          <Button
+                            size="small"
+                            type="primary"
+                            icon={<PlusOutlined />}
+                            onClick={() => setAddHarvestOpen(true)}
+                          >
+                            添加灵材
+                          </Button>
+                        </Flex>
+                        <HarvestTable rows={harvestBagRows} />
+                      </Flex>
                     ),
                   },
                   {
@@ -374,6 +475,83 @@ const GmFarmViewer: React.FC = () => {
             </Flex>
           )}
         </Spin>
+
+        {/* ── 添加种子弹窗 ── */}
+        <Modal
+          title="添加种子"
+          open={addSeedOpen}
+          onCancel={() => { setAddSeedOpen(false); addSeedForm.resetFields(); }}
+          onOk={() => void handleAddSeedSubmit()}
+          confirmLoading={addSeedLoading}
+          destroyOnClose
+        >
+          <Form form={addSeedForm} layout="vertical" initialValues={{ quantity: 1, mutationType: '', generation: 0 }}>
+            <Form.Item name="itemId" label="种子" rules={[{ required: true, message: '请选择种子' }]}>
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="选择种子"
+                options={
+                  data?.staticConfig.seeds.map((s) => ({
+                    value: s.itemId,
+                    label: `${s.name}（${s.itemId}）`,
+                  })) ?? []
+                }
+              />
+            </Form.Item>
+            <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
+              <InputNumber min={1} max={9999} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="mutationType" label="变异类型（可选）">
+              <Select
+                allowClear
+                placeholder="无变异"
+                options={mutationOptions}
+              />
+            </Form.Item>
+            <Form.Item name="generation" label="代数">
+              <InputNumber min={0} max={99} style={{ width: '100%' }} />
+            </Form.Item>
+          </Form>
+        </Modal>
+
+        {/* ── 添加灵材弹窗 ── */}
+        <Modal
+          title="添加灵材"
+          open={addHarvestOpen}
+          onCancel={() => { setAddHarvestOpen(false); addHarvestForm.resetFields(); }}
+          onOk={() => void handleAddHarvestSubmit()}
+          confirmLoading={addHarvestLoading}
+          destroyOnClose
+        >
+          <Form form={addHarvestForm} layout="vertical" initialValues={{ quantity: 1, quality: 'normal' }}>
+            <Form.Item name="cropId" label="作物" rules={[{ required: true, message: '请选择作物' }]}>
+              <Select
+                showSearch
+                optionFilterProp="label"
+                placeholder="选择作物"
+                options={
+                  data?.staticConfig.crops.map((c) => ({
+                    value: c.cropId,
+                    label: `${c.name}（${c.cropId}）`,
+                  })) ?? []
+                }
+              />
+            </Form.Item>
+            <Form.Item name="quantity" label="数量" rules={[{ required: true, message: '请输入数量' }]}>
+              <InputNumber min={1} max={999999} style={{ width: '100%' }} />
+            </Form.Item>
+            <Form.Item name="quality" label="品质">
+              <Select
+                options={[
+                  { value: 'hq', label: '优质' },
+                  { value: 'normal', label: '普通' },
+                  { value: 'lq', label: '劣质' },
+                ]}
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
       </Flex>
     </Card>
   );
