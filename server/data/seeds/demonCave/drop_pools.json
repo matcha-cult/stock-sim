@@ -1,0 +1,161 @@
+{
+  "pools": [
+    {
+      "id": "drop-normal-1-5",
+      "name": "普通怪物掉落池（1-5 层）",
+      "drops": [
+      ]
+    },
+    {
+      "id": "drop-normal-6-10",
+      "name": "普通怪物掉落池（6-10 层）",
+      "drops": [
+      ]
+    },
+    {
+      "id": "drop-normal-11-20",
+      "name": "普通怪物掉落池（11-20 层）",
+      "drops": [
+      ]
+    },
+    {
+      "id": "drop-normal-21-30",
+      "name": "普通怪物掉落池（21-30 层）",
+      "drops": [
+      ]
+    },
+    {
+      "id": "drop-normal-31-50",
+      "name": "普通怪物掉落池（31-50 层）",
+      "drops": [
+      ]
+    },
+    {
+      "id": "drop-elite-1-5",
+      "name": "精英怪物掉落池（1-5 层）",
+      "drops": [
+        { "item_id": "material_hundun_jinghua", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.0005, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "drop-elite-6-10",
+      "name": "精英怪物掉落池（6-10 层）",
+      "drops": [
+        { "item_id": "material_hundun_jinghua", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.0005, "min": 1, "max": 1 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.0005, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "drop-elite-11-20",
+      "name": "精英怪物掉落池（11-20 层）",
+      "drops": [
+        { "item_id": "material_hundun_jinghua", "rate": 0.0005, "min": 1, "max": 2 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.0005, "min": 1, "max": 2 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.0005, "min": 1, "max": 2 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.0005, "min": 1, "max": 2 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.0005, "min": 1, "max": 2 }
+      ]
+    },
+    {
+      "id": "drop-elite-21-30",
+      "name": "精英怪物掉落池（21-30 层）",
+      "drops": [
+        { "item_id": "material_hundun_jinghua", "rate": 0.0005, "min": 1, "max": 3 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.0005, "min": 1, "max": 3 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.0005, "min": 1, "max": 3 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.0005, "min": 1, "max": 3 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.0005, "min": 1, "max": 3 }
+      ]
+    },
+    {
+      "id": "drop-elite-31-50",
+      "name": "精英怪物掉落池（31-50 层）",
+      "drops": [
+        { "item_id": "material_hundun_jinghua", "rate": 0.0005, "min": 1, "max": 5 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.0005, "min": 1, "max": 5 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.0005, "min": 1, "max": 5 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.0005, "min": 1, "max": 5 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.0005, "min": 1, "max": 5 }
+      ]
+    },
+    {
+      "id": "drop-boss-1-5",
+      "name": "BOSS 怪物掉落池（1-5 层）",
+      "drops": [
+        { "item_id": "tier-up-pill", "rate": 0.00001, "min": 1, "max": 1 },
+        { "item_id": "material_hundun_jinghua", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.001, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "drop-boss-6-10",
+      "name": "BOSS 怪物掉落池（6-10 层）",
+      "drops": [
+        { "item_id": "tier-up-pill", "rate": 0.00001, "min": 1, "max": 1 },
+        { "item_id": "material_hundun_jinghua", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.001, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "drop-boss-11-20",
+      "name": "BOSS 怪物掉落池（11-20 层）",
+      "drops": [
+        { "item_id": "tier-up-pill", "rate": 0.00001, "min": 1, "max": 1 },
+        { "item_id": "material_hundun_jinghua", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.001, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "drop-boss-21-30",
+      "name": "BOSS 怪物掉落池（21-30 层）",
+      "drops": [
+        { "item_id": "tier-up-pill", "rate": 0.00001, "min": 1, "max": 1 },
+        { "item_id": "material_hundun_jinghua", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.001, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "drop-boss-31-50",
+      "name": "BOSS 怪物掉落池（31-50 层）",
+      "drops": [
+        { "item_id": "tier-up-pill", "rate": 0.00001, "min": 1, "max": 1 },
+        { "item_id": "material_hundun_jinghua", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_kunlun_yusui", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_jiuwei_huohu", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_taixu_zhi_lei", "rate": 0.001, "min": 1, "max": 1 },
+        { "item_id": "material_fenghuang_yu", "rate": 0.001, "min": 1, "max": 1 }
+      ]
+    },
+    {
+      "id": "drop-rare-material",
+      "name": "稀有材料掉落池（通用）",
+      "drops": [
+      ]
+    },
+    {
+      "id": "drop-event",
+      "name": "活动掉落池（通用）",
+      "drops": [
+      ]
+    }
+  ]
+}

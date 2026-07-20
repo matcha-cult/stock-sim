@@ -54,6 +54,14 @@ model characters {
   farm_activity_logs           farm_activity_log[]
   farm_plant_templates         farm_plant_template[]
   puzzle_cards                 puzzle_card[] @ignore
+  character_beasts             character_beast[]
+  beast_rank_snapshots         beast_rank_snapshot[]
+  beast_action_logs            beast_action_log[]
+  demon_cave_progress          character_demon_cave_progress?
+  demon_cave_idle_histories    demon_cave_idle_history[]
+  demon_cave_drop_logs         demon_cave_drop_log[]
+  inventory_items              inventory_item[]
+  inventory_ledgers            inventory_ledger[]
 }
 
 // 股票报价表
@@ -95,7 +103,7 @@ model stock_market_price_history {
 
   tick                     stock_market_tick @relation(fields: [tick_id], references: [id])
 
-  @@index([stock_id, tick_id])
+  @@unique([stock_id, tick_id])
 }
 
 // 股市新闻事件表
@@ -488,5 +496,238 @@ model puzzle_card {
   @@unique([character_id, ticket_number])
   @@index([character_id])
   @@index([type_key])
+}
+
+// ========== 万兽楼灵兽系统 ==========
+
+// 灵兽主表
+model character_beast {
+  id               Int       @id @default(autoincrement())
+  character_id     Int
+  beast_def_id     String    @db.VarChar(64)
+  bloodline_id     String?   @db.VarChar(64)
+  nickname         String    @db.VarChar(64)
+  description      String?   @db.VarChar(80)
+  avatar           String?   @db.VarChar(255)
+  level            BigInt    @default(1)
+  progress_exp     BigInt    @default(0)
+  total_exp        BigInt    @default(0)
+  template_id      String    @db.VarChar(64)
+  base_attrs_override Json   @default("{}")
+  level_gains_override Json  @default("{}")
+  aptitude_bonus   Float     @default(1.0)
+  cultivation_count Int      @default(0)
+  beast_tier       String    @default("huang") @db.VarChar(20)
+  star_level       Int       @default(1)
+  is_transformed   Boolean   @default(false)
+  is_active        Boolean   @default(false)
+  custom_tag       String?   @db.VarChar(20)
+  obtained_from    String    @db.VarChar(64)
+  obtained_ref_id  String?   @db.VarChar(64)
+  created_at       DateTime  @default(now()) @db.Timestamp(6)
+  updated_at       DateTime  @updatedAt @db.Timestamp(6)
+
+  character        characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+  techniques       character_beast_technique[]
+  skill_policies   character_beast_skill_policy[]
+  rank_snapshot    beast_rank_snapshot?
+
+  @@index([character_id])
+}
+
+// 兽诀表
+model character_beast_technique {
+  id                        Int       @id @default(autoincrement())
+  beast_id                  Int
+  technique_id              String    @db.VarChar(64)
+  current_layer             Int       @default(1)
+  is_innate                 Boolean   @default(false)
+  learned_from_item_def_id  String?   @db.VarChar(64)
+  created_at                DateTime  @default(now()) @db.Timestamp(6)
+  updated_at                DateTime  @updatedAt @db.Timestamp(6)
+
+  beast                     character_beast @relation(fields: [beast_id], references: [id], onDelete: Cascade)
+
+  @@unique([beast_id, technique_id])
+  @@index([beast_id])
+}
+
+// 战斗策略表
+model character_beast_skill_policy {
+  id            Int       @id @default(autoincrement())
+  beast_id      Int
+  skill_id      String    @db.VarChar(64)
+  priority      Int
+  enabled       Boolean   @default(true)
+  created_at    DateTime  @default(now()) @db.Timestamp(6)
+  updated_at    DateTime  @updatedAt @db.Timestamp(6)
+
+  beast         character_beast @relation(fields: [beast_id], references: [id], onDelete: Cascade)
+
+  @@unique([beast_id, skill_id])
+  @@index([beast_id])
+}
+
+// 排行榜快照表
+model beast_rank_snapshot {
+  beast_id      Int       @id
+  character_id  Int
+  beast_name    String    @default("") @db.VarChar(64)
+  level         BigInt    @default(1)
+  beast_tier    String    @default("huang") @db.VarChar(20)
+  is_transformed Boolean  @default(false)
+  score         BigInt    @default(0)
+  snapshot_at   DateTime  @default(now()) @db.Timestamp(6)
+
+  beast         character_beast @relation(fields: [beast_id], references: [id], onDelete: Cascade)
+  character     characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+}
+
+// 灵兽操作日志表（召唤/放生/培育/升阶/化形记录）
+model beast_action_log {
+  id                BigInt   @id @default(autoincrement())
+  character_id      Int
+  action_type       String   @db.VarChar(50)
+  spirit_stones_cost Int     @default(0)
+  other_cost        String?
+  action_detail     String?
+  created_at        DateTime @default(now()) @db.Timestamp(6)
+
+  character         characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@index([character_id])
+  @@index([created_at(sort: Desc)])
+}
+
+// 锁妖窟进度表
+model character_demon_cave_progress {
+  character_id       Int       @id
+  beast_ids          Int[]     @default([]) // 出战灵兽 ID 数组，最多 4 只
+  best_floor         Int       @default(0)
+  current_floor      Int       @default(1)
+  current_run_id     String?   @db.VarChar(64)
+  current_battle_id  String?   @db.VarChar(128)
+  last_settled_floor Int       @default(0)
+  is_idling          Boolean   @default(false) // 是否正在挂机
+  idle_floor         Int?      // 挂机楼层（可以挂机已通关的楼层）
+  idle_started_at    DateTime? @db.Timestamp(6) // 挂机开始时间
+  current_history_id Int?      // 当前挂机的历史记录 ID（进行中）
+  updated_at         DateTime  @default(now()) @db.Timestamp(6)
+
+  character          characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+}
+
+// 锁妖窟挂机历史记录
+model demon_cave_idle_history {
+  id                 Int      @id @default(autoincrement())
+  character_id       Int
+  beast_ids          Int[]
+  beast_names        String[] @db.VarChar(64)
+  floor              Int
+  status             String   @default("active") @db.VarChar(16) // active: 进行中, completed: 已结束
+  idle_started_at    DateTime @db.Timestamp(6)
+  idle_ended_at      DateTime? @db.Timestamp(6) // 进行中时为 null
+  duration_seconds   Int?     // 进行中时为 null
+  total_battles      Int?     // 进行中时为 null
+  victory_count      Int      @default(0)
+  defeat_count       Int      @default(0)
+  timeout_count      Int      @default(0)
+  total_experience   BigInt   @default(0)
+  created_at         DateTime @default(now()) @db.Timestamp(6)
+
+  character          characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+  battle_logs        demon_cave_idle_battle_log[]
+  drop_logs          demon_cave_drop_log[]
+
+  @@index([character_id])
+  @@index([idle_ended_at(sort: Desc)])
+}
+
+// 锁妖窟挂机战斗日志（每场战斗一条记录）
+model demon_cave_idle_battle_log {
+  id              BigInt   @id @default(autoincrement())
+  history_id      Int      // 关联到挂机会话
+  battle_index    Int      // 第几场战斗（从 1 开始）
+  result          String   @db.VarChar(16) // victory / defeat / timeout
+  rounds          Int
+  experience      BigInt
+  battle_logs     Json?    // 详细的回合日志（JSONB）
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+
+  history         demon_cave_idle_history @relation(fields: [history_id], references: [id], onDelete: Cascade)
+
+  @@index([history_id])
+  @@index([created_at(sort: Desc)])
+}
+
+// 锁妖窟掉落记录
+model demon_cave_drop_log {
+  id              BigInt   @id @default(autoincrement())
+  character_id    Int
+  history_id      Int?     // 关联挂机历史（挑战模式为空）
+  source_type     String   @db.VarChar(16) // idle: 挂机, challenge: 挑战
+  floor           Int      // 楼层
+  item_key        String   @db.VarChar(64)  // 物品ID
+  quantity        Int      // 数量
+  created_at      DateTime @default(now()) @db.Timestamp(6)
+
+  character       characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+  history         demon_cave_idle_history? @relation(fields: [history_id], references: [id], onDelete: SetNull)
+
+  @@index([character_id])
+  @@index([history_id])
+  @@index([created_at(sort: Desc)])
+}
+
+// ========== 统一背包系统 ==========
+
+// 统一背包表（核心表）
+// 物品定义存储在内存中（itemConfigLoader 加载 items.json），不存数据库
+model inventory_item {
+  id                  Int       @id @default(autoincrement())
+  character_id        Int
+  item_key            String    @db.VarChar(64)
+  quantity            Int       @default(0)
+  mutation_type       String?   @db.VarChar(32)
+  generation          Int?      @default(0)
+  quality             String?   @db.VarChar(20)
+  durability          Int?      @default(100)
+  level               Int?      @default(1)
+  custom_attributes   Json?     @db.JsonB
+  created_at          DateTime  @default(now()) @db.Timestamp(6)
+  updated_at          DateTime  @updatedAt @db.Timestamp(6)
+
+  character           characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  // 同一角色同一物品及属性组合可多格存放（单格上限由 max_stack 控制）
+  @@index([character_id])
+  @@index([item_key])
+  @@index([character_id, item_key])
+  @@index([character_id, item_key, mutation_type, generation, quality, level])
+
+  @@map("inventory_items")
+}
+
+// 物品流水账表（记录物品变动）
+model inventory_ledger {
+  id                  BigInt   @id @default(autoincrement())
+  character_id        Int
+  item_key            String   @db.VarChar(64)
+  operation_type      String   @db.VarChar(20) // acquire, consume, craft, sell, buy
+  quantity_change     Int
+  balance_after       Int
+  biz_type            String   @db.VarChar(50)
+  biz_id              String?  @db.VarChar(128)
+  memo                String?  @db.VarChar(500)
+  created_at          DateTime @default(now()) @db.Timestamp(6)
+
+  character           characters @relation(fields: [character_id], references: [id], onDelete: Cascade)
+
+  @@index([character_id])
+  @@index([item_key])
+  @@index([character_id, created_at])
+  @@index([operation_type])
+
+  @@map("inventory_ledger")
 }
 

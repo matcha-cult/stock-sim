@@ -1,0 +1,8 @@
+{
+  "id": "demon-ram",
+  "name": "盘羊精",
+  "description": "羊身人面，目在腋下，贪食无厌",
+  "template_id": "tpl-attack",
+  "element": [],
+  "bloodline_id": "bloodline-taotie"
+}

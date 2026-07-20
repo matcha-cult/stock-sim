@@ -1,0 +1,10 @@
+{
+  "id": "demon-lion",
+  "name": "狮精",
+  "description": "人面虎躯，九尾摇曳，昆仑山神之后裔",
+  "template_id": "tpl-defense",
+  "element": [
+    "金"
+  ],
+  "bloodline_id": "bloodline-luwu"
+}

@@ -26,11 +26,12 @@
  * 4. GM 添加种子 / 灵材不做业务校验（不扣灵石、不检查等级），
  *    但会校验 itemId / cropId 是否存在于配置中，避免写入无效数据。
  */
-import { query } from '../../config/database.js';
+import { query, withTransaction } from '../../config/database.js';
 import * as farmService from './farmService.js';
 import type { FarmOverviewDto, FarmStaticConfigDto, CropQuality } from './farmTypes.js';
 import type { ActivityLogDto } from './farmService.js';
-import { getCropConfig, getSeedConfig } from './farmConfigLoader.js';
+import { getCropConfig, getSeedConfig, getAllCrops } from './farmConfigLoader.js';
+import { addItem } from '../inventory/unifiedInventoryService.js';
 
 interface CharacterRow {
   id: number;
@@ -152,14 +153,22 @@ export async function gmAddSeed(
   const seedConfig = getSeedConfig(itemId);
   if (!seedConfig) return { success: false, message: `种子 ${itemId} 不存在` };
 
-  await query(
-    `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-     VALUES ($1, $2, $3, $4, $5, NOW())
-     ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
-     SET quantity = farm_seed_inventory.quantity + $3,
-         updated_at = CURRENT_TIMESTAMP`,
-    [character.id, itemId, quantity, mutationType, generation],
-  );
+  const result = await addItem({
+    characterId: character.id,
+    itemKey: itemId,
+    quantity,
+    attributes: {
+      mutationType: mutationType || undefined,
+      generation: generation || undefined,
+    },
+    operationType: 'acquire',
+    bizType: 'gm_add',
+    memo: `GM 添加种子 ${seedConfig.name} x${quantity}`,
+  });
+
+  if (!result.success) {
+    return { success: false, message: result.message };
+  }
 
   return { success: true, message: '添加成功', characterId: character.id };
 }
@@ -184,14 +193,73 @@ export async function gmAddHarvest(
     return { success: false, message: `无效品质 ${quality}，可选：hq / normal / lq` };
   }
 
-  await query(
-    `INSERT INTO farm_harvest_inventory (character_id, crop_id, quantity, quality, updated_at)
-     VALUES ($1, $2, $3, $4, NOW())
-     ON CONFLICT (character_id, crop_id, quality) DO UPDATE
-     SET quantity = farm_harvest_inventory.quantity + $3,
-         updated_at = CURRENT_TIMESTAMP`,
-    [character.id, cropId, quantity, quality],
-  );
+  const harvestItemKey = `material_${cropId}`;
+  const result = await addItem({
+    characterId: character.id,
+    itemKey: harvestItemKey,
+    quantity,
+    attributes: {
+      quality,
+    },
+    operationType: 'acquire',
+    bizType: 'gm_add',
+    memo: `GM 添加灵材 ${cropConfig.name} (${quality}) x${quantity}`,
+  });
+
+  if (!result.success) {
+    return { success: false, message: result.message };
+  }
 
   return { success: true, message: '添加成功', characterId: character.id };
+}
+
+/**
+ * GM 为指定角色一键添加所有作物的灵材（跳过业务校验）。
+ * 每个作物按传入的品质列表各自增加 quantity 个。
+ * 所有写入在同一事务内完成，任一失败全部回滚。
+ */
+export async function gmAddAllHarvest(
+  params: GmFarmLookupParams,
+  quantity: number,
+  qualities: CropQuality[],
+): Promise<{ success: boolean; message: string; characterId?: number; cropCount?: number }> {
+  const character = await resolveCharacter(params);
+  if (character == null) return { success: false, message: '角色不存在' };
+
+  for (const q of qualities) {
+    if (!VALID_QUALITIES.has(q)) {
+      return { success: false, message: `无效品质 ${q}，可选：hq / normal / lq` };
+    }
+  }
+
+  const allCrops = getAllCrops();
+  if (allCrops.length === 0) {
+    return { success: false, message: '作物配置为空，无法添加' };
+  }
+
+  await withTransaction(async () => {
+    for (const crop of allCrops) {
+      for (const quality of qualities) {
+        const harvestItemKey = `material_${crop.cropId}`;
+        await addItem({
+          characterId: character.id,
+          itemKey: harvestItemKey,
+          quantity,
+          attributes: {
+            quality,
+          },
+          operationType: 'acquire',
+          bizType: 'gm_add',
+          memo: `GM 一键添加灵材 ${crop.name} (${quality}) x${quantity}`,
+        });
+      }
+    }
+  });
+
+  return {
+    success: true,
+    message: '添加成功',
+    characterId: character.id,
+    cropCount: allCrops.length,
+  };
 }

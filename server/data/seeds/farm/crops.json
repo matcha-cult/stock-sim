@@ -4,14 +4,6 @@
       "cropId": "spirit_root_gold",
       "name": "灵根·金",
       "description": "金属性灵根作物，蕴含锐利灵气",
-      "traits": [
-        "灵根",
-        "金灵"
-      ],
-      "element": [
-        "金"
-      ],
-      "rarity": "common",
       "sortOrder": 0,
       "enabled": true,
       "growthStageMinutes": [
@@ -27,8 +19,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 70,
       "yieldMax": 80,
-      "sellPricePerUnit": 100,
-      "harvestTradeUnit": 100,
       "expGain": 5,
       "requiredTier": 1,
       "seedItemId": "seed_spirit_root_gold",
@@ -40,14 +30,6 @@
       "cropId": "spirit_root_wood",
       "name": "灵根·木",
       "description": "木属性灵根作物，蕴含生机灵气",
-      "traits": [
-        "灵根",
-        "木灵"
-      ],
-      "element": [
-        "木"
-      ],
-      "rarity": "common",
       "sortOrder": 1,
       "enabled": true,
       "growthStageMinutes": [
@@ -63,8 +45,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 70,
       "yieldMax": 80,
-      "sellPricePerUnit": 100,
-      "harvestTradeUnit": 100,
       "expGain": 5,
       "requiredTier": 1,
       "seedItemId": "seed_spirit_root_wood",
@@ -76,14 +56,6 @@
       "cropId": "spirit_root_water",
       "name": "灵根·水",
       "description": "水属性灵根作物，蕴含润泽灵气",
-      "traits": [
-        "灵根",
-        "水灵"
-      ],
-      "element": [
-        "水"
-      ],
-      "rarity": "common",
       "sortOrder": 2,
       "enabled": true,
       "growthStageMinutes": [
@@ -99,8 +71,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 70,
       "yieldMax": 80,
-      "sellPricePerUnit": 100,
-      "harvestTradeUnit": 100,
       "expGain": 5,
       "requiredTier": 1,
       "seedItemId": "seed_spirit_root_water",
@@ -112,14 +82,6 @@
       "cropId": "spirit_root_fire",
       "name": "灵根·火",
       "description": "火属性灵根作物，蕴含炽烈灵气",
-      "traits": [
-        "灵根",
-        "火灵"
-      ],
-      "element": [
-        "火"
-      ],
-      "rarity": "common",
       "sortOrder": 3,
       "enabled": true,
       "growthStageMinutes": [
@@ -135,8 +97,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 70,
       "yieldMax": 80,
-      "sellPricePerUnit": 100,
-      "harvestTradeUnit": 100,
       "expGain": 5,
       "requiredTier": 1,
       "seedItemId": "seed_spirit_root_fire",
@@ -148,14 +108,6 @@
       "cropId": "spirit_root_earth",
       "name": "灵根·土",
       "description": "土属性灵根作物，蕴含厚重灵气",
-      "traits": [
-        "灵根",
-        "土灵"
-      ],
-      "element": [
-        "土"
-      ],
-      "rarity": "common",
       "sortOrder": 4,
       "enabled": true,
       "growthStageMinutes": [
@@ -171,8 +123,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 70,
       "yieldMax": 80,
-      "sellPricePerUnit": 100,
-      "harvestTradeUnit": 100,
       "expGain": 5,
       "requiredTier": 1,
       "seedItemId": "seed_spirit_root_earth",
@@ -184,11 +134,6 @@
       "cropId": "rice_basic",
       "name": "灵稻",
       "description": "基础灵稻，可参与杂交",
-      "traits": [
-        "禾本"
-      ],
-      "element": [],
-      "rarity": "common",
       "sortOrder": 10,
       "enabled": true,
       "growthStageMinutes": [
@@ -204,8 +149,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 120,
-      "sellPricePerUnit": 100,
-      "harvestTradeUnit": 100,
       "expGain": 3,
       "requiredTier": 1,
       "seedItemId": "seed_rice_basic",
@@ -217,13 +160,6 @@
       "cropId": "jin_ling_rice",
       "name": "金灵稻",
       "description": "灵稻与金灵根杂交，孕育金灵稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "金"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 5,
       "enabled": true,
       "growthStageMinutes": [
@@ -239,8 +175,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 125,
-      "harvestTradeUnit": 100,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_jin_ling_rice",
@@ -252,13 +186,6 @@
       "cropId": "mu_ling_rice",
       "name": "木灵稻",
       "description": "灵稻与木灵根杂交，孕育木灵稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "木"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 6,
       "enabled": true,
       "growthStageMinutes": [
@@ -274,8 +201,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 125,
-      "harvestTradeUnit": 100,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_mu_ling_rice",
@@ -287,13 +212,6 @@
       "cropId": "shui_ling_rice",
       "name": "水灵稻",
       "description": "灵稻与水灵根杂交，孕育水灵稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "水"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 7,
       "enabled": true,
       "growthStageMinutes": [
@@ -309,8 +227,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 125,
-      "harvestTradeUnit": 100,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_shui_ling_rice",
@@ -322,13 +238,6 @@
       "cropId": "huo_ling_rice",
       "name": "火灵稻",
       "description": "灵稻与火灵根杂交，孕育火灵稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "火"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 8,
       "enabled": true,
       "growthStageMinutes": [
@@ -344,8 +253,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 125,
-      "harvestTradeUnit": 100,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_huo_ling_rice",
@@ -357,13 +264,6 @@
       "cropId": "tu_ling_rice",
       "name": "土灵稻",
       "description": "灵稻与土灵根杂交，孕育土灵稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "土"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 9,
       "enabled": true,
       "growthStageMinutes": [
@@ -379,8 +279,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 125,
-      "harvestTradeUnit": 100,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_tu_ling_rice",
@@ -392,14 +290,6 @@
       "cropId": "bi_jing_rice",
       "name": "碧粳稻",
       "description": "水木相生，孕育碧粳稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "水",
-        "木"
-      ],
-      "rarity": "rare",
       "sortOrder": 11,
       "enabled": true,
       "growthStageMinutes": [
@@ -415,8 +305,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 1800,
-      "harvestTradeUnit": 100,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_bi_jing_rice",
@@ -428,14 +316,6 @@
       "cropId": "yan_huo_rice",
       "name": "青炎稻",
       "description": "木火相生，孕育青炎稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "木",
-        "火"
-      ],
-      "rarity": "rare",
       "sortOrder": 12,
       "enabled": true,
       "growthStageMinutes": [
@@ -451,8 +331,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 1800,
-      "harvestTradeUnit": 100,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_yan_huo_rice",
@@ -464,14 +342,6 @@
       "cropId": "yan_tu_rice",
       "name": "炎土稻",
       "description": "火土相生，孕育炎土稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "火",
-        "土"
-      ],
-      "rarity": "rare",
       "sortOrder": 13,
       "enabled": true,
       "growthStageMinutes": [
@@ -487,8 +357,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 1800,
-      "harvestTradeUnit": 100,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_yan_tu_rice",
@@ -500,14 +368,6 @@
       "cropId": "jin_sui_rice",
       "name": "壤金稻",
       "description": "土生金，凝练壤金稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "土",
-        "金"
-      ],
-      "rarity": "rare",
       "sortOrder": 14,
       "enabled": true,
       "growthStageMinutes": [
@@ -523,8 +383,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 1800,
-      "harvestTradeUnit": 100,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_jin_sui_rice",
@@ -536,14 +394,6 @@
       "cropId": "xuan_bing_rice",
       "name": "玄冰稻",
       "description": "金水相生，孕育玄冰稻",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "金",
-        "水"
-      ],
-      "rarity": "rare",
       "sortOrder": 15,
       "enabled": true,
       "growthStageMinutes": [
@@ -559,8 +409,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 80,
       "yieldMax": 110,
-      "sellPricePerUnit": 1800,
-      "harvestTradeUnit": 100,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_xuan_bing_rice",
@@ -572,12 +420,6 @@
       "cropId": "qi_xing_rice",
       "name": "七星稻",
       "description": "四象汇聚，孕育七星稻",
-      "traits": [
-        "禾本",
-        "七星"
-      ],
-      "element": [],
-      "rarity": "legendary",
       "sortOrder": 20,
       "enabled": true,
       "growthStageMinutes": [
@@ -593,8 +435,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 60,
       "yieldMax": 90,
-      "sellPricePerUnit": 5000,
-      "harvestTradeUnit": 100,
       "expGain": 20,
       "requiredTier": 1,
       "seedItemId": "seed_qi_xing_rice",
@@ -606,11 +446,6 @@
       "cropId": "ling_hu",
       "name": "灵葫",
       "description": "基础灵葫，可参与杂交",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [],
-      "rarity": "common",
       "sortOrder": 30,
       "enabled": true,
       "growthStageMinutes": [
@@ -626,8 +461,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 10000,
-      "harvestTradeUnit": 5,
       "expGain": 3,
       "requiredTier": 1,
       "seedItemId": "seed_ling_hu",
@@ -639,13 +472,6 @@
       "cropId": "jin_ling_hu",
       "name": "金灵葫",
       "description": "灵葫受金灵根影响，孕育金灵葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "金"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 31,
       "enabled": true,
       "growthStageMinutes": [
@@ -661,8 +487,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 12500,
-      "harvestTradeUnit": 5,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_jin_ling_hu",
@@ -674,13 +498,6 @@
       "cropId": "mu_ling_hu",
       "name": "木灵葫",
       "description": "灵葫受木灵根影响，孕育木灵葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "木"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 32,
       "enabled": true,
       "growthStageMinutes": [
@@ -696,8 +513,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 12500,
-      "harvestTradeUnit": 5,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_mu_ling_hu",
@@ -709,13 +524,6 @@
       "cropId": "shui_ling_hu",
       "name": "水灵葫",
       "description": "灵葫受水灵根影响，孕育水灵葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "水"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 33,
       "enabled": true,
       "growthStageMinutes": [
@@ -731,8 +539,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 12500,
-      "harvestTradeUnit": 5,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_shui_ling_hu",
@@ -744,13 +550,6 @@
       "cropId": "huo_ling_hu",
       "name": "火灵葫",
       "description": "灵葫受火灵根影响，孕育火灵葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "火"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 34,
       "enabled": true,
       "growthStageMinutes": [
@@ -766,8 +565,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 12500,
-      "harvestTradeUnit": 5,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_huo_ling_hu",
@@ -779,13 +576,6 @@
       "cropId": "tu_ling_hu",
       "name": "土灵葫",
       "description": "灵葫受土灵根影响，孕育土灵葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "土"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 35,
       "enabled": true,
       "growthStageMinutes": [
@@ -801,8 +591,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 12500,
-      "harvestTradeUnit": 5,
       "expGain": 4,
       "requiredTier": 1,
       "seedItemId": "seed_tu_ling_hu",
@@ -814,14 +602,6 @@
       "cropId": "bi_man_hu",
       "name": "碧蔓葫",
       "description": "水木相生，孕育碧蔓葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "水",
-        "木"
-      ],
-      "rarity": "rare",
       "sortOrder": 36,
       "enabled": true,
       "growthStageMinutes": [
@@ -837,8 +617,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 180000,
-      "harvestTradeUnit": 5,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_bi_man_hu",
@@ -850,14 +628,6 @@
       "cropId": "cui_yan_hu",
       "name": "翠焰葫",
       "description": "木火相生，孕育翠焰葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "木",
-        "火"
-      ],
-      "rarity": "rare",
       "sortOrder": 37,
       "enabled": true,
       "growthStageMinutes": [
@@ -873,8 +643,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 180000,
-      "harvestTradeUnit": 5,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_cui_yan_hu",
@@ -886,14 +654,6 @@
       "cropId": "chi_tao_hu",
       "name": "赤陶葫",
       "description": "火土相生，孕育赤陶葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "火",
-        "土"
-      ],
-      "rarity": "rare",
       "sortOrder": 38,
       "enabled": true,
       "growthStageMinutes": [
@@ -909,8 +669,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 180000,
-      "harvestTradeUnit": 5,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_chi_tao_hu",
@@ -922,14 +680,6 @@
       "cropId": "zi_jin_hu",
       "name": "紫金葫",
       "description": "土生金，孕育紫金葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "土",
-        "金"
-      ],
-      "rarity": "rare",
       "sortOrder": 39,
       "enabled": true,
       "growthStageMinutes": [
@@ -945,8 +695,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 180000,
-      "harvestTradeUnit": 5,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_zi_jin_hu",
@@ -958,14 +706,6 @@
       "cropId": "xuan_lu_hu",
       "name": "玄露葫",
       "description": "金水相生，孕育玄露葫",
-      "traits": [
-        "葫芦科"
-      ],
-      "element": [
-        "金",
-        "水"
-      ],
-      "rarity": "rare",
       "sortOrder": 40,
       "enabled": true,
       "growthStageMinutes": [
@@ -981,8 +721,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 7,
-      "sellPricePerUnit": 180000,
-      "harvestTradeUnit": 5,
       "expGain": 8,
       "requiredTier": 1,
       "seedItemId": "seed_xuan_lu_hu",
@@ -994,12 +732,6 @@
       "cropId": "taixu_hu",
       "name": "太虚葫",
       "description": "五行归元，孕育太虚葫",
-      "traits": [
-        "葫芦科",
-        "太虚"
-      ],
-      "element": [],
-      "rarity": "legendary",
       "sortOrder": 50,
       "enabled": true,
       "growthStageMinutes": [
@@ -1015,8 +747,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 1,
       "yieldMax": 1,
-      "sellPricePerUnit": 500000,
-      "harvestTradeUnit": 1,
       "expGain": 20,
       "requiredTier": 2,
       "seedItemId": "seed_taixu_hu",
@@ -1028,13 +758,6 @@
       "cropId": "long_xu_cao",
       "name": "龙须草",
       "description": "金属性禾本灵草，细叶如龙须，蕴含锐利灵气",
-      "traits": [
-        "禾本"
-      ],
-      "element": [
-        "金"
-      ],
-      "rarity": "uncommon",
       "sortOrder": 60,
       "enabled": true,
       "growthStageMinutes": [
@@ -1050,8 +773,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 10,
       "yieldMax": 20,
-      "sellPricePerUnit": 1000,
-      "harvestTradeUnit": 1,
       "expGain": 5,
       "requiredTier": 1,
       "seedItemId": "seed_long_xu_cao",
@@ -1063,13 +784,6 @@
       "cropId": "tian_luo_teng",
       "name": "天罗藤",
       "description": "木属性藤本灵植，藤蔓蔓延，蕴含蓬勃生机",
-      "traits": [
-        "藤本"
-      ],
-      "element": [
-        "木"
-      ],
-      "rarity": "rare",
       "sortOrder": 61,
       "enabled": true,
       "growthStageMinutes": [
@@ -1085,8 +799,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 1,
       "yieldMax": 3,
-      "sellPricePerUnit": 20000,
-      "harvestTradeUnit": 1,
       "expGain": 10,
       "requiredTier": 1,
       "seedItemId": "seed_tian_luo_teng",
@@ -1098,11 +810,6 @@
       "cropId": "ling_lian",
       "name": "灵莲",
       "description": "基础灵莲，无属性，可参与杂交",
-      "traits": [
-        "莲科"
-      ],
-      "element": [],
-      "rarity": "common",
       "sortOrder": 69,
       "enabled": true,
       "growthStageMinutes": [
@@ -1118,8 +825,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 6,
       "yieldMax": 10,
-      "sellPricePerUnit": 2000,
-      "harvestTradeUnit": 1,
       "expGain": 4,
       "requiredTier": 2,
       "seedItemId": "seed_ling_lian",
@@ -1131,13 +836,6 @@
       "cropId": "jin_feng_lian",
       "name": "金锋莲",
       "description": "金属性莲科灵植，花瓣如金刃，蕴含锐利灵气",
-      "traits": [
-        "莲科"
-      ],
-      "element": [
-        "金"
-      ],
-      "rarity": "rare",
       "sortOrder": 70,
       "enabled": true,
       "growthStageMinutes": [
@@ -1153,8 +851,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 5,
       "yieldMax": 8,
-      "sellPricePerUnit": 7000,
-      "harvestTradeUnit": 1,
       "expGain": 8,
       "requiredTier": 2,
       "seedItemId": "seed_jin_feng_lian",
@@ -1166,13 +862,6 @@
       "cropId": "cui_xin_lian",
       "name": "翠心莲",
       "description": "木属性莲科灵植，莲心翠碧，蕴含生机灵气",
-      "traits": [
-        "莲科"
-      ],
-      "element": [
-        "木"
-      ],
-      "rarity": "rare",
       "sortOrder": 71,
       "enabled": true,
       "growthStageMinutes": [
@@ -1188,8 +877,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 5,
       "yieldMax": 8,
-      "sellPricePerUnit": 7500,
-      "harvestTradeUnit": 1,
       "expGain": 8,
       "requiredTier": 2,
       "seedItemId": "seed_cui_xin_lian",
@@ -1201,13 +888,6 @@
       "cropId": "bing_po_lian",
       "name": "冰魄莲",
       "description": "水属性莲科灵植，冰魄凝寒，蕴含极寒灵气",
-      "traits": [
-        "莲科"
-      ],
-      "element": [
-        "水"
-      ],
-      "rarity": "rare",
       "sortOrder": 72,
       "enabled": true,
       "growthStageMinutes": [
@@ -1223,8 +903,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 5,
       "yieldMax": 8,
-      "sellPricePerUnit": 8000,
-      "harvestTradeUnit": 1,
       "expGain": 8,
       "requiredTier": 2,
       "seedItemId": "seed_bing_po_lian",
@@ -1236,13 +914,6 @@
       "cropId": "long_xue_hua",
       "name": "龙血花",
       "description": "火属性莲科灵植，龙血炽燃，蕴含炽烈灵气",
-      "traits": [
-        "莲科"
-      ],
-      "element": [
-        "火"
-      ],
-      "rarity": "rare",
       "sortOrder": 73,
       "enabled": true,
       "growthStageMinutes": [
@@ -1258,8 +929,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 3,
       "yieldMax": 6,
-      "sellPricePerUnit": 10000,
-      "harvestTradeUnit": 1,
       "expGain": 8,
       "requiredTier": 2,
       "seedItemId": "seed_long_xue_hua",
@@ -1271,13 +940,6 @@
       "cropId": "hou_tu_lian",
       "name": "厚土莲",
       "description": "土属性莲科灵植，厚德载物，蕴含厚重灵气",
-      "traits": [
-        "莲科"
-      ],
-      "element": [
-        "土"
-      ],
-      "rarity": "rare",
       "sortOrder": 74,
       "enabled": true,
       "growthStageMinutes": [
@@ -1293,8 +955,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 4,
       "yieldMax": 7,
-      "sellPricePerUnit": 6000,
-      "harvestTradeUnit": 1,
       "expGain": 8,
       "requiredTier": 2,
       "seedItemId": "seed_hou_tu_lian",
@@ -1306,12 +966,6 @@
       "cropId": "qi_xing_lian",
       "name": "七星莲",
       "description": "莲科汇聚，五行归元，孕育七星莲",
-      "traits": [
-        "莲科",
-        "七星"
-      ],
-      "element": [],
-      "rarity": "legendary",
       "sortOrder": 80,
       "enabled": true,
       "growthStageMinutes": [
@@ -1327,8 +981,6 @@
       "witherAfterMinutes": 480,
       "yieldMin": 1,
       "yieldMax": 2,
-      "sellPricePerUnit": 500000,
-      "harvestTradeUnit": 1,
       "expGain": 20,
       "requiredTier": 2,
       "seedItemId": "seed_qi_xing_lian",

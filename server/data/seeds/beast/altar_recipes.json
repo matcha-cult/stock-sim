@@ -1,0 +1,618 @@
+{
+  "version": 7,
+  "description": "祭坛召唤配方定义（9种SSR + 27种SR = 36种配方）",
+  "recipes": [
+    {
+      "id": "recipe-zhulong",
+      "bloodline_id": "bloodline-zhulong",
+      "preferred": {
+        "elements": ["火", "土"],
+        "items": [],
+        "traits": ["龙", "烛龙"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "钟山烛龙，偏好火土双系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-yinglong",
+      "bloodline_id": "bloodline-yinglong",
+      "preferred": {
+        "elements": ["金", "水"],
+        "items": [],
+        "traits": ["龙", "应龙"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "应龙，偏好金水双系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-xiangliu",
+      "bloodline_id": "bloodline-xiangliu",
+      "preferred": {
+        "elements": ["水", "土"],
+        "items": [],
+        "traits": ["蛇", "九头"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "相柳，偏好水土双系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-dijiang",
+      "bloodline_id": "bloodline-dijiang",
+      "preferred": {
+        "elements": ["土"],
+        "items": [],
+        "traits": ["混沌"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "帝江，偏好土系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-luwu",
+      "bloodline_id": "bloodline-luwu",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["虎", "昆仑"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "陆吾，偏好金系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-kaimingshou",
+      "bloodline_id": "bloodline-kaimingshou",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["虎", "守门"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "开明兽，偏好金系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-fenghuang",
+      "bloodline_id": "bloodline-fenghuang",
+      "preferred": {
+        "elements": ["火"],
+        "items": [],
+        "traits": ["凤", "鸟"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "凤凰，偏好火系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-taotie",
+      "bloodline_id": "bloodline-taotie",
+      "preferred": {
+        "elements": ["金", "土"],
+        "items": [],
+        "traits": ["贪兽", "羊"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "狍鸮，偏好金土双系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-jiufeng",
+      "bloodline_id": "bloodline-jiufeng",
+      "preferred": {
+        "elements": ["木"],
+        "items": [],
+        "traits": ["鸟", "九首"]
+      },
+      "disliked": {
+        "elements": [],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": "rare",
+      "description": "九凤，偏好木系祭品+无属性rare+",
+      "weight": 10
+    },
+    {
+      "id": "recipe-jiuweihu",
+      "bloodline_id": "bloodline-jiuweihu",
+      "preferred": {
+        "elements": ["木"],
+        "items": [],
+        "traits": ["狐"]
+      },
+      "disliked": {
+        "elements": ["金"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "九尾狐，偏好木系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-bifang",
+      "bloodline_id": "bloodline-bifang",
+      "preferred": {
+        "elements": ["火"],
+        "items": [],
+        "traits": ["鸟", "鹤"]
+      },
+      "disliked": {
+        "elements": ["水"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "毕方，偏好火系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-luanniao",
+      "bloodline_id": "bloodline-luanniao",
+      "preferred": {
+        "elements": ["火"],
+        "items": [],
+        "traits": ["鸟", "凤"]
+      },
+      "disliked": {
+        "elements": ["水"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "鸾鸟，偏好火系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-gudiao",
+      "bloodline_id": "bloodline-gudiao",
+      "preferred": {
+        "elements": ["水"],
+        "items": [],
+        "traits": ["雕", "鹰"]
+      },
+      "disliked": {
+        "elements": ["土"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "蛊雕，偏好水系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-qiongqi",
+      "bloodline_id": "bloodline-qiongqi",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["虎", "翼"]
+      },
+      "disliked": {
+        "elements": ["火"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "穷奇，偏好金系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-huashe",
+      "bloodline_id": "bloodline-huashe",
+      "preferred": {
+        "elements": ["水"],
+        "items": [],
+        "traits": ["蛇", "豺"]
+      },
+      "disliked": {
+        "elements": ["土"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "化蛇，偏好水系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-feiyi",
+      "bloodline_id": "bloodline-feiyi",
+      "preferred": {
+        "elements": ["火"],
+        "items": [],
+        "traits": ["蛇", "双身"]
+      },
+      "disliked": {
+        "elements": ["水"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "肥遗，偏好火系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-zhuyan",
+      "bloodline_id": "bloodline-zhuyan",
+      "preferred": {
+        "elements": ["木"],
+        "items": [],
+        "traits": ["猿", "猴"]
+      },
+      "disliked": {
+        "elements": ["金"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "朱厌，偏好木系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-qinyuan",
+      "bloodline_id": "bloodline-qinyuan",
+      "preferred": {
+        "elements": ["火"],
+        "items": [],
+        "traits": ["蜂", "毒"]
+      },
+      "disliked": {
+        "elements": ["水"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "钦原，偏好火系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-yonghe",
+      "bloodline_id": "bloodline-yonghe",
+      "preferred": {
+        "elements": ["火"],
+        "items": [],
+        "traits": ["猿", "黄"]
+      },
+      "disliked": {
+        "elements": ["水"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "雍和，偏好火系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-yayu",
+      "bloodline_id": "bloodline-yayu",
+      "preferred": {
+        "elements": ["水"],
+        "items": [],
+        "traits": ["牛", "赤"]
+      },
+      "disliked": {
+        "elements": ["土"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "窫窳，偏好水系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-zhuhuai",
+      "bloodline_id": "bloodline-zhuhuai",
+      "preferred": {
+        "elements": ["水"],
+        "items": [],
+        "traits": ["牛", "四角"]
+      },
+      "disliked": {
+        "elements": ["土"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "诸怀，偏好水系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-fuxi",
+      "bloodline_id": "bloodline-fuxi",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["鸡", "人面"]
+      },
+      "disliked": {
+        "elements": ["火"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "凫徯，偏好金系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-tiangou",
+      "bloodline_id": "bloodline-tiangou",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["狸", "白首"]
+      },
+      "disliked": {
+        "elements": ["火"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "天狗，偏好金系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-zheng",
+      "bloodline_id": "bloodline-zheng",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["豹", "赤"]
+      },
+      "disliked": {
+        "elements": ["火"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "狰，偏好金系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-dangkang",
+      "bloodline_id": "bloodline-dangkang",
+      "preferred": {
+        "elements": ["土"],
+        "items": [],
+        "traits": ["猪", "瑞"]
+      },
+      "disliked": {
+        "elements": ["木"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "当康，偏好土系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-fei",
+      "bloodline_id": "bloodline-fei",
+      "preferred": {
+        "elements": ["水"],
+        "items": [],
+        "traits": ["牛", "疫"]
+      },
+      "disliked": {
+        "elements": ["土"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "蜚，偏好水系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-manman",
+      "bloodline_id": "bloodline-manman",
+      "preferred": {
+        "elements": ["水"],
+        "items": [],
+        "traits": ["鸟", "比翼"]
+      },
+      "disliked": {
+        "elements": ["土"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "蛮蛮，偏好水系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-zhujian",
+      "bloodline_id": "bloodline-zhujian",
+      "preferred": {
+        "elements": ["木"],
+        "items": [],
+        "traits": ["豹", "人首"]
+      },
+      "disliked": {
+        "elements": ["金"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "诸犍，偏好木系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-mingshe",
+      "bloodline_id": "bloodline-mingshe",
+      "preferred": {
+        "elements": ["火"],
+        "items": [],
+        "traits": ["蛇", "四翼"]
+      },
+      "disliked": {
+        "elements": ["水"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "鸣蛇，偏好火系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-yingzhao",
+      "bloodline_id": "bloodline-yingzhao",
+      "preferred": {
+        "elements": ["木"],
+        "items": [],
+        "traits": ["马", "人面"]
+      },
+      "disliked": {
+        "elements": ["金"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "英招，偏好木系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-shuhu",
+      "bloodline_id": "bloodline-shuhu",
+      "preferred": {
+        "elements": ["木"],
+        "items": [],
+        "traits": ["马", "蛇尾"]
+      },
+      "disliked": {
+        "elements": ["金"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "孰湖，偏好木系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-bo",
+      "bloodline_id": "bloodline-bo",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["马", "食虎"]
+      },
+      "disliked": {
+        "elements": ["火"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "駮，偏好金系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-shanjun",
+      "bloodline_id": "bloodline-shanjun",
+      "preferred": {
+        "elements": ["木"],
+        "items": [],
+        "traits": ["犬", "人面"]
+      },
+      "disliked": {
+        "elements": ["金"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "山犭军，偏好木系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-tulu",
+      "bloodline_id": "bloodline-tulu",
+      "preferred": {
+        "elements": ["土"],
+        "items": [],
+        "traits": ["羊", "四角"]
+      },
+      "disliked": {
+        "elements": ["木"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "土蝼，偏好土系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-aoyin",
+      "bloodline_id": "bloodline-aoyin",
+      "preferred": {
+        "elements": ["金"],
+        "items": [],
+        "traits": ["牛", "白身"]
+      },
+      "disliked": {
+        "elements": ["火"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "傲因，偏好金系祭品",
+      "weight": 30
+    },
+    {
+      "id": "recipe-ranyiyu",
+      "bloodline_id": "bloodline-ranyiyu",
+      "preferred": {
+        "elements": ["水"],
+        "items": [],
+        "traits": ["鱼", "蛇首"]
+      },
+      "disliked": {
+        "elements": ["土"],
+        "items": [],
+        "traits": []
+      },
+      "required_rarity": null,
+      "description": "冉遗鱼，偏好水系祭品",
+      "weight": 30
+    }
+  ]
+}

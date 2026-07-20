@@ -51,6 +51,11 @@ export type SpiritStonesLedgerBizType =
   | 'farm_expand_cell'
   | 'farm_upgrade_tier'
   | 'farm_place_decoration'
+  | 'altar_summon'
+  | 'inventory_sell_item'
+  | 'tier_up'
+  | 'tier_up_auto_buy_pill'
+  | 'tier_up_auto_buy_pill_refund'
   | 'other';
 
 export interface RecordLedgerParams {
@@ -422,5 +427,10 @@ export const LEDGER_BIZ_TYPE_LABELS: Record<SpiritStonesLedgerBizType, string> =
   farm_expand_cell: '灵田扩展格子',
   farm_upgrade_tier: '灵田等阶突破',
   farm_place_decoration: '灵田放置装饰物',
+  altar_summon: '祭坛召唤',
+  inventory_sell_item: '背包出售物品',
+  tier_up: '灵兽升阶',
+  tier_up_auto_buy_pill: '升阶自动购买丹药',
+  tier_up_auto_buy_pill_refund: '升阶自动购买丹药退款',
   other: '其他',
 };

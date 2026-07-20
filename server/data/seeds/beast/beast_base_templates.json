@@ -1,0 +1,102 @@
+{
+  "version": 2,
+  "description": "灵兽基础模板定义（5种角色模板）",
+  "templates": [
+    {
+      "id": "tpl-balanced",
+      "name": "平衡型",
+      "description": "攻防均衡，无明显短板",
+      "role": "平衡型",
+      "base_aptitude_level": 4,
+      "max_technique_slots": 5,
+      "base_attrs": {
+        "max_hp": 280, "max_mp": 65, "atk": 50, "magic_atk": 50, "def": 40, "magic_def": 40, "spd": 4.5,
+        "accuracy": 0.93, "dodge": 0.06, "parry": 0.04, "crit_rate": 0.08, "crit_dmg": 1.68,
+        "crit_dmg_reduce": 0.02, "anti_crit": 0.04, "dmg_bonus": 0.05, "heal_bonus": 0.02,
+        "heal_reduce": 0.00, "life_steal": 0.02, "cdr": 0.03,
+        "control_resist": 0.06, "metal_resist": 0.06, "wood_resist": 0.06, "water_resist": 0.06, "fire_resist": 0.06, "earth_resist": 0.06,
+        "hp_regen": 3.0, "mp_regen": 2.5
+      },
+      "level_attr_gains": {
+        "max_hp": 68, "max_mp": 6, "atk": 10, "magic_atk": 10, "def": 8, "magic_def": 8, "spd": 0.016,
+        "accuracy": 0, "dodge": 0, "parry": 0, "crit_rate": 0.001, "crit_dmg": 0.002,
+        "crit_dmg_reduce": 0, "anti_crit": 0, "dmg_bonus": 0.001, "heal_bonus": 0,
+        "heal_reduce": 0, "life_steal": 0, "cdr": 0,
+        "control_resist": 0, "metal_resist": 0.001, "wood_resist": 0.001, "water_resist": 0.001, "fire_resist": 0.001, "earth_resist": 0.001,
+        "hp_regen": 0.22, "mp_regen": 0.18
+      }
+    },
+    {
+      "id": "tpl-attack",
+      "name": "攻击型",
+      "description": "高攻击高暴击，身板较脆",
+      "role": "攻击型",
+      "base_aptitude_level": 4,
+      "max_technique_slots": 5,
+      "base_attrs": {
+        "max_hp": 240, "max_mp": 55, "atk": 65, "magic_atk": 55, "def": 30, "magic_def": 30, "spd": 5.0,
+        "accuracy": 0.94, "dodge": 0.08, "parry": 0.03, "crit_rate": 0.12, "crit_dmg": 1.80,
+        "crit_dmg_reduce": 0.01, "anti_crit": 0.02, "dmg_bonus": 0.08, "heal_bonus": 0.00,
+        "heal_reduce": 0.00, "life_steal": 0.03, "cdr": 0.02,
+        "control_resist": 0.04, "metal_resist": 0.04, "wood_resist": 0.04, "water_resist": 0.04, "fire_resist": 0.04, "earth_resist": 0.04,
+        "hp_regen": 2.0, "mp_regen": 2.0
+      },
+      "level_attr_gains": {
+        "max_hp": 56, "max_mp": 5, "atk": 14, "magic_atk": 11, "def": 6, "magic_def": 6, "spd": 0.020,
+        "accuracy": 0, "dodge": 0, "parry": 0, "crit_rate": 0.002, "crit_dmg": 0.004,
+        "crit_dmg_reduce": 0, "anti_crit": 0, "dmg_bonus": 0.002, "heal_bonus": 0,
+        "heal_reduce": 0, "life_steal": 0.001, "cdr": 0,
+        "control_resist": 0, "metal_resist": 0.001, "wood_resist": 0.001, "water_resist": 0.001, "fire_resist": 0.001, "earth_resist": 0.001,
+        "hp_regen": 0.15, "mp_regen": 0.15
+      }
+    },
+    {
+      "id": "tpl-defense",
+      "name": "防御型",
+      "description": "高生命高防御，攻击较低",
+      "role": "防御型",
+      "base_aptitude_level": 4,
+      "max_technique_slots": 5,
+      "base_attrs": {
+        "max_hp": 350, "max_mp": 45, "atk": 35, "magic_atk": 25, "def": 55, "magic_def": 45, "spd": 3.0,
+        "accuracy": 0.90, "dodge": 0.03, "parry": 0.08, "crit_rate": 0.04, "crit_dmg": 1.50,
+        "crit_dmg_reduce": 0.04, "anti_crit": 0.06, "dmg_bonus": 0.02, "heal_bonus": 0.00,
+        "heal_reduce": 0.00, "life_steal": 0.00, "cdr": 0.00,
+        "control_resist": 0.08, "metal_resist": 0.06, "wood_resist": 0.06, "water_resist": 0.06, "fire_resist": 0.06, "earth_resist": 0.10,
+        "hp_regen": 4.0, "mp_regen": 1.5
+      },
+      "level_attr_gains": {
+        "max_hp": 80, "max_mp": 4, "atk": 7, "magic_atk": 5, "def": 12, "magic_def": 9, "spd": 0.010,
+        "accuracy": 0, "dodge": 0, "parry": 0.001, "crit_rate": 0, "crit_dmg": 0,
+        "crit_dmg_reduce": 0.001, "anti_crit": 0.001, "dmg_bonus": 0, "heal_bonus": 0,
+        "heal_reduce": 0, "life_steal": 0, "cdr": 0,
+        "control_resist": 0.005, "metal_resist": 0.005, "wood_resist": 0.005, "water_resist": 0.005, "fire_resist": 0.005, "earth_resist": 0.005,
+        "hp_regen": 0.30, "mp_regen": 0.12
+      }
+    },
+    {
+      "id": "tpl-support",
+      "name": "辅助型",
+      "description": "高治疗加成，辅助队友",
+      "role": "辅助型",
+      "base_aptitude_level": 4,
+      "max_technique_slots": 5,
+      "base_attrs": {
+        "max_hp": 270, "max_mp": 70, "atk": 38, "magic_atk": 48, "def": 38, "magic_def": 45, "spd": 4.0,
+        "accuracy": 0.92, "dodge": 0.05, "parry": 0.03, "crit_rate": 0.05, "crit_dmg": 1.55,
+        "crit_dmg_reduce": 0.02, "anti_crit": 0.04, "dmg_bonus": 0.02, "heal_bonus": 0.10,
+        "heal_reduce": 0.05, "life_steal": 0.00, "cdr": 0.04,
+        "control_resist": 0.06, "metal_resist": 0.05, "wood_resist": 0.08, "water_resist": 0.05, "fire_resist": 0.05, "earth_resist": 0.05,
+        "hp_regen": 2.8, "mp_regen": 3.0
+      },
+      "level_attr_gains": {
+        "max_hp": 62, "max_mp": 7, "atk": 8, "magic_atk": 10, "def": 7, "magic_def": 9, "spd": 0.013,
+        "accuracy": 0, "dodge": 0, "parry": 0, "crit_rate": 0, "crit_dmg": 0,
+        "crit_dmg_reduce": 0, "anti_crit": 0, "dmg_bonus": 0, "heal_bonus": 0.002,
+        "heal_reduce": 0.001, "life_steal": 0, "cdr": 0.001,
+        "control_resist": 0.005, "metal_resist": 0.001, "wood_resist": 0.001, "water_resist": 0.001, "fire_resist": 0.001, "earth_resist": 0.001,
+        "hp_regen": 0.20, "mp_regen": 0.22
+      }
+    }
+  ]
+}

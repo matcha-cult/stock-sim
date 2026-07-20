@@ -34,6 +34,14 @@ import { initializeShopRentScheduler, stopShopRentScheduler } from './services/s
 import { initMonthCardConfig } from './services/monthCard/monthCardConfigCache.js';
 import { scratchPrizeConfigCache } from './services/scratchGame/scratchPrizeConfigCache.js';
 import { initFarmConfig } from './services/farm/farmConfigLoader.js';
+import { initItemConfig } from './services/inventory/itemConfigLoader.js';
+import { initBeastConfig } from './services/beast/beastConfigLoader.js';
+import { initMonsterTemplateConfig } from './services/demonCave/monsterTemplateLoader.js';
+import { initDemonCaveMonsterConfig } from './services/demonCave/monsterConfigLoader.js';
+import { initDropPoolConfig } from './services/demonCave/dropPoolLoader.js';
+import { initDemonCaveFloorConfig } from './services/demonCave/floorConfigLoader.js';
+import { initStarLevelConfig } from './services/shared/starLevelLoader.js';
+import { startIdleBattleWorker, stopIdleBattleWorker } from './services/demonCave/idleBattleWorker.js';
 import './types/express.d.ts';
 
 dotenv.config();
@@ -50,7 +58,7 @@ async function startServer() {
     await pool.query('SELECT 1');
     logger.info('数据库连接池已初始化');
   } catch (error) {
-    logger.error('数据库连接失败:', error);
+    logger.error(error, '数据库连接失败');
     process.exit(1);
   }
 
@@ -78,12 +86,44 @@ async function startServer() {
   await initFarmConfig();
   logger.info('灵田配置已加载（纯内存）');
 
+  // 加载统一背包物品配置（纯内存，Map 索引）
+  await initItemConfig();
+  logger.info('统一背包物品配置已加载（纯内存）');
+
+  // 加载灵兽配置（灵兽模板 + 成长参数 + 祭坛配方）
+  await initBeastConfig();
+  logger.info('灵兽配置已加载（纯内存）');
+
+  // 加载星级配置（灵兽和怪物通用）
+  await initStarLevelConfig();
+  logger.info('星级配置已加载（纯内存）');
+
+  // 加载锁妖窟怪物模板配置（纯内存，Map 索引）
+  await initMonsterTemplateConfig();
+  logger.info('锁妖窟怪物模板配置已加载（纯内存）');
+
+  // 加载锁妖窟怪物清单配置（纯内存，Map 索引，引用模板）
+  await initDemonCaveMonsterConfig();
+  logger.info('锁妖窟怪物清单配置已加载（纯内存）');
+
+  // 加载锁妖窟掉落池配置（纯内存，Map 索引）
+  await initDropPoolConfig();
+  logger.info('锁妖窟掉落池配置已加载（纯内存）');
+
+  // 加载锁妖窟楼层配置（纯内存，Map 索引，引用怪物清单和掉落池）
+  await initDemonCaveFloorConfig();
+  logger.info('锁妖窟楼层配置已加载（纯内存）');
+
   // 测试 Redis 连接
   try {
     await redis.ping();
     logger.info('Redis 已连接');
+
+    // 启动挂机战斗 Worker（依赖 Redis）
+    startIdleBattleWorker();
+    logger.info('挂机战斗 Worker 已启动');
   } catch (error) {
-    logger.warn('Redis 连接失败，继续启动（部分功能可能受限）:', error);
+    logger.warn(error, 'Redis 连接失败，继续启动（部分功能可能受限）');
   }
 
   // 创建 Express 应用
@@ -123,6 +163,7 @@ async function startServer() {
     logger.info('开始优雅关闭...');
     stopStockMarketScheduler();
     stopShopRentScheduler();
+    await stopIdleBattleWorker();
     await pool.end();
     await redis.quit();
     logger.info('服务已关闭');
@@ -134,6 +175,6 @@ async function startServer() {
 }
 
 startServer().catch((error) => {
-  logger.error('服务启动失败:', error);
+  logger.error(error, '服务启动失败');
   process.exit(1);
 });

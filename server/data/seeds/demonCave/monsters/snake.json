@@ -1,0 +1,7 @@
+{
+  "id": "demon-snake",
+  "name": "蛇妖",
+  "description": "修炼成精的毒蛇，擅长法术",
+  "template_id": "tpl-support",
+  "element": ["水"]
+}

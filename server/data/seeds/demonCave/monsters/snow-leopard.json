@@ -1,0 +1,10 @@
+{
+  "id": "demon-snow-leopard",
+  "name": "雪豹精",
+  "description": "纯色大猫，粗壮虎尾，出入有神光相随",
+  "template_id": "tpl-attack",
+  "element": [
+    "土"
+  ],
+  "bloodline_id": "bloodline-taifeng"
+}

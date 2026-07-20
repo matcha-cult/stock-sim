@@ -1,0 +1,10 @@
+{
+  "id": "demon-winged-horse",
+  "name": "飞马精",
+  "description": "生双翼之骏马，虎纹斑斑，奔跑如风",
+  "template_id": "tpl-attack",
+  "element": [
+    "木"
+  ],
+  "bloodline_id": "bloodline-yingzhao"
+}

@@ -80,8 +80,8 @@ interface QixiConfig {
   batchSize: number;
 }
 
-import qixiConfigRaw from '../../seeds/puzzleCardQixiConfig.json' assert { type: 'json' };
-import sanyuanConfigRaw from '../../seeds/puzzleCardSanyuanConfig.json' assert { type: 'json' };
+import qixiConfigRaw from '../../seeds/puzzleCardQixiConfig.json' with { type: 'json' };
+import sanyuanConfigRaw from '../../seeds/puzzleCardSanyuanConfig.json' with { type: 'json' };
 
 const QIXI_CONFIG = qixiConfigRaw as QixiConfig;
 const SANYUAN_CONFIG = sanyuanConfigRaw as QixiConfig;

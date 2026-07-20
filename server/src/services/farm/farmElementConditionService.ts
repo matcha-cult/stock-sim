@@ -17,6 +17,7 @@
  * 2. 单元素入侵和元素相生需要动态参数（element/elements），由配方指定。
  */
 import type { CropConfig, CropElement } from './farmTypes.js';
+import { getCropElementAndTraits } from '../inventory/itemConfigLoader.js';
 
 // ── 条件 ID 常量 ──
 
@@ -62,7 +63,10 @@ export function checkElementCondition(
  */
 function checkSingleElementInvasion(adjacentCrops: CropConfig[], element?: CropElement): boolean {
   if (!element) return false;
-  return adjacentCrops.some((crop) => crop.element.includes(element));
+  return adjacentCrops.some((crop) => {
+    const info = getCropElementAndTraits(crop.cropId);
+    return info?.element.includes(element) ?? false;
+  });
 }
 
 /**
@@ -74,7 +78,10 @@ function checkSingleElementInvasion(adjacentCrops: CropConfig[], element?: CropE
  */
 function checkDualElementGeneration(adjacentCrops: CropConfig[], elements?: CropElement[]): boolean {
   if (!elements || elements.length !== 2) return false;
-  const hasElement = (elem: CropElement) => adjacentCrops.some((crop) => crop.element.includes(elem));
+  const hasElement = (elem: CropElement) => adjacentCrops.some((crop) => {
+    const info = getCropElementAndTraits(crop.cropId);
+    return info?.element.includes(elem) ?? false;
+  });
   return hasElement(elements[0]) && hasElement(elements[1]);
 }
 
@@ -100,8 +107,11 @@ function checkWuXingGuiYuan(adjacentCrops: CropConfig[]): boolean {
   // 收集所有元素（去重）
   const elementSet = new Set<CropElement>();
   for (const crop of adjacentCrops) {
-    for (const elem of crop.element) {
-      elementSet.add(elem);
+    const info = getCropElementAndTraits(crop.cropId);
+    if (info) {
+      for (const elem of info.element) {
+        elementSet.add(elem as CropElement);
+      }
     }
   }
 
@@ -131,8 +141,12 @@ export function getRemainingElementsAfterWuXing(adjacentCrops: CropConfig[]): Cr
   // 统计每个元素的出现次数
   const elementCount = new Map<CropElement, number>();
   for (const crop of adjacentCrops) {
-    for (const elem of crop.element) {
-      elementCount.set(elem, (elementCount.get(elem) ?? 0) + 1);
+    const info = getCropElementAndTraits(crop.cropId);
+    if (info) {
+      for (const elem of info.element) {
+        const elemTyped = elem as CropElement;
+        elementCount.set(elemTyped, (elementCount.get(elemTyped) ?? 0) + 1);
+      }
     }
   }
 

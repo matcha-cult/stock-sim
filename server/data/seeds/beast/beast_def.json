@@ -1,0 +1,476 @@
+{
+  "version": 7,
+  "description": "基础灵兽定义（47种：五行各8种 + 无属性7种），基于山海经血脉后代",
+  "beasts": [
+    {
+      "id": "beast-huyao",
+      "name": "狐妖",
+      "description": "青丘灵狐，九尾血脉之始",
+      "avatar": "/assets/beast/beast-huyao.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 101,
+      "enabled": true
+    },
+    {
+      "id": "beast-yuanyao",
+      "name": "猿妖",
+      "description": "白首赤足之猿，朱厌血脉后代",
+      "avatar": "/assets/beast/beast-yuanyao.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 102,
+      "enabled": true
+    },
+    {
+      "id": "beast-baoyao",
+      "name": "豹妖",
+      "description": "长尾人首之豹，诸犍血脉后代",
+      "avatar": "/assets/beast/beast-baoyao.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 103,
+      "enabled": true
+    },
+    {
+      "id": "beast-mayao",
+      "name": "人面马妖",
+      "description": "虎纹鸟翼之人面马，英招/孰湖血脉后代",
+      "avatar": "/assets/beast/beast-mayao.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 104,
+      "enabled": true
+    },
+    {
+      "id": "beast-niaoyao",
+      "name": "残翼鸟妖",
+      "description": "一翼一目之鸟，蛮蛮血脉后代",
+      "avatar": "/assets/beast/beast-niaoyao.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 105,
+      "enabled": true
+    },
+    {
+      "id": "beast-quanyao",
+      "name": "犬妖",
+      "description": "人面善投之犬，山犭军血脉后代",
+      "avatar": "/assets/beast/beast-quanyao.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 106,
+      "enabled": true
+    },
+    {
+      "id": "beast-linghu",
+      "name": "灵狐",
+      "description": "青丘灵狐，九尾血脉后代",
+      "avatar": "/assets/beast/beast-linghu.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 107,
+      "enabled": true
+    },
+    {
+      "id": "beast-housunjing",
+      "name": "猴精",
+      "description": "白首赤足之猴，朱厌血脉后代",
+      "avatar": "/assets/beast/beast-housunjing.webp",
+      "attribute_element": ["木"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 108,
+      "enabled": true
+    },
+    {
+      "id": "beast-huoya",
+      "name": "火鸦",
+      "description": "一足赤文之鹤，毕方血脉后代",
+      "avatar": "/assets/beast/beast-huoya.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 201,
+      "enabled": true
+    },
+    {
+      "id": "beast-queyao",
+      "name": "雀妖",
+      "description": "五彩神鸟，凤凰血脉后代",
+      "avatar": "/assets/beast/beast-queyao.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 202,
+      "enabled": true
+    },
+    {
+      "id": "beast-dufengyao",
+      "name": "毒蜂妖",
+      "description": "大如鸳鸯之毒蜂，钦原血脉后代",
+      "avatar": "/assets/beast/beast-dufengyao.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 203,
+      "enabled": true
+    },
+    {
+      "id": "beast-siyishe",
+      "name": "四翼蛇妖",
+      "description": "四翼磬音之蛇，鸣蛇血脉后代",
+      "avatar": "/assets/beast/beast-siyishe.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 204,
+      "enabled": true
+    },
+    {
+      "id": "beast-shuangshenshe",
+      "name": "双身蛇妖",
+      "description": "一首两身之蛇，肥遗血脉后代",
+      "avatar": "/assets/beast/beast-shuangshenshe.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 205,
+      "enabled": true
+    },
+    {
+      "id": "beast-luanbird",
+      "name": "青鸾",
+      "description": "五采凤属之鸟，鸾鸟血脉后代",
+      "avatar": "/assets/beast/beast-luanbird.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 206,
+      "enabled": true
+    },
+    {
+      "id": "beast-huangyuan",
+      "name": "黄猿妖",
+      "description": "赤目黄身之猿，雍和血脉后代",
+      "avatar": "/assets/beast/beast-huangyuan.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 207,
+      "enabled": true
+    },
+    {
+      "id": "beast-fengchu",
+      "name": "火凤雏鸟",
+      "description": "凤凰之雏，火系血脉后代",
+      "avatar": "/assets/beast/beast-fengchu.webp",
+      "attribute_element": ["火"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 208,
+      "enabled": true
+    },
+    {
+      "id": "beast-hundunshou",
+      "name": "混沌兽",
+      "description": "六足四翼之混沌，帝江血脉后代",
+      "avatar": "/assets/beast/beast-hundunshou.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 301,
+      "enabled": true
+    },
+    {
+      "id": "beast-wumianyao",
+      "name": "无面妖",
+      "description": "浑敦无面之兽，帝江血脉后代",
+      "avatar": "/assets/beast/beast-wumianyao.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 302,
+      "enabled": true
+    },
+    {
+      "id": "beast-ruizhu",
+      "name": "瑞猪",
+      "description": "有牙瑞猪，当康血脉后代",
+      "avatar": "/assets/beast/beast-ruizhu.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 303,
+      "enabled": true
+    },
+    {
+      "id": "beast-sijiaoyang",
+      "name": "四角羊妖",
+      "description": "四角食人之羊，土蝼血脉后代",
+      "avatar": "/assets/beast/beast-sijiaoyang.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 304,
+      "enabled": true
+    },
+    {
+      "id": "beast-chishenniuyao",
+      "name": "赤身牛妖",
+      "description": "赤身人面之牛，窫窳血脉后代",
+      "avatar": "/assets/beast/beast-chishenniuyao.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 305,
+      "enabled": true
+    },
+    {
+      "id": "beast-yatunjing",
+      "name": "牙豚精",
+      "description": "有牙豚精，当康血脉后代",
+      "avatar": "/assets/beast/beast-yatunjing.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 306,
+      "enabled": true
+    },
+    {
+      "id": "beast-zheng",
+      "name": "狰",
+      "description": "章莪山赤豹，五尾一角，山地猛兽",
+      "avatar": "/assets/beast/beast-zheng.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 307,
+      "enabled": true
+    },
+    {
+      "id": "beast-gudiao",
+      "name": "蛊雕",
+      "description": "角雕精怪，山林猛禽",
+      "avatar": "/assets/beast/beast-gudiao.webp",
+      "attribute_element": ["土"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 308,
+      "enabled": true
+    },
+    {
+      "id": "beast-shanjun",
+      "name": "山君",
+      "description": "昆仑虎身九尾，陆吾血脉后代",
+      "avatar": "/assets/beast/beast-shanjun.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 401,
+      "enabled": true
+    },
+    {
+      "id": "beast-huyaokunlun",
+      "name": "虎妖",
+      "description": "昆仑虎妖，陆吾/开明兽血脉后代",
+      "avatar": "/assets/beast/beast-huyaokunlun.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 402,
+      "enabled": true
+    },
+    {
+      "id": "beast-jiushouhu",
+      "name": "九首虎妖",
+      "description": "九首人面之虎，开明兽血脉后代",
+      "avatar": "/assets/beast/beast-jiushouhu.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 403,
+      "enabled": true
+    },
+    {
+      "id": "beast-xionghuyao",
+      "name": "凶虎妖",
+      "description": "有翼食人之虎，穷奇血脉后代",
+      "avatar": "/assets/beast/beast-xionghuyao.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 404,
+      "enabled": true
+    },
+    {
+      "id": "beast-chibaoyao",
+      "name": "赤豹妖",
+      "description": "五尾一角之赤豹，狰血脉后代",
+      "avatar": "/assets/beast/beast-chibaoyao.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 405,
+      "enabled": true
+    },
+    {
+      "id": "beast-baishouli",
+      "name": "白首狸妖",
+      "description": "白首御凶之狸，天狗血脉后代",
+      "avatar": "/assets/beast/beast-baishouli.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 406,
+      "enabled": true
+    },
+    {
+      "id": "beast-jimiaogong",
+      "name": "人面鸡精",
+      "description": "人面雄鸡，凫徯血脉后代",
+      "avatar": "/assets/beast/beast-jimiaogong.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 407,
+      "enabled": true
+    },
+    {
+      "id": "beast-baishenniuyao",
+      "name": "白身牛妖",
+      "description": "白身四角之牛，傲因血脉后代",
+      "avatar": "/assets/beast/beast-baishenniuyao.webp",
+      "attribute_element": ["金"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 408,
+      "enabled": true
+    },
+    {
+      "id": "beast-jiutoushe",
+      "name": "九头蛇妖",
+      "description": "九首蛇身，相柳血脉后代",
+      "avatar": "/assets/beast/beast-jiutoushe.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 501,
+      "enabled": true
+    },
+    {
+      "id": "beast-zezhaoguai",
+      "name": "泽沼精怪",
+      "description": "泽沼精怪，相柳血脉后代",
+      "avatar": "/assets/beast/beast-zezhaoguai.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 502,
+      "enabled": true
+    },
+    {
+      "id": "beast-shuishejing",
+      "name": "水蛇精",
+      "description": "人面豺身之蛇，化蛇血脉后代",
+      "avatar": "/assets/beast/beast-shuishejing.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 503,
+      "enabled": true
+    },
+    {
+      "id": "beast-yiniuyao",
+      "name": "疫牛妖",
+      "description": "白首一目之牛，蜚血脉后代",
+      "avatar": "/assets/beast/beast-yiniuyao.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 504,
+      "enabled": true
+    },
+    {
+      "id": "beast-canyiniao",
+      "name": "单翅禽",
+      "description": "一翼一目之禽，蛮蛮血脉后代",
+      "avatar": "/assets/beast/beast-canyiniao.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 505,
+      "enabled": true
+    },
+    {
+      "id": "beast-sheshouyu",
+      "name": "蛇首鱼精",
+      "description": "鱼身蛇首六足，冉遗鱼血脉后代",
+      "avatar": "/assets/beast/beast-sheshouyu.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 506,
+      "enabled": true
+    },
+    {
+      "id": "beast-renmianshou",
+      "name": "人面兽",
+      "description": "人面马足之兽，窫窳血脉后代",
+      "avatar": "/assets/beast/beast-renmianshou.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 507,
+      "enabled": true
+    },
+    {
+      "id": "beast-sijiaoniujing",
+      "name": "四角牛精",
+      "description": "四角人目之牛，诸怀血脉后代",
+      "avatar": "/assets/beast/beast-sijiaoniujing.webp",
+      "attribute_element": ["水"],
+      "cultivation_decay_rate": 0.1,
+      "sort_weight": 508,
+      "enabled": true
+    },
+    {
+      "id": "beast-chilinjiao",
+      "name": "赤鳞蛇妖",
+      "description": "赤鳞蛇妖，烛龙血脉后代",
+      "avatar": "/assets/beast/beast-chilinjiao.webp",
+      "attribute_element": [],
+      "cultivation_decay_rate": 0.08,
+      "sort_weight": 601,
+      "enabled": true
+    },
+    {
+      "id": "beast-renmianshe",
+      "name": "人面蛇精",
+      "description": "人面蛇精，烛龙血脉后代",
+      "avatar": "/assets/beast/beast-renmianshe.webp",
+      "attribute_element": [],
+      "cultivation_decay_rate": 0.08,
+      "sort_weight": 602,
+      "enabled": true
+    },
+    {
+      "id": "beast-youyilongyi",
+      "name": "有翼龙裔",
+      "description": "有翼龙裔，应龙血脉后代",
+      "avatar": "/assets/beast/beast-youyilongyi.webp",
+      "attribute_element": [],
+      "cultivation_decay_rate": 0.08,
+      "sort_weight": 603,
+      "enabled": true
+    },
+    {
+      "id": "beast-huanglongyao",
+      "name": "黄龙妖",
+      "description": "黄龙妖，应龙血脉后代",
+      "avatar": "/assets/beast/beast-huanglongyao.webp",
+      "attribute_element": [],
+      "cultivation_decay_rate": 0.08,
+      "sort_weight": 604,
+      "enabled": true
+    },
+    {
+      "id": "beast-tanshou",
+      "name": "贪兽",
+      "description": "贪食之兽，狍鸮血脉后代",
+      "avatar": "/assets/beast/beast-tanshou.webp",
+      "attribute_element": [],
+      "cultivation_decay_rate": 0.08,
+      "sort_weight": 605,
+      "enabled": true
+    },
+    {
+      "id": "beast-yangmianyao",
+      "name": "羊面妖",
+      "description": "羊面妖，狍鸮血脉后代",
+      "avatar": "/assets/beast/beast-yangmianyao.webp",
+      "attribute_element": [],
+      "cultivation_decay_rate": 0.08,
+      "sort_weight": 606,
+      "enabled": true
+    },
+    {
+      "id": "beast-shoumenshou",
+      "name": "守门兽",
+      "description": "昆仑守门兽，开明兽血脉后代",
+      "avatar": "/assets/beast/beast-shoumenshou.webp",
+      "attribute_element": [],
+      "cultivation_decay_rate": 0.08,
+      "sort_weight": 607,
+      "enabled": true
+    }
+  ]
+}

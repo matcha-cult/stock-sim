@@ -1,0 +1,10 @@
+{
+  "id": "demon-saber-tooth",
+  "name": "剑齿精",
+  "description": "古兽遗种，犬齿如剑，凶悍异常",
+  "template_id": "tpl-attack",
+  "element": [
+    "金"
+  ],
+  "bloodline_id": "bloodline-rushou"
+}

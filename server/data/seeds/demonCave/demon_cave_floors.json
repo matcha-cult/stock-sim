@@ -1,0 +1,2210 @@
+{
+  "floors": [
+    {
+      "floor": 1,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 1,
+          "attr_multiplier": 0.8,
+          "experience": 50,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 1,
+          "attr_multiplier": 0.8,
+          "experience": 50,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 2
+      }
+    },
+    {
+      "floor": 2,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 2,
+          "attr_multiplier": 0.8,
+          "experience": 100,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 2,
+          "attr_multiplier": 0.8,
+          "experience": 100,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 2
+      }
+    },
+    {
+      "floor": 3,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 3,
+          "attr_multiplier": 0.8,
+          "experience": 150,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 3,
+          "attr_multiplier": 0.8,
+          "experience": 150,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 2
+      }
+    },
+    {
+      "floor": 4,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 4,
+          "attr_multiplier": 0.8,
+          "experience": 200,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 4,
+          "attr_multiplier": 0.8,
+          "experience": 200,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 2
+      }
+    },
+    {
+      "floor": 5,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 5,
+          "attr_multiplier": 0.8,
+          "experience": 250,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 5,
+          "attr_multiplier": 0.8,
+          "experience": 250,
+          "drop_pool_ids": [
+            "drop-normal-1-5"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖将",
+          "star_level": 3,
+          "level": 6,
+          "attr_multiplier": 1.26,
+          "experience": 625,
+          "drop_pool_ids": [
+            "drop-elite-1-5",
+            "drop-rare-material"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 2,
+        "guarantee": [
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 6,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 6,
+          "attr_multiplier": 0.8,
+          "experience": 300,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 6,
+          "attr_multiplier": 0.8,
+          "experience": 300,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 7,
+          "attr_multiplier": 1.26,
+          "experience": 750,
+          "drop_pool_ids": [
+            "drop-elite-6-10"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 3
+      }
+    },
+    {
+      "floor": 7,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 7,
+          "attr_multiplier": 0.8,
+          "experience": 350,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 7,
+          "attr_multiplier": 0.8,
+          "experience": 350,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 8,
+          "attr_multiplier": 1.26,
+          "experience": 875,
+          "drop_pool_ids": [
+            "drop-elite-6-10"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 3
+      }
+    },
+    {
+      "floor": 8,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 8,
+          "attr_multiplier": 0.8,
+          "experience": 400,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 8,
+          "attr_multiplier": 0.8,
+          "experience": 400,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 9,
+          "attr_multiplier": 1.26,
+          "experience": 1000,
+          "drop_pool_ids": [
+            "drop-elite-6-10"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 3
+      }
+    },
+    {
+      "floor": 9,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 9,
+          "attr_multiplier": 0.8,
+          "experience": 450,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 9,
+          "attr_multiplier": 0.8,
+          "experience": 450,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 10,
+          "attr_multiplier": 1.26,
+          "experience": 1125,
+          "drop_pool_ids": [
+            "drop-elite-6-10"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 3
+      }
+    },
+    {
+      "floor": 10,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 10,
+          "attr_multiplier": 0.8,
+          "experience": 500,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 10,
+          "attr_multiplier": 0.8,
+          "experience": 500,
+          "drop_pool_ids": [
+            "drop-normal-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 12,
+          "attr_multiplier": 1.26,
+          "experience": 1250,
+          "drop_pool_ids": [
+            "drop-elite-6-10"
+          ]
+        },
+        {
+          "monster_id": "demon-scorpion",
+          "rarity": "boss",
+          "title": "万毒之王",
+          "star_level": 4,
+          "level": 15,
+          "attr_multiplier": 1.66,
+          "experience": 3000,
+          "drop_pool_ids": [
+            "drop-boss-6-10",
+            "drop-rare-material"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 3,
+        "guarantee": [
+          {
+            "monster_id": "demon-scorpion",
+            "count": 1
+          },
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 11,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 11,
+          "attr_multiplier": 0.8,
+          "experience": 550,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 11,
+          "attr_multiplier": 0.8,
+          "experience": 550,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 13,
+          "attr_multiplier": 1.26,
+          "experience": 1375,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 12,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 12,
+          "attr_multiplier": 0.8,
+          "experience": 600,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 12,
+          "attr_multiplier": 0.8,
+          "experience": 600,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 14,
+          "attr_multiplier": 1.26,
+          "experience": 1500,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 13,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 13,
+          "attr_multiplier": 0.8,
+          "experience": 650,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 13,
+          "attr_multiplier": 0.8,
+          "experience": 650,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 15,
+          "attr_multiplier": 1.26,
+          "experience": 1625,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 14,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 14,
+          "attr_multiplier": 0.8,
+          "experience": 700,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 14,
+          "attr_multiplier": 0.8,
+          "experience": 700,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 16,
+          "attr_multiplier": 1.26,
+          "experience": 1750,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 15,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 15,
+          "attr_multiplier": 0.8,
+          "experience": 750,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 15,
+          "attr_multiplier": 0.8,
+          "experience": 750,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖将",
+          "star_level": 3,
+          "level": 18,
+          "attr_multiplier": 1.26,
+          "experience": 1875,
+          "drop_pool_ids": [
+            "drop-elite-11-20",
+            "drop-rare-material"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4,
+        "guarantee": [
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 16,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 16,
+          "attr_multiplier": 0.8,
+          "experience": 800,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 16,
+          "attr_multiplier": 0.8,
+          "experience": 800,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 19,
+          "attr_multiplier": 1.26,
+          "experience": 2000,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 17,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 17,
+          "attr_multiplier": 0.8,
+          "experience": 850,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 17,
+          "attr_multiplier": 0.8,
+          "experience": 850,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 20,
+          "attr_multiplier": 1.26,
+          "experience": 2125,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 18,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 18,
+          "attr_multiplier": 0.8,
+          "experience": 900,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 18,
+          "attr_multiplier": 0.8,
+          "experience": 900,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 21,
+          "attr_multiplier": 1.26,
+          "experience": 2250,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 19,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 19,
+          "attr_multiplier": 0.8,
+          "experience": 950,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 19,
+          "attr_multiplier": 0.8,
+          "experience": 950,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 22,
+          "attr_multiplier": 1.26,
+          "experience": 2375,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4
+      }
+    },
+    {
+      "floor": 20,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 20,
+          "attr_multiplier": 0.8,
+          "experience": 1000,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 20,
+          "attr_multiplier": 0.8,
+          "experience": 1000,
+          "drop_pool_ids": [
+            "drop-normal-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 24,
+          "attr_multiplier": 1.26,
+          "experience": 2500,
+          "drop_pool_ids": [
+            "drop-elite-11-20"
+          ]
+        },
+        {
+          "monster_id": "demon-scorpion",
+          "rarity": "boss",
+          "title": "万毒之王",
+          "star_level": 4,
+          "level": 30,
+          "attr_multiplier": 1.66,
+          "experience": 6000,
+          "drop_pool_ids": [
+            "drop-boss-11-20",
+            "drop-rare-material",
+            "drop-event"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 4,
+        "guarantee": [
+          {
+            "monster_id": "demon-scorpion",
+            "count": 1
+          },
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 21,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 21,
+          "attr_multiplier": 0.8,
+          "experience": 1050,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 21,
+          "attr_multiplier": 0.8,
+          "experience": 1050,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 25,
+          "attr_multiplier": 1.26,
+          "experience": 2625,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 22,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 22,
+          "attr_multiplier": 0.8,
+          "experience": 1100,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 22,
+          "attr_multiplier": 0.8,
+          "experience": 1100,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 26,
+          "attr_multiplier": 1.26,
+          "experience": 2750,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 23,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 23,
+          "attr_multiplier": 0.8,
+          "experience": 1150,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 23,
+          "attr_multiplier": 0.8,
+          "experience": 1150,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 27,
+          "attr_multiplier": 1.26,
+          "experience": 2875,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 24,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 24,
+          "attr_multiplier": 0.8,
+          "experience": 1200,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 24,
+          "attr_multiplier": 0.8,
+          "experience": 1200,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 28,
+          "attr_multiplier": 1.26,
+          "experience": 3000,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 25,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 25,
+          "attr_multiplier": 0.8,
+          "experience": 1250,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 25,
+          "attr_multiplier": 0.8,
+          "experience": 1250,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖将",
+          "star_level": 3,
+          "level": 30,
+          "attr_multiplier": 1.26,
+          "experience": 3125,
+          "drop_pool_ids": [
+            "drop-elite-21-30",
+            "drop-rare-material"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5,
+        "guarantee": [
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 26,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 26,
+          "attr_multiplier": 0.8,
+          "experience": 1300,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 26,
+          "attr_multiplier": 0.8,
+          "experience": 1300,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 31,
+          "attr_multiplier": 1.26,
+          "experience": 3250,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 27,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 27,
+          "attr_multiplier": 0.8,
+          "experience": 1350,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 27,
+          "attr_multiplier": 0.8,
+          "experience": 1350,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 32,
+          "attr_multiplier": 1.26,
+          "experience": 3375,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 28,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 28,
+          "attr_multiplier": 0.8,
+          "experience": 1400,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 28,
+          "attr_multiplier": 0.8,
+          "experience": 1400,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 33,
+          "attr_multiplier": 1.26,
+          "experience": 3500,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 29,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 29,
+          "attr_multiplier": 0.8,
+          "experience": 1450,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 29,
+          "attr_multiplier": 0.8,
+          "experience": 1450,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 34,
+          "attr_multiplier": 1.26,
+          "experience": 3625,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 30,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 30,
+          "attr_multiplier": 0.8,
+          "experience": 1500,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 30,
+          "attr_multiplier": 0.8,
+          "experience": 1500,
+          "drop_pool_ids": [
+            "drop-normal-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 36,
+          "attr_multiplier": 1.26,
+          "experience": 3750,
+          "drop_pool_ids": [
+            "drop-elite-21-30"
+          ]
+        },
+        {
+          "monster_id": "demon-scorpion",
+          "rarity": "boss",
+          "title": "万毒之王",
+          "star_level": 5,
+          "level": 45,
+          "attr_multiplier": 1.66,
+          "experience": 9000,
+          "drop_pool_ids": [
+            "drop-boss-21-30",
+            "drop-rare-material",
+            "drop-event"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5,
+        "guarantee": [
+          {
+            "monster_id": "demon-scorpion",
+            "count": 1
+          },
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 31,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 31,
+          "attr_multiplier": 0.8,
+          "experience": 1550,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 31,
+          "attr_multiplier": 0.8,
+          "experience": 1550,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 37,
+          "attr_multiplier": 1.26,
+          "experience": 3875,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 32,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 32,
+          "attr_multiplier": 0.8,
+          "experience": 1600,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 32,
+          "attr_multiplier": 0.8,
+          "experience": 1600,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 38,
+          "attr_multiplier": 1.26,
+          "experience": 4000,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 33,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 33,
+          "attr_multiplier": 0.8,
+          "experience": 1650,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 33,
+          "attr_multiplier": 0.8,
+          "experience": 1650,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 39,
+          "attr_multiplier": 1.26,
+          "experience": 4125,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 34,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 34,
+          "attr_multiplier": 0.8,
+          "experience": 1700,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 34,
+          "attr_multiplier": 0.8,
+          "experience": 1700,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 40,
+          "attr_multiplier": 1.26,
+          "experience": 4250,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 35,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 35,
+          "attr_multiplier": 0.8,
+          "experience": 1750,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 35,
+          "attr_multiplier": 0.8,
+          "experience": 1750,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖将",
+          "star_level": 3,
+          "level": 42,
+          "attr_multiplier": 1.26,
+          "experience": 4375,
+          "drop_pool_ids": [
+            "drop-elite-31-50",
+            "drop-rare-material"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5,
+        "guarantee": [
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 36,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 36,
+          "attr_multiplier": 0.8,
+          "experience": 1800,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 36,
+          "attr_multiplier": 0.8,
+          "experience": 1800,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 43,
+          "attr_multiplier": 1.26,
+          "experience": 4500,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 37,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 37,
+          "attr_multiplier": 0.8,
+          "experience": 1850,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 37,
+          "attr_multiplier": 0.8,
+          "experience": 1850,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 44,
+          "attr_multiplier": 1.26,
+          "experience": 4625,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 38,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 38,
+          "attr_multiplier": 0.8,
+          "experience": 1900,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 38,
+          "attr_multiplier": 0.8,
+          "experience": 1900,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 45,
+          "attr_multiplier": 1.26,
+          "experience": 4750,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 39,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 39,
+          "attr_multiplier": 0.8,
+          "experience": 1950,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 39,
+          "attr_multiplier": 0.8,
+          "experience": 1950,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 46,
+          "attr_multiplier": 1.26,
+          "experience": 4875,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 40,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 40,
+          "attr_multiplier": 0.8,
+          "experience": 2000,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 40,
+          "attr_multiplier": 0.8,
+          "experience": 2000,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 48,
+          "attr_multiplier": 1.26,
+          "experience": 5000,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-scorpion",
+          "rarity": "boss",
+          "title": "万毒之王",
+          "star_level": 5,
+          "level": 60,
+          "attr_multiplier": 1.66,
+          "experience": 12000,
+          "drop_pool_ids": [
+            "drop-boss-31-50",
+            "drop-rare-material",
+            "drop-event"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5,
+        "guarantee": [
+          {
+            "monster_id": "demon-scorpion",
+            "count": 1
+          },
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 41,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 41,
+          "attr_multiplier": 0.8,
+          "experience": 2050,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 41,
+          "attr_multiplier": 0.8,
+          "experience": 2050,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 49,
+          "attr_multiplier": 1.26,
+          "experience": 5125,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 42,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 42,
+          "attr_multiplier": 0.8,
+          "experience": 2100,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 42,
+          "attr_multiplier": 0.8,
+          "experience": 2100,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 50,
+          "attr_multiplier": 1.26,
+          "experience": 5250,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 43,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 43,
+          "attr_multiplier": 0.8,
+          "experience": 2150,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 43,
+          "attr_multiplier": 0.8,
+          "experience": 2150,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 51,
+          "attr_multiplier": 1.26,
+          "experience": 5375,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 44,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 44,
+          "attr_multiplier": 0.8,
+          "experience": 2200,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 44,
+          "attr_multiplier": 0.8,
+          "experience": 2200,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 52,
+          "attr_multiplier": 1.26,
+          "experience": 5500,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 45,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 45,
+          "attr_multiplier": 0.8,
+          "experience": 2250,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 45,
+          "attr_multiplier": 0.8,
+          "experience": 2250,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖将",
+          "star_level": 3,
+          "level": 54,
+          "attr_multiplier": 1.26,
+          "experience": 5625,
+          "drop_pool_ids": [
+            "drop-elite-31-50",
+            "drop-rare-material"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5,
+        "guarantee": [
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    },
+    {
+      "floor": 46,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 46,
+          "attr_multiplier": 0.8,
+          "experience": 2300,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 46,
+          "attr_multiplier": 0.8,
+          "experience": 2300,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 55,
+          "attr_multiplier": 1.26,
+          "experience": 5750,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 47,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 47,
+          "attr_multiplier": 0.8,
+          "experience": 2350,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 1,
+          "level": 47,
+          "attr_multiplier": 0.8,
+          "experience": 2350,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 56,
+          "attr_multiplier": 1.26,
+          "experience": 5875,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 48,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 48,
+          "attr_multiplier": 0.8,
+          "experience": 2400,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 48,
+          "attr_multiplier": 0.8,
+          "experience": 2400,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 57,
+          "attr_multiplier": 1.26,
+          "experience": 6000,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 49,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 49,
+          "attr_multiplier": 0.8,
+          "experience": 2450,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 49,
+          "attr_multiplier": 0.8,
+          "experience": 2450,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 58,
+          "attr_multiplier": 1.26,
+          "experience": 6125,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5
+      }
+    },
+    {
+      "floor": 50,
+      "monster_pool": [
+        {
+          "monster_id": "demon-wolf",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 50,
+          "attr_multiplier": 0.8,
+          "experience": 2500,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-boar",
+          "rarity": "normal",
+          "star_level": 0,
+          "level": 50,
+          "attr_multiplier": 0.8,
+          "experience": 2500,
+          "drop_pool_ids": [
+            "drop-normal-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-snake",
+          "rarity": "elite",
+          "title": "蛇妖",
+          "star_level": 2,
+          "level": 60,
+          "attr_multiplier": 1.26,
+          "experience": 6250,
+          "drop_pool_ids": [
+            "drop-elite-31-50"
+          ]
+        },
+        {
+          "monster_id": "demon-scorpion",
+          "rarity": "boss",
+          "title": "万毒之王",
+          "star_level": 5,
+          "level": 75,
+          "attr_multiplier": 1.66,
+          "experience": 15000,
+          "drop_pool_ids": [
+            "drop-boss-31-50",
+            "drop-rare-material",
+            "drop-event"
+          ]
+        }
+      ],
+      "composition": {
+        "count": 5,
+        "guarantee": [
+          {
+            "monster_id": "demon-scorpion",
+            "count": 1
+          },
+          {
+            "monster_id": "demon-snake",
+            "count": 1
+          }
+        ]
+      }
+    }
+  ]
+}

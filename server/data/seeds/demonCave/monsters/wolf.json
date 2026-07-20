@@ -1,0 +1,7 @@
+{
+  "id": "demon-wolf",
+  "name": "妖狼",
+  "description": "山林中的妖化狼群，速度快，攻击凶猛",
+  "template_id": "tpl-attack",
+  "element": ["金"]
+}

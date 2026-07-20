@@ -1,0 +1,10 @@
+{
+  "id": "demon-snapping-turtle",
+  "name": "鳄龟精",
+  "description": "龟蛇合体，甲壳厚重，水中之霸",
+  "template_id": "tpl-defense",
+  "element": [
+    "水"
+  ],
+  "bloodline_id": "bloodline-xuanwu"
+}

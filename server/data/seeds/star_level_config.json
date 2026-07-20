@@ -1,0 +1,11 @@
+{
+  "star_levels": [
+    { "star": 0, "name": "无星", "attr_multiplier": 1.00 },
+    { "star": 1, "name": "一星", "attr_multiplier": 1.00 },
+    { "star": 2, "name": "二星", "attr_multiplier": 1.20 },
+    { "star": 3, "name": "三星", "attr_multiplier": 1.35 },
+    { "star": 4, "name": "四星", "attr_multiplier": 1.50 },
+    { "star": 5, "name": "五星", "attr_multiplier": 1.70 },
+    { "star": 6, "name": "六星", "attr_multiplier": 2.00 }
+  ]
+}

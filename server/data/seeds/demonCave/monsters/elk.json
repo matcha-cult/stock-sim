@@ -1,0 +1,10 @@
+{
+  "id": "demon-elk",
+  "name": "麋鹿精",
+  "description": "麋身牛尾，肉角生辉，五彩背毛，仁兽之属",
+  "template_id": "tpl-balanced",
+  "element": [
+    "土"
+  ],
+  "bloodline_id": "bloodline-qilin"
+}

@@ -1,0 +1,10 @@
+{
+  "id": "demon-peacock",
+  "name": "孔雀精",
+  "description": "五彩斑斓，尾羽华丽，雍容华贵",
+  "template_id": "tpl-support",
+  "element": [
+    "火"
+  ],
+  "bloodline_id": "bloodline-fenghuang"
+}

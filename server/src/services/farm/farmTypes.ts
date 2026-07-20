@@ -46,11 +46,6 @@ export interface CropConfig {
   cropId: string;
   name: string;
   description: string;
-  /** 作物特性标签数组（如 ["禾本"]、["灵根", "金灵"]） */
-  traits: string[];
-  /** 作物元素数组（单属性如 ["金"]，双属性如 ["水", "木"]，无属性如 []） */
-  element: CropElement[];
-  rarity: string;
   sortOrder: number;
   enabled: boolean;
   growthStageMinutes: number[];
@@ -62,9 +57,6 @@ export interface CropConfig {
   witherAfterMinutes: number;
   yieldMin: number;
   yieldMax: number;
-  sellPricePerUnit: number;
-  /** 出售交易单位大小（多少个体制成 1 交易单位） */
-  harvestTradeUnit: number;
   expGain: number;
   /** 种植所需的最低等阶（1-4，对应黄/玄/地/天） */
   requiredTier: number;

@@ -1,0 +1,2016 @@
+{
+  "items": [
+    {
+      "itemKey": "seed_spirit_root_gold",
+      "name": "灵根·金种子",
+      "category": "seed",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3,
+      "buyable": true,
+      "buyPrice": 10,
+      "attributes": {
+        "cropId": "spirit_root_gold",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "灵根",
+          "金灵"
+        ]
+      },
+      "description": "金属性灵根作物的种子",
+      "icon": "seed_spirit_root_gold.png"
+    },
+    {
+      "itemKey": "seed_spirit_root_wood",
+      "name": "灵根·木种子",
+      "category": "seed",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3,
+      "buyable": true,
+      "buyPrice": 10,
+      "attributes": {
+        "cropId": "spirit_root_wood",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "灵根",
+          "木灵"
+        ]
+      },
+      "description": "木属性灵根作物的种子",
+      "icon": "seed_spirit_root_wood.png"
+    },
+    {
+      "itemKey": "seed_spirit_root_water",
+      "name": "灵根·水种子",
+      "category": "seed",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3,
+      "buyable": true,
+      "buyPrice": 10,
+      "attributes": {
+        "cropId": "spirit_root_water",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "灵根",
+          "水灵"
+        ]
+      },
+      "description": "水属性灵根作物的种子",
+      "icon": "seed_spirit_root_water.png"
+    },
+    {
+      "itemKey": "seed_spirit_root_fire",
+      "name": "灵根·火种子",
+      "category": "seed",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3,
+      "buyable": true,
+      "buyPrice": 10,
+      "attributes": {
+        "cropId": "spirit_root_fire",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "灵根",
+          "火灵"
+        ]
+      },
+      "description": "火属性灵根作物的种子",
+      "icon": "seed_spirit_root_fire.png"
+    },
+    {
+      "itemKey": "seed_spirit_root_earth",
+      "name": "灵根·土种子",
+      "category": "seed",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3,
+      "buyable": true,
+      "buyPrice": 10,
+      "attributes": {
+        "cropId": "spirit_root_earth",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "灵根",
+          "土灵"
+        ]
+      },
+      "description": "土属性灵根作物的种子",
+      "icon": "seed_spirit_root_earth.png"
+    },
+    {
+      "itemKey": "seed_rice_basic",
+      "name": "灵稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 2,
+      "buyable": true,
+      "buyPrice": 5,
+      "attributes": {
+        "cropId": "rice_basic",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "基础灵稻的种子",
+      "icon": "seed_rice_basic.png"
+    },
+    {
+      "itemKey": "seed_jin_ling_rice",
+      "name": "金灵稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 8,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "jin_ling_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与金灵根杂交，金灵稻的种子（杂交产出）",
+      "icon": "seed_jin_ling_rice.png"
+    },
+    {
+      "itemKey": "seed_mu_ling_rice",
+      "name": "木灵稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 8,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "mu_ling_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与木灵根杂交，木灵稻的种子（杂交产出）",
+      "icon": "seed_mu_ling_rice.png"
+    },
+    {
+      "itemKey": "seed_shui_ling_rice",
+      "name": "水灵稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 8,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "shui_ling_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与水灵根杂交，水灵稻的种子（杂交产出）",
+      "icon": "seed_shui_ling_rice.png"
+    },
+    {
+      "itemKey": "seed_huo_ling_rice",
+      "name": "火灵稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 8,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "huo_ling_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与火灵根杂交，火灵稻的种子（杂交产出）",
+      "icon": "seed_huo_ling_rice.png"
+    },
+    {
+      "itemKey": "seed_tu_ling_rice",
+      "name": "土灵稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 8,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "tu_ling_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与土灵根杂交，土灵稻的种子（杂交产出）",
+      "icon": "seed_tu_ling_rice.png"
+    },
+    {
+      "itemKey": "seed_bi_jing_rice",
+      "name": "碧粳稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "bi_jing_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "水",
+          "木"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "水木相生，碧粳稻的种子（杂交产出）",
+      "icon": "seed_bi_jing_rice.png"
+    },
+    {
+      "itemKey": "seed_yan_huo_rice",
+      "name": "青炎稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "yan_huo_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "木",
+          "火"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "木火相生，青炎稻的种子（杂交产出）",
+      "icon": "seed_yan_huo_rice.png"
+    },
+    {
+      "itemKey": "seed_yan_tu_rice",
+      "name": "炎土稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "yan_tu_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "火",
+          "土"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "火土相生，炎土稻的种子（杂交产出）",
+      "icon": "seed_yan_tu_rice.png"
+    },
+    {
+      "itemKey": "seed_jin_sui_rice",
+      "name": "壤金稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "jin_sui_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "土",
+          "金"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "土生金，壤金稻的种子（杂交产出）",
+      "icon": "seed_jin_sui_rice.png"
+    },
+    {
+      "itemKey": "seed_xuan_bing_rice",
+      "name": "玄冰稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "xuan_bing_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "金",
+          "水"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "金水相生，玄冰稻的种子（杂交产出）",
+      "icon": "seed_xuan_bing_rice.png"
+    },
+    {
+      "itemKey": "seed_qi_xing_rice",
+      "name": "七星稻种子",
+      "category": "seed",
+      "subcategory": "grain",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 200,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "qi_xing_rice",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [],
+        "traits": [
+          "禾本",
+          "七星"
+        ]
+      },
+      "description": "五行俱全，七星稻的种子（杂交产出）",
+      "icon": "seed_qi_xing_rice.png"
+    },
+    {
+      "itemKey": "seed_ling_hu",
+      "name": "灵葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 200,
+      "buyable": true,
+      "buyPrice": 500,
+      "attributes": {
+        "cropId": "ling_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "基础灵葫的种子",
+      "icon": "seed_ling_hu.png"
+    },
+    {
+      "itemKey": "seed_jin_ling_hu",
+      "name": "金灵葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 250,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "jin_ling_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受金灵根影响，金灵葫的种子（杂交产出）",
+      "icon": "seed_jin_ling_hu.png"
+    },
+    {
+      "itemKey": "seed_mu_ling_hu",
+      "name": "木灵葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 250,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "mu_ling_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受木灵根影响，木灵葫的种子（杂交产出）",
+      "icon": "seed_mu_ling_hu.png"
+    },
+    {
+      "itemKey": "seed_shui_ling_hu",
+      "name": "水灵葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 250,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "shui_ling_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受水灵根影响，水灵葫的种子（杂交产出）",
+      "icon": "seed_shui_ling_hu.png"
+    },
+    {
+      "itemKey": "seed_huo_ling_hu",
+      "name": "火灵葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 250,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "huo_ling_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受火灵根影响，火灵葫的种子（杂交产出）",
+      "icon": "seed_huo_ling_hu.png"
+    },
+    {
+      "itemKey": "seed_tu_ling_hu",
+      "name": "土灵葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 250,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "tu_ling_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受土灵根影响，土灵葫的种子（杂交产出）",
+      "icon": "seed_tu_ling_hu.png"
+    },
+    {
+      "itemKey": "seed_bi_man_hu",
+      "name": "碧蔓葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3600,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "bi_man_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "水",
+          "木"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "水木相生，碧蔓葫的种子（杂交产出）",
+      "icon": "seed_bi_man_hu.png"
+    },
+    {
+      "itemKey": "seed_cui_yan_hu",
+      "name": "翠焰葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3600,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "cui_yan_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "木",
+          "火"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "木火相生，翠焰葫的种子（杂交产出）",
+      "icon": "seed_cui_yan_hu.png"
+    },
+    {
+      "itemKey": "seed_chi_tao_hu",
+      "name": "赤陶葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3600,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "chi_tao_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "火",
+          "土"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "火土相生，赤陶葫的种子（杂交产出）",
+      "icon": "seed_chi_tao_hu.png"
+    },
+    {
+      "itemKey": "seed_zi_jin_hu",
+      "name": "紫金葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3600,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "zi_jin_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "土",
+          "金"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "土生金，紫金葫的种子（杂交产出）",
+      "icon": "seed_zi_jin_hu.png"
+    },
+    {
+      "itemKey": "seed_xuan_lu_hu",
+      "name": "玄露葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 3600,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "xuan_lu_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "金",
+          "水"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "金水相生，玄露葫的种子（杂交产出）",
+      "icon": "seed_xuan_lu_hu.png"
+    },
+    {
+      "itemKey": "seed_taixu_hu",
+      "name": "太虚葫种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 10000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "taixu_hu",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [],
+        "traits": [
+          "葫芦科",
+          "太虚"
+        ]
+      },
+      "description": "五行归元，太虚葫的种子（杂交产出）",
+      "icon": "seed_taixu_hu.png"
+    },
+    {
+      "itemKey": "seed_long_xu_cao",
+      "name": "龙须草种子",
+      "category": "seed",
+      "subcategory": "herb",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 100,
+      "buyable": true,
+      "buyPrice": 250,
+      "attributes": {
+        "cropId": "long_xu_cao",
+        "requiredTier": 1,
+        "seedUnit": "株",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "金属性禾本灵草的种子",
+      "icon": "seed_long_xu_cao.png"
+    },
+    {
+      "itemKey": "seed_tian_luo_teng",
+      "name": "天罗藤种子",
+      "category": "seed",
+      "subcategory": "herb",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 120,
+      "buyable": true,
+      "buyPrice": 300,
+      "attributes": {
+        "cropId": "tian_luo_teng",
+        "requiredTier": 1,
+        "seedUnit": "根",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "藤本"
+        ]
+      },
+      "description": "木属性藤本灵植的种子",
+      "icon": "seed_tian_luo_teng.png"
+    },
+    {
+      "itemKey": "seed_ling_lian",
+      "name": "灵莲种子",
+      "category": "seed",
+      "subcategory": "lotus",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 80,
+      "buyable": true,
+      "buyPrice": 200,
+      "attributes": {
+        "cropId": "ling_lian",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "基础灵莲的种子，无属性",
+      "icon": "seed_ling_lian.png"
+    },
+    {
+      "itemKey": "seed_jin_feng_lian",
+      "name": "金锋莲种子",
+      "category": "seed",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 140,
+      "buyable": true,
+      "buyPrice": 350,
+      "attributes": {
+        "cropId": "jin_feng_lian",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "金属性莲科灵植的种子",
+      "icon": "seed_jin_feng_lian.png"
+    },
+    {
+      "itemKey": "seed_cui_xin_lian",
+      "name": "翠心莲种子",
+      "category": "seed",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 152,
+      "buyable": true,
+      "buyPrice": 380,
+      "attributes": {
+        "cropId": "cui_xin_lian",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "木属性莲科灵植的种子",
+      "icon": "seed_cui_xin_lian.png"
+    },
+    {
+      "itemKey": "seed_bing_po_lian",
+      "name": "冰魄莲种子",
+      "category": "seed",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 160,
+      "buyable": true,
+      "buyPrice": 400,
+      "attributes": {
+        "cropId": "bing_po_lian",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "水属性莲科灵植的种子",
+      "icon": "seed_bing_po_lian.png"
+    },
+    {
+      "itemKey": "seed_long_xue_hua",
+      "name": "龙血花种子",
+      "category": "seed",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 140,
+      "buyable": true,
+      "buyPrice": 350,
+      "attributes": {
+        "cropId": "long_xue_hua",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "火属性莲科灵植的种子",
+      "icon": "seed_long_xue_hua.png"
+    },
+    {
+      "itemKey": "seed_hou_tu_lian",
+      "name": "厚土莲种子",
+      "category": "seed",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 120,
+      "buyable": true,
+      "buyPrice": 300,
+      "attributes": {
+        "cropId": "hou_tu_lian",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "土属性莲科灵植的种子",
+      "icon": "seed_hou_tu_lian.png"
+    },
+    {
+      "itemKey": "seed_qi_xing_lian",
+      "name": "七星莲种子",
+      "category": "seed",
+      "subcategory": "lotus",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 100000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "qi_xing_lian",
+        "requiredTier": 1,
+        "seedUnit": "颗",
+        "element": [],
+        "traits": [
+          "莲科",
+          "七星"
+        ]
+      },
+      "description": "莲科汇聚，五行归元，七星莲的种子（杂交产出）",
+      "icon": "seed_qi_xing_lian.png"
+    },
+    {
+      "itemKey": "material_spirit_root_gold",
+      "name": "灵根·金",
+      "category": "material",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "spirit_root_gold",
+        "tradeUnit": 20,
+        "harvestUnit": "颗",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "灵根",
+          "金灵"
+        ]
+      },
+      "description": "金属性灵根作物，蕴含锐利灵气",
+      "icon": "material_spirit_root_gold.png"
+    },
+    {
+      "itemKey": "material_spirit_root_wood",
+      "name": "灵根·木",
+      "category": "material",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "spirit_root_wood",
+        "tradeUnit": 20,
+        "harvestUnit": "颗",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "灵根",
+          "木灵"
+        ]
+      },
+      "description": "木属性灵根作物，蕴含生机灵气",
+      "icon": "material_spirit_root_wood.png"
+    },
+    {
+      "itemKey": "material_spirit_root_water",
+      "name": "灵根·水",
+      "category": "material",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "spirit_root_water",
+        "tradeUnit": 20,
+        "harvestUnit": "颗",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "灵根",
+          "水灵"
+        ]
+      },
+      "description": "水属性灵根作物，蕴含润泽灵气",
+      "icon": "material_spirit_root_water.png"
+    },
+    {
+      "itemKey": "material_spirit_root_fire",
+      "name": "灵根·火",
+      "category": "material",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "spirit_root_fire",
+        "tradeUnit": 20,
+        "harvestUnit": "颗",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "灵根",
+          "火灵"
+        ]
+      },
+      "description": "火属性灵根作物，蕴含炽烈灵气",
+      "icon": "material_spirit_root_fire.png"
+    },
+    {
+      "itemKey": "material_spirit_root_earth",
+      "name": "灵根·土",
+      "category": "material",
+      "subcategory": "spirit_root",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "spirit_root_earth",
+        "tradeUnit": 20,
+        "harvestUnit": "颗",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "灵根",
+          "土灵"
+        ]
+      },
+      "description": "土属性灵根作物，蕴含厚重灵气",
+      "icon": "material_spirit_root_earth.png"
+    },
+    {
+      "itemKey": "material_rice_basic",
+      "name": "灵稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "rice_basic",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "基础灵稻，可参与杂交",
+      "icon": "material_rice_basic.png"
+    },
+    {
+      "itemKey": "material_jin_ling_rice",
+      "name": "金灵稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 125,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "jin_ling_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与金灵根杂交，孕育金灵稻",
+      "icon": "material_jin_ling_rice.png"
+    },
+    {
+      "itemKey": "material_mu_ling_rice",
+      "name": "木灵稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 125,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "mu_ling_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与木灵根杂交，孕育木灵稻",
+      "icon": "material_mu_ling_rice.png"
+    },
+    {
+      "itemKey": "material_shui_ling_rice",
+      "name": "水灵稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 125,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "shui_ling_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与水灵根杂交，孕育水灵稻",
+      "icon": "material_shui_ling_rice.png"
+    },
+    {
+      "itemKey": "material_huo_ling_rice",
+      "name": "火灵稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 125,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "huo_ling_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与火灵根杂交，孕育火灵稻",
+      "icon": "material_huo_ling_rice.png"
+    },
+    {
+      "itemKey": "material_tu_ling_rice",
+      "name": "土灵稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 125,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "tu_ling_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "灵稻与土灵根杂交，孕育土灵稻",
+      "icon": "material_tu_ling_rice.png"
+    },
+    {
+      "itemKey": "material_bi_jing_rice",
+      "name": "碧粳稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 1800,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "bi_jing_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "水",
+          "木"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "水木相生，孕育碧粳稻",
+      "icon": "material_bi_jing_rice.png"
+    },
+    {
+      "itemKey": "material_yan_huo_rice",
+      "name": "青炎稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 1800,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "yan_huo_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "木",
+          "火"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "木火相生，孕育青炎稻",
+      "icon": "material_yan_huo_rice.png"
+    },
+    {
+      "itemKey": "material_yan_tu_rice",
+      "name": "炎土稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 1800,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "yan_tu_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "火",
+          "土"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "火土相生，孕育炎土稻",
+      "icon": "material_yan_tu_rice.png"
+    },
+    {
+      "itemKey": "material_jin_sui_rice",
+      "name": "壤金稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 1800,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "jin_sui_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "土",
+          "金"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "土生金，凝练壤金稻",
+      "icon": "material_jin_sui_rice.png"
+    },
+    {
+      "itemKey": "material_xuan_bing_rice",
+      "name": "玄冰稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 1800,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "xuan_bing_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [
+          "金",
+          "水"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "金水相生，孕育玄冰稻",
+      "icon": "material_xuan_bing_rice.png"
+    },
+    {
+      "itemKey": "material_qi_xing_rice",
+      "name": "七星稻",
+      "category": "material",
+      "subcategory": "grain",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 5000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "qi_xing_rice",
+        "tradeUnit": 20,
+        "harvestUnit": "粒",
+        "element": [],
+        "traits": [
+          "禾本",
+          "七星"
+        ]
+      },
+      "description": "四象汇聚，孕育七星稻",
+      "icon": "material_qi_xing_rice.png"
+    },
+    {
+      "itemKey": "material_ling_hu",
+      "name": "灵葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 10000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "ling_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "基础灵葫，可参与杂交",
+      "icon": "material_ling_hu.png"
+    },
+    {
+      "itemKey": "material_jin_ling_hu",
+      "name": "金灵葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 12500,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "jin_ling_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受金灵根影响，孕育金灵葫",
+      "icon": "material_jin_ling_hu.png"
+    },
+    {
+      "itemKey": "material_mu_ling_hu",
+      "name": "木灵葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 12500,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "mu_ling_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受木灵根影响，孕育木灵葫",
+      "icon": "material_mu_ling_hu.png"
+    },
+    {
+      "itemKey": "material_shui_ling_hu",
+      "name": "水灵葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 12500,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "shui_ling_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受水灵根影响，孕育水灵葫",
+      "icon": "material_shui_ling_hu.png"
+    },
+    {
+      "itemKey": "material_huo_ling_hu",
+      "name": "火灵葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 12500,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "huo_ling_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受火灵根影响，孕育火灵葫",
+      "icon": "material_huo_ling_hu.png"
+    },
+    {
+      "itemKey": "material_tu_ling_hu",
+      "name": "土灵葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 12500,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "tu_ling_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "灵葫受土灵根影响，孕育土灵葫",
+      "icon": "material_tu_ling_hu.png"
+    },
+    {
+      "itemKey": "material_bi_man_hu",
+      "name": "碧蔓葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 180000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "bi_man_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "水",
+          "木"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "水木相生，孕育碧蔓葫",
+      "icon": "material_bi_man_hu.png"
+    },
+    {
+      "itemKey": "material_cui_yan_hu",
+      "name": "翠焰葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 180000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "cui_yan_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "木",
+          "火"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "木火相生，孕育翠焰葫",
+      "icon": "material_cui_yan_hu.png"
+    },
+    {
+      "itemKey": "material_chi_tao_hu",
+      "name": "赤陶葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 180000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "chi_tao_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "火",
+          "土"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "火土相生，孕育赤陶葫",
+      "icon": "material_chi_tao_hu.png"
+    },
+    {
+      "itemKey": "material_zi_jin_hu",
+      "name": "紫金葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 180000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "zi_jin_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "土",
+          "金"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "土生金，孕育紫金葫",
+      "icon": "material_zi_jin_hu.png"
+    },
+    {
+      "itemKey": "material_xuan_lu_hu",
+      "name": "玄露葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 180000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "xuan_lu_hu",
+        "tradeUnit": 5,
+        "harvestUnit": "个",
+        "element": [
+          "金",
+          "水"
+        ],
+        "traits": [
+          "葫芦科"
+        ]
+      },
+      "description": "金水相生，孕育玄露葫",
+      "icon": "material_xuan_lu_hu.png"
+    },
+    {
+      "itemKey": "material_taixu_hu",
+      "name": "太虚葫",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 500000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "taixu_hu",
+        "tradeUnit": 1,
+        "harvestUnit": "个",
+        "element": [],
+        "traits": [
+          "葫芦科",
+          "太虚"
+        ]
+      },
+      "description": "五行归元，孕育太虚葫",
+      "icon": "material_taixu_hu.png"
+    },
+    {
+      "itemKey": "material_long_xu_cao",
+      "name": "龙须草",
+      "category": "material",
+      "subcategory": "herb",
+      "rarity": "uncommon",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 1000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "long_xu_cao",
+        "tradeUnit": 1,
+        "harvestUnit": "株",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "禾本"
+        ]
+      },
+      "description": "金属性禾本灵草，细叶如龙须，蕴含锐利灵气",
+      "icon": "material_long_xu_cao.png"
+    },
+    {
+      "itemKey": "material_tian_luo_teng",
+      "name": "天罗藤",
+      "category": "material",
+      "subcategory": "herb",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 20000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "tian_luo_teng",
+        "tradeUnit": 1,
+        "harvestUnit": "条",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "藤本"
+        ]
+      },
+      "description": "木属性藤本灵植，藤蔓蔓延，蕴含蓬勃生机",
+      "icon": "material_tian_luo_teng.png"
+    },
+    {
+      "itemKey": "material_ling_lian",
+      "name": "灵莲",
+      "category": "material",
+      "subcategory": "lotus",
+      "rarity": "common",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 2000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "ling_lian",
+        "tradeUnit": 1,
+        "harvestUnit": "朵",
+        "element": [],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "基础灵莲，无属性，可参与杂交",
+      "icon": "material_ling_lian.png"
+    },
+    {
+      "itemKey": "material_jin_feng_lian",
+      "name": "金锋莲",
+      "category": "material",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 7000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "jin_feng_lian",
+        "tradeUnit": 1,
+        "harvestUnit": "朵",
+        "element": [
+          "金"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "金属性莲科灵植，花瓣如金刃，蕴含锐利灵气",
+      "icon": "material_jin_feng_lian.png"
+    },
+    {
+      "itemKey": "material_cui_xin_lian",
+      "name": "翠心莲",
+      "category": "material",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 7500,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "cui_xin_lian",
+        "tradeUnit": 1,
+        "harvestUnit": "朵",
+        "element": [
+          "木"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "木属性莲科灵植，莲心翠碧，蕴含生机灵气",
+      "icon": "material_cui_xin_lian.png"
+    },
+    {
+      "itemKey": "material_bing_po_lian",
+      "name": "冰魄莲",
+      "category": "material",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 8000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "bing_po_lian",
+        "tradeUnit": 1,
+        "harvestUnit": "朵",
+        "element": [
+          "水"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "水属性莲科灵植，冰魄凝寒，蕴含极寒灵气",
+      "icon": "material_bing_po_lian.png"
+    },
+    {
+      "itemKey": "material_long_xue_hua",
+      "name": "龙血花",
+      "category": "material",
+      "subcategory": "gourd",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 10000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "long_xue_hua",
+        "tradeUnit": 1,
+        "harvestUnit": "朵",
+        "element": [
+          "火"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "火属性莲科灵植，龙血炽燃，蕴含炽烈灵气",
+      "icon": "material_long_xue_hua.png"
+    },
+    {
+      "itemKey": "material_hou_tu_lian",
+      "name": "厚土莲",
+      "category": "material",
+      "subcategory": "lotus",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 6000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "hou_tu_lian",
+        "tradeUnit": 1,
+        "harvestUnit": "朵",
+        "element": [
+          "土"
+        ],
+        "traits": [
+          "莲科"
+        ]
+      },
+      "description": "土属性莲科灵植，厚德载物，蕴含厚重灵气",
+      "icon": "material_hou_tu_lian.png"
+    },
+    {
+      "itemKey": "material_qi_xing_lian",
+      "name": "七星莲",
+      "category": "material",
+      "subcategory": "lotus",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 500000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "cropId": "qi_xing_lian",
+        "tradeUnit": 1,
+        "harvestUnit": "朵",
+        "element": [],
+        "traits": [
+          "莲科",
+          "七星"
+        ]
+      },
+      "description": "莲科汇聚，五行归元，孕育七星莲",
+      "icon": "material_qi_xing_lian.png"
+    },
+    {
+      "itemKey": "material_hundun_jinghua",
+      "name": "混沌精华",
+      "category": "material",
+      "subcategory": "relic",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 50000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "source": "demon_cave"
+      },
+      "description": "帝江血脉凝结的混沌精华，蕴含浑沌之力，可作为祭坛召唤祭品",
+      "icon": "material_hundun_jinghua.png"
+    },
+    {
+      "itemKey": "material_taixu_zhi_lei",
+      "name": "太虚之泪",
+      "category": "material",
+      "subcategory": "relic",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 200000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "source": "demon_cave"
+      },
+      "description": "烛龙血脉凝结的太虚之泪，蕴含昼夜交替之力，可作为祭坛召唤祭品",
+      "icon": "material_taixu_zhi_lei.png"
+    },
+    {
+      "itemKey": "material_kunlun_yusui",
+      "name": "昆仑玉髓",
+      "category": "material",
+      "subcategory": "relic",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 60000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "source": "demon_cave"
+      },
+      "description": "昆仑山神陆吾血脉凝结的玉髓，蕴含山岳之力，可作为祭坛召唤祭品",
+      "icon": "material_kunlun_yusui.png"
+    },
+    {
+      "itemKey": "material_jiuwei_huohu",
+      "name": "九尾狐火",
+      "category": "material",
+      "subcategory": "relic",
+      "rarity": "rare",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 55000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "source": "demon_cave"
+      },
+      "description": "九尾狐血脉凝结的狐火，蕴含魅惑之力，可作为祭坛召唤祭品",
+      "icon": "material_jiuwei_huohu.png"
+    },
+    {
+      "itemKey": "material_fenghuang_yu",
+      "name": "凤凰羽",
+      "category": "material",
+      "subcategory": "relic",
+      "rarity": "legendary",
+      "maxStack": 9999,
+      "sellable": true,
+      "sellPrice": 250000,
+      "buyable": false,
+      "buyPrice": 0,
+      "attributes": {
+        "source": "demon_cave"
+      },
+      "description": "凤凰血脉凝结的神羽，蕴含涅槃之力，可作为祭坛召唤祭品",
+      "icon": "material_fenghuang_yu.png"
+    },
+    {
+      "itemKey": "tier-up-pill",
+      "name": "升阶丹",
+      "category": "consumable",
+      "subcategory": "pill",
+      "rarity": "legendary",
+      "maxStack": 99,
+      "sellable": false,
+      "sellPrice": 0,
+      "buyable": true,
+      "buyPrice": 50000000,
+      "attributes": {},
+      "description": "灵兽品阶提升所需丹药，蕴含天地灵气，可助灵兽突破品阶桎梏",
+      "icon": "tier_up_pill.png"
+    }
+  ]
+}

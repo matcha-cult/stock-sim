@@ -24,6 +24,8 @@
  */
 import { query, withTransaction } from '../../config/database.js';
 import { consumeSpiritStones, addSpiritStones } from '../inventory/shared/consume.js';
+import { addItem, removeItem, getItemsByCharacter } from '../inventory/unifiedInventoryService.js';
+import { getItemsByCategory, getItemByCropId } from '../inventory/itemConfigLoader.js';
 import {
   getCropConfig,
   getSeedConfig,
@@ -148,17 +150,16 @@ async function grantInitialSeeds(characterId: number): Promise<void> {
   const initialSeeds = getInitialSeeds();
   if (initialSeeds.length === 0) return;
 
-  const seedValues = initialSeeds
-    .map((s) => `(${characterId}, '${s.itemId}', ${s.quantity}, '', 0, NOW())`)
-    .join(', ');
-  await query(
-    `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-     VALUES ${seedValues}
-     ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
-     SET quantity = farm_seed_inventory.quantity + EXCLUDED.quantity,
-         updated_at = CURRENT_TIMESTAMP`,
-    [],
-  );
+  for (const seed of initialSeeds) {
+    await addItem({
+      characterId,
+      itemKey: seed.itemId,
+      quantity: seed.quantity,
+      operationType: 'acquire',
+      bizType: 'farm_initial_seeds',
+      memo: '初始种子发放',
+    });
+  }
 }
 
 /** 获取灵田档案（不存在返回 null） */
@@ -261,7 +262,8 @@ export async function getFarmOverview(characterId: number): Promise<FarmOverview
     };
   }
 
-  const [cellRows, decoRows, seedRows, harvestRows] = await Promise.all([
+  // 并行查询：格子、装饰物、种子背包、灵材仓库
+  const [cellRows, decoRows, seedItems, harvestItems] = await Promise.all([
     query<CellRow>(
       `SELECT row, col, unlocked, crop_id,
               EXTRACT(EPOCH FROM planted_at) * 1000 AS planted_at_epoch,
@@ -274,14 +276,8 @@ export async function getFarmOverview(characterId: number): Promise<FarmOverview
       `SELECT row, col, decoration_type FROM farm_decoration WHERE character_id = $1`,
       [characterId],
     ),
-    query<SeedRow>(
-      `SELECT id, item_id, quantity, mutation_type, generation FROM farm_seed_inventory WHERE character_id = $1`,
-      [characterId],
-    ),
-    query<HarvestRow>(
-      `SELECT crop_id, quantity, quality FROM farm_harvest_inventory WHERE character_id = $1`,
-      [characterId],
-    ),
+    getItemsByCharacter(characterId, { category: 'seed' }),
+    getItemsByCharacter(characterId, { category: 'material' }),
   ]);
 
   // 构建装饰物索引
@@ -297,8 +293,28 @@ export async function getFarmOverview(characterId: number): Promise<FarmOverview
 
   const farmInfo = buildFarmInfoDto(profile);
   const cells = cellRows.rows.map((row) => buildCellDto(row, decoByCell, now, gridConfig));
-  const seedBag = buildSeedInventoryDto(seedRows.rows);
-  const harvestBag = buildHarvestInventoryDto(harvestRows.rows);
+
+  // 将统一背包数据转换为 SeedRow 格式
+  const seedRows: SeedRow[] = seedItems
+    .filter((item) => item.quantity > 0)
+    .map((item) => ({
+      id: item.id,
+      item_id: item.itemKey,
+      quantity: item.quantity,
+      mutation_type: item.mutationType || '',
+      generation: item.generation || 0,
+    }));
+  const seedBag = buildSeedInventoryDto(seedRows);
+
+  // 将统一背包数据转换为 HarvestRow 格式
+  const harvestRows: HarvestRow[] = harvestItems
+    .filter((item) => item.quantity > 0)
+    .map((item) => ({
+      crop_id: item.itemKey.replace(/^material_/, ''),
+      quantity: item.quantity,
+      quality: item.quality || 'normal',
+    }));
+  const harvestBag = buildHarvestInventoryDto(harvestRows);
 
   return { reclaimed: true, farmInfo, cells, seedBag, harvestBag, serverNow: now };
 }
@@ -313,33 +329,46 @@ export async function getHarvestInventory(
   const clampedPageSize = Math.min(Math.max(pageSize, 1), 100);
   const offset = (clampedPage - 1) * clampedPageSize;
 
+  // 从内存配置预筛选 material 类 itemKey（替代旧的 JOIN item_definitions）
+  const materialItemKeys = getItemsByCategory('material').map((item) => item.itemKey);
+
+  if (materialItemKeys.length === 0) {
+    return { items: [], total: 0, page: clampedPage, pageSize: clampedPageSize };
+  }
+
+  // 使用统一背包表查询灵材
   const [countResult, dataResult] = await Promise.all([
     query<{ count: string }>(
-      `SELECT COUNT(*) AS count FROM farm_harvest_inventory WHERE character_id = $1 AND quantity > 0`,
-      [characterId],
+      `SELECT COUNT(*) AS count
+       FROM inventory_items
+       WHERE character_id = $1 AND item_key = ANY($2) AND quantity > 0`,
+      [characterId, materialItemKeys],
     ),
-    query<HarvestRow>(
-      `SELECT crop_id, quantity, quality
-       FROM farm_harvest_inventory
-       WHERE character_id = $1 AND quantity > 0
-       ORDER BY crop_id, quality
-       LIMIT $2 OFFSET $3`,
-      [characterId, clampedPageSize, offset],
+    query<{ item_key: string; quantity: number; quality: string | null }>(
+      `SELECT item_key, quantity, quality
+       FROM inventory_items
+       WHERE character_id = $1 AND item_key = ANY($2) AND quantity > 0
+       ORDER BY item_key, quality
+       LIMIT $3 OFFSET $4`,
+      [characterId, materialItemKeys, clampedPageSize, offset],
     ),
   ]);
 
   const total = Number(countResult.rows[0].count);
   const items: HarvestInventoryItemDto[] = dataResult.rows.map((row) => {
-    const crop = getCropConfig(row.crop_id);
+    // item_key 格式为 material_xxx，需要提取 cropId
+    const cropId = row.item_key.replace(/^material_/, '');
+    const crop = getCropConfig(cropId);
+    const itemDef = getItemByCropId(cropId);
     return {
-      cropId: row.crop_id,
+      cropId,
       quantity: row.quantity,
-      quality: row.quality as CropQuality,
-      name: crop?.name ?? row.crop_id,
-      element: crop?.element ?? [],
+      quality: (row.quality || 'normal') as CropQuality,
+      name: crop?.name ?? cropId,
+      element: itemDef?.attributes?.element ?? [],
       requiredTier: crop?.requiredTier ?? 1,
-      sellPricePerUnit: crop?.sellPricePerUnit ?? 0,
-      harvestTradeUnit: crop?.harvestTradeUnit ?? 1,
+      sellPricePerUnit: itemDef?.sellPrice ?? 0,
+      harvestTradeUnit: itemDef?.attributes?.tradeUnit ?? 1,
       harvestUnit: crop?.harvestUnit ?? '',
     };
   });
@@ -378,14 +407,20 @@ export async function buySeed(
     });
     if (!consumeResult.success) return { success: false, message: consumeResult.message };
 
-    await query(
-      `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-       VALUES ($1, $2, $3, '', 0, NOW())
-       ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
-       SET quantity = farm_seed_inventory.quantity + $3,
-           updated_at = CURRENT_TIMESTAMP`,
-      [characterId, itemId, quantity],
-    );
+    // 使用统一背包服务添加种子
+    const addResult = await addItem({
+      characterId,
+      itemKey: itemId,
+      quantity,
+      operationType: 'buy',
+      bizType: 'farm_buy_seed',
+      bizId: itemId,
+      memo: `购买 ${seedConfig.name} x${quantity}`,
+    });
+
+    if (!addResult.success) {
+      return { success: false, message: addResult.message };
+    }
 
     return { success: true, message: `购买成功，花费 ${totalCost} 灵石` };
   });
@@ -402,15 +437,23 @@ export async function sellSeed(
     if (!seedConfig) return { success: false, message: '种子不存在' };
     if (quantity <= 0) return { success: false, message: '数量无效' };
 
-    const dbMutationType = mutationType ?? '';
-    const result = await query(
-      `UPDATE farm_seed_inventory SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP
-       WHERE character_id = $2 AND item_id = $3 AND quantity >= $1
-         AND mutation_type = $4
-       RETURNING id`,
-      [quantity, characterId, itemId, dbMutationType],
-    );
-    if (result.rowCount === 0) return { success: false, message: '种子数量不足' };
+    // 使用统一背包服务扣除种子
+    const removeResult = await removeItem({
+      characterId,
+      itemKey: itemId,
+      quantity,
+      attributes: {
+        mutationType: mutationType || undefined,
+      },
+      operationType: 'sell',
+      bizType: 'farm_sell_seed',
+      bizId: itemId,
+      memo: `出售 ${seedConfig.name} x${quantity}`,
+    });
+
+    if (!removeResult.success) {
+      return { success: false, message: '种子数量不足' };
+    }
 
     const totalEarn = BigInt(seedConfig.sellPrice * quantity);
     await addSpiritStones(characterId, totalEarn, {
@@ -418,11 +461,6 @@ export async function sellSeed(
       bizId: itemId,
       memo: `出售 ${seedConfig.name} x${quantity}`,
     });
-
-    await query(
-      `DELETE FROM farm_seed_inventory WHERE character_id = $1 AND item_id = $2 AND quantity = 0`,
-      [characterId, itemId],
-    );
 
     return { success: true, message: `出售成功，获得 ${totalEarn} 灵石` };
   });
@@ -448,23 +486,25 @@ export async function plantCrop(
 ): Promise<PlantResult> {
   return withTransaction(async () => {
     // 通过 seedId 查询种子信息（锁定行）
+    // 从内存配置预筛选 seed 类 itemKey，确保只查种子（替代旧的 JOIN item_definitions）
+    const seedItemKeys = getItemsByCategory('seed').map((item) => item.itemKey);
     const seedRowResult = await query<{
       id: number;
-      item_id: string;
+      item_key: string;
       quantity: number;
-      mutation_type: string;
-      generation: number;
+      mutation_type: string | null;
+      generation: number | null;
     }>(
-      `SELECT id, item_id, quantity, mutation_type, generation
-       FROM farm_seed_inventory
-       WHERE character_id = $1 AND id = $2 AND quantity >= 1
+      `SELECT id, item_key, quantity, mutation_type, generation
+       FROM inventory_items
+       WHERE character_id = $1 AND id = $2 AND quantity >= 1 AND item_key = ANY($3)
        FOR UPDATE`,
-      [characterId, seedId],
+      [characterId, seedId, seedItemKeys],
     );
     if (seedRowResult.rowCount === 0) return { success: false, message: '种子不存在或数量不足' };
     const seedRow = seedRowResult.rows[0];
 
-    const seedConfig = getSeedConfig(seedRow.item_id);
+    const seedConfig = getSeedConfig(seedRow.item_key);
     if (!seedConfig) return { success: false, message: '种子配置不存在' };
 
     const cropConfig = getCropConfig(seedConfig.cropId);
@@ -489,20 +529,27 @@ export async function plantCrop(
     if (!cell.unlocked) return { success: false, message: '格子未解锁' };
     if (cell.crop_id) return { success: false, message: '格子已有作物' };
 
-    const plantedGeneration = seedRow.generation;
+    const plantedGeneration = seedRow.generation ?? 0; // 商店种子默认为 0 代
     const seedMutationType = seedRow.mutation_type;
 
-    // 扣减种子（数量减 1，如果为 0 则删除记录）
-    await query(
-      `UPDATE farm_seed_inventory SET quantity = quantity - 1, updated_at = CURRENT_TIMESTAMP
-       WHERE id = $1`,
-      [seedId],
-    );
-    // 如果数量为 0，删除记录（可选，保持数据整洁）
-    await query(
-      `DELETE FROM farm_seed_inventory WHERE id = $1 AND quantity = 0`,
-      [seedId],
-    );
+    // 使用统一背包服务扣减种子
+    const removeResult = await removeItem({
+      characterId,
+      itemKey: seedRow.item_key,
+      quantity: 1,
+      attributes: {
+        mutationType: seedMutationType ?? undefined,
+        generation: seedRow.generation ?? undefined, // 传入原始值（可能为 null）给 removeItem
+      },
+      operationType: 'consume',
+      bizType: 'farm_plant',
+      bizId: `${row}_${col}`,
+      memo: `种植 ${seedConfig.name}`,
+    });
+
+    if (!removeResult.success) {
+      return { success: false, message: '种子数量不足' };
+    }
 
     // 判定变异
     // 如果种子自带变异（变异种子），直接使用；否则判定是否发生新变异
@@ -551,7 +598,7 @@ export async function plantCrop(
       col,
       cropId: cropConfig.cropId,
       metadata: {
-        seedItemId: seedRow.item_id,
+        seedItemId: seedRow.item_key,
         generation: plantedGeneration,
         mutationType: finalMutationType,
       },
@@ -682,14 +729,20 @@ export async function harvestCrop(
         if (rollMutationInheritance()) {
           witheredSeedMutationType = 'gold';
         }
-        await query(
-          `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, $3, $4, NOW())
-           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
-           SET quantity = farm_seed_inventory.quantity + 1,
-               updated_at = CURRENT_TIMESTAMP`,
-          [characterId, witheredSeedItemId, witheredSeedMutationType ?? '', newSeedGeneration],
-        );
+        // 使用统一背包服务添加种子
+        await addItem({
+          characterId,
+          itemKey: witheredSeedItemId,
+          quantity: 1,
+          attributes: {
+            mutationType: witheredSeedMutationType || undefined,
+            generation: newSeedGeneration,
+          },
+          operationType: 'acquire',
+          bizType: 'farm_wither_seed',
+          bizId: `${row}_${col}`,
+          memo: `枯萎留种 ${witheredSeedItemId}`,
+        });
         // 枯萎但有种子掉落：发放经验（根据作物配置的 expGain，缺省为 1）
         await query(
           `UPDATE farm_profile SET farm_exp = farm_exp + $2, updated_at = CURRENT_TIMESTAMP WHERE character_id = $1`,
@@ -744,14 +797,19 @@ export async function harvestCrop(
     const actualYield = Math.max(Math.floor(baseYield * yieldMul), 1);
 
     // 写入灵材仓库（按品质分别计数）
-    await query(
-      `INSERT INTO farm_harvest_inventory (character_id, crop_id, quantity, quality, updated_at)
-       VALUES ($1, $2, $3, $4, NOW())
-       ON CONFLICT (character_id, crop_id, quality) DO UPDATE
-       SET quantity = farm_harvest_inventory.quantity + $3,
-           updated_at = CURRENT_TIMESTAMP`,
-      [characterId, cropConfig.cropId, actualYield, quality],
-    );
+    const harvestItemKey = `material_${cropConfig.cropId}`;
+    await addItem({
+      characterId,
+      itemKey: harvestItemKey,
+      quantity: actualYield,
+      attributes: {
+        quality,
+      },
+      operationType: 'acquire',
+      bizType: 'farm_harvest',
+      bizId: `${row}_${col}`,
+      memo: `收获 ${cropConfig.name} x${actualYield}`,
+    });
 
     // 种子产出判定：金光变必然产种，优质也必然产种（100%）
     // 详见设计文档 4.6 节
@@ -786,34 +844,36 @@ export async function harvestCrop(
 
       // 种子产出：是否从产量扣除
       if (actualYield > 0) {
-        await query(
-          `UPDATE farm_harvest_inventory SET quantity = quantity - 1, updated_at = CURRENT_TIMESTAMP
-           WHERE character_id = $1 AND crop_id = $2 AND quality = $3 AND quantity >= 1`,
-          [characterId, cropConfig.cropId, quality],
-        );
+        // 使用统一背包服务扣除灵材
+        await removeItem({
+          characterId,
+          itemKey: harvestItemKey,
+          quantity: 1,
+          attributes: {
+            quality,
+          },
+          operationType: 'consume',
+          bizType: 'farm_harvest_seed',
+          bizId: `${row}_${col}`,
+          memo: `产出种子扣除灵材`,
+        });
       }
 
       // 发放种子到种子袋（代数 = 种植种子代数 + 1）
       const newSeedGeneration = cell.planted_generation + 1;
-      if (seedMutationType) {
-        await query(
-          `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, $3, $4, NOW())
-           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
-           SET quantity = farm_seed_inventory.quantity + 1,
-               updated_at = CURRENT_TIMESTAMP`,
-          [characterId, seedItemId, seedMutationType, newSeedGeneration],
-        );
-      } else {
-        await query(
-          `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, '', $3, NOW())
-           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
-           SET quantity = farm_seed_inventory.quantity + 1,
-               updated_at = CURRENT_TIMESTAMP`,
-          [characterId, seedItemId, newSeedGeneration],
-        );
-      }
+      await addItem({
+        characterId,
+        itemKey: seedItemId,
+        quantity: 1,
+        attributes: {
+          mutationType: seedMutationType || undefined,
+          generation: newSeedGeneration,
+        },
+        operationType: 'acquire',
+        bizType: 'farm_harvest_seed',
+        bizId: `${row}_${col}`,
+        memo: `收获产出种子 ${seedItemId}`,
+      });
     }
 
     // 发放杂交种子（如果有 pending_hybrid_seed 且满足条件）
@@ -824,15 +884,19 @@ export async function harvestCrop(
       hybridSeedItemId = cell.pending_hybrid_seed;
       const seedConfig = getSeedConfig(hybridSeedItemId);
       if (seedConfig) {
-        // 发放杂交种子（第 1 代）
-        await query(
-          `INSERT INTO farm_seed_inventory (character_id, item_id, quantity, mutation_type, generation, updated_at)
-           VALUES ($1, $2, 1, '', 1, NOW())
-           ON CONFLICT (character_id, item_id, mutation_type, generation) DO UPDATE
-           SET quantity = farm_seed_inventory.quantity + 1,
-               updated_at = CURRENT_TIMESTAMP`,
-          [characterId, hybridSeedItemId],
-        );
+        // 使用统一背包服务发放杂交种子（第 1 代）
+        await addItem({
+          characterId,
+          itemKey: hybridSeedItemId,
+          quantity: 1,
+          attributes: {
+            generation: 1,
+          },
+          operationType: 'acquire',
+          bizType: 'farm_harvest_hybrid',
+          bizId: `${row}_${col}`,
+          memo: `发放杂交种子 ${hybridSeedItemId}`,
+        });
         hybridSeedDistributed = true;
       }
     }
@@ -1314,9 +1378,9 @@ export async function transplantCrop(
 // ==================== 灵材出售 ====================
 
 /**
- * 出售灵材。按 cropConfig.harvestTradeUnit 个体 = 1 交易单位。
+ * 出售灵材。按 tradeUnit 个体 = 1 交易单位。
  * quantity 参数为交易单位数（不是个体数）。
- * 实际消耗的个体数 = quantity × harvestTradeUnit。
+ * 实际消耗的个体数 = quantity × tradeUnit。
  */
 export async function sellHarvest(
   characterId: number,
@@ -1329,21 +1393,34 @@ export async function sellHarvest(
     if (!cropConfig) return { success: false, message: '作物不存在' };
     if (tradeUnits <= 0) return { success: false, message: '数量无效' };
 
-    const tradeUnitSize = cropConfig.harvestTradeUnit;
+    // 从 items 获取 tradeUnit 和 sellPrice
+    const harvestItemKey = `material_${cropId}`;
+    const itemDef = getItemByCropId(cropId);
+    const tradeUnitSize = itemDef?.attributes?.tradeUnit ?? 1;
+    const sellPricePerUnit = itemDef?.sellPrice ?? 0;
     const individualCount = tradeUnits * tradeUnitSize;
 
-    // 扣减灵材库存
-    const result = await query(
-      `UPDATE farm_harvest_inventory SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP
-       WHERE character_id = $2 AND crop_id = $3 AND quality = $4 AND quantity >= $1
-       RETURNING id`,
-      [individualCount, characterId, cropId, quality],
-    );
-    if (result.rowCount === 0) return { success: false, message: '灵材不足' };
+    // 使用统一背包服务扣减灵材库存
+    const removeResult = await removeItem({
+      characterId,
+      itemKey: harvestItemKey,
+      quantity: individualCount,
+      attributes: {
+        quality,
+      },
+      operationType: 'sell',
+      bizType: 'farm_sell_harvest',
+      bizId: `${cropId}_${quality}`,
+      memo: `出售 ${cropConfig.name}(${quality}) x${tradeUnits} 单位`,
+    });
+
+    if (!removeResult.success) {
+      return { success: false, message: '灵材不足' };
+    }
 
     // 计算售价（品质影响单价）
     const priceMul = computeSellPriceMultiplier(quality);
-    const unitPrice = Math.floor(cropConfig.sellPricePerUnit * priceMul);
+    const unitPrice = Math.floor(sellPricePerUnit * priceMul);
     const totalEarn = BigInt(unitPrice * tradeUnits);
 
     await addSpiritStones(characterId, totalEarn, {
@@ -1367,11 +1444,6 @@ export async function sellHarvest(
       },
     });
 
-    await query(
-      `DELETE FROM farm_harvest_inventory WHERE character_id = $1 AND crop_id = $2 AND quality = $3 AND quantity = 0`,
-      [characterId, cropId, quality],
-    );
-
     return { success: true, message: `出售成功，获得 ${totalEarn} 灵石` };
   });
 }
@@ -1380,45 +1452,70 @@ export async function sellAllHarvest(
   characterId: number,
 ): Promise<{ success: boolean; message: string; totalEarn: number }> {
   return withTransaction(async () => {
-    const rows = await query<HarvestRow>(
-      `SELECT crop_id, quantity, quality FROM farm_harvest_inventory WHERE character_id = $1 AND quantity > 0`,
-      [characterId],
-    );
-    if (rows.rows.length === 0) return { success: true, message: '没有可出售的灵材', totalEarn: 0 };
+    // 使用统一背包表查询灵材
+    const harvestItems = await getItemsByCharacter(characterId, { category: 'material' });
+    const availableItems = harvestItems.filter((item) => item.quantity > 0);
 
+    if (availableItems.length === 0) {
+      return { success: true, message: '没有可出售的灵材', totalEarn: 0 };
+    }
+
+    // 计算总收益
     let totalEarn = 0;
-    for (const row of rows.rows) {
-      const cropConfig = getCropConfig(row.crop_id);
+    const sellOperations: Array<{
+      itemKey: string;
+      cropId: string;
+      quality: string;
+      tradeUnits: number;
+      deductCount: number;
+    }> = [];
+
+    for (const item of availableItems) {
+      // item_key 格式为 material_xxx，需要提取 cropId
+      const cropId = item.itemKey.replace(/^material_/, '');
+      const cropConfig = getCropConfig(cropId);
       if (!cropConfig) continue;
-      const tradeUnitSize = cropConfig.harvestTradeUnit;
-      const tradeUnits = Math.floor(row.quantity / tradeUnitSize);
+
+      // 从 items 获取 tradeUnit 和 sellPrice
+      const itemDef = getItemByCropId(cropId);
+      const tradeUnitSize = itemDef?.attributes?.tradeUnit ?? 1;
+      const sellPricePerUnit = itemDef?.sellPrice ?? 0;
+
+      const quality = item.quality || 'normal';
+      const tradeUnits = Math.floor(item.quantity / tradeUnitSize);
       if (tradeUnits <= 0) continue;
-      const priceMul = computeSellPriceMultiplier(row.quality as CropQuality);
-      const unitPrice = Math.floor(cropConfig.sellPricePerUnit * priceMul);
+
+      const priceMul = computeSellPriceMultiplier(quality as CropQuality);
+      const unitPrice = Math.floor(sellPricePerUnit * priceMul);
       totalEarn += unitPrice * tradeUnits;
+
+      sellOperations.push({
+        itemKey: item.itemKey,
+        cropId,
+        quality,
+        tradeUnits,
+        deductCount: tradeUnits * tradeUnitSize,
+      });
     }
 
-    if (totalEarn === 0) return { success: true, message: '没有可出售的灵材', totalEarn: 0 };
-
-    // 出售时按各作物 harvestTradeUnit 的整数倍扣除，余数保留
-    for (const row of rows.rows) {
-      const cropConfig = getCropConfig(row.crop_id);
-      if (!cropConfig) continue;
-      const tradeUnitSize = cropConfig.harvestTradeUnit;
-      const tradeUnits = Math.floor(row.quantity / tradeUnitSize);
-      if (tradeUnits <= 0) continue;
-      const deductCount = tradeUnits * tradeUnitSize;
-      await query(
-        `UPDATE farm_harvest_inventory SET quantity = quantity - $1, updated_at = CURRENT_TIMESTAMP
-         WHERE character_id = $2 AND crop_id = $3 AND quality = $4`,
-        [deductCount, characterId, row.crop_id, row.quality],
-      );
+    if (totalEarn === 0) {
+      return { success: true, message: '没有可出售的灵材', totalEarn: 0 };
     }
 
-    await query(
-      `DELETE FROM farm_harvest_inventory WHERE character_id = $1 AND quantity = 0`,
-      [characterId],
-    );
+    // 批量扣除灵材（使用统一背包服务）
+    for (const op of sellOperations) {
+      await removeItem({
+        characterId,
+        itemKey: op.itemKey,
+        quantity: op.deductCount,
+        attributes: {
+          quality: op.quality,
+        },
+        operationType: 'sell',
+        bizType: 'farm_sell_harvest',
+        memo: `一键出售 ${op.cropId}(${op.quality}) x${op.tradeUnits} 单位`,
+      });
+    }
 
     await addSpiritStones(characterId, BigInt(totalEarn), {
       bizType: 'farm_sell_harvest',
@@ -1432,15 +1529,13 @@ export async function sellAllHarvest(
       col: -1,
       metadata: {
         isSellAll: true,
-        items: rows.rows.map(r => {
-          const cropConfig = getCropConfig(r.crop_id);
-          const tradeUnitSize = cropConfig?.harvestTradeUnit ?? 1;
-          const tradeUnits = Math.floor(r.quantity / tradeUnitSize);
+        items: sellOperations.map((op) => {
+          const cropConfig = getCropConfig(op.cropId);
           return {
-            cropId: r.crop_id,
-            cropName: cropConfig?.name ?? r.crop_id,
-            quality: r.quality,
-            tradeUnits,
+            cropId: op.cropId,
+            cropName: cropConfig?.name ?? op.cropId,
+            quality: op.quality,
+            tradeUnits: op.tradeUnits,
           };
         }),
         totalEarn,
@@ -1692,11 +1787,17 @@ function buildCellDto(
   const accelMul = getAccelerationMultiplier();
   const state = computeCropState(cropConfig, plantedAt, now, speedMul, witherMul, accelMul);
 
+  // 从 items 获取 element 和 rarity
+  const cropId = row.crop_id;
+  const itemDef = getItemByCropId(cropId);
+  const cropElement = itemDef?.attributes?.element ?? [];
+  const cropRarity = itemDef?.rarity ?? 'common';
+
   return {
     ...base,
     cropName: cropConfig.name,
-    cropElement: cropConfig.element,
-    cropRarity: cropConfig.rarity,
+    cropElement: cropElement,
+    cropRarity: cropRarity,
     cropState: {
       ...state,
       maturedAt: state.maturedAt != null ? Math.floor(state.maturedAt) : null,
@@ -1740,12 +1841,13 @@ export function getFarmStaticConfig(): FarmStaticConfigDto {
     .filter((s) => s.enabled)
     .map((s) => {
       const cropConfig = getCropConfig(s.cropId);
+      const itemDef = getItemByCropId(s.cropId);
       return {
         itemId: s.itemId,
         cropId: s.cropId,
         name: s.name,
-        traits: cropConfig?.traits ?? [],
-        element: cropConfig?.element ?? [],
+        traits: itemDef?.attributes?.traits ?? [],
+        element: itemDef?.attributes?.element ?? [],
         buyPrice: s.buyPrice,
         sellPrice: s.sellPrice,
         requiredTier: s.requiredTier,
@@ -1758,24 +1860,28 @@ export function getFarmStaticConfig(): FarmStaticConfigDto {
 
   const crops: CropConfigDto[] = getAllCrops()
     .filter((c) => c.enabled)
-    .map((c) => ({
-      cropId: c.cropId,
-      name: c.name,
-      rarity: c.rarity,
-      element: c.element,
-      harvestUnit: c.harvestUnit,
-      sellPricePerUnit: c.sellPricePerUnit,
-      harvestTradeUnit: c.harvestTradeUnit,
-      requiredTier: c.requiredTier,
-      yieldMin: c.yieldMin,
-      yieldMax: c.yieldMax,
-      growthStageMinutes: c.growthStageMinutes,
-      stageLabels: c.stageLabels,
-      witherAfterMinutes: c.witherAfterMinutes,
-      // 总生长时间 = 前 (n-1) 个阶段的总和，最后一个阶段（如"成熟"）是收获点，
-      // 实际持续时间由 witherAfterMinutes 决定，不计入总生长时间
-      totalGrowthMinutes: c.growthStageMinutes.slice(0, -1).reduce((sum, m) => sum + m, 0),
-    }));
+    .map((c) => {
+      // 从 items 获取作物属性（element, traits, rarity, sellPricePerUnit, harvestTradeUnit）
+      const item = getItemByCropId(c.cropId);
+      return {
+        cropId: c.cropId,
+        name: c.name,
+        rarity: item?.rarity ?? 'common',
+        element: item?.attributes?.element ?? [],
+        harvestUnit: c.harvestUnit,
+        sellPricePerUnit: item?.sellPrice ?? 0,
+        harvestTradeUnit: item?.attributes?.tradeUnit ?? 1,
+        requiredTier: c.requiredTier,
+        yieldMin: c.yieldMin,
+        yieldMax: c.yieldMax,
+        growthStageMinutes: c.growthStageMinutes,
+        stageLabels: c.stageLabels,
+        witherAfterMinutes: c.witherAfterMinutes,
+        // 总生长时间 = 前 (n-1) 个阶段的总和，最后一个阶段（如"成熟"）是收获点，
+        // 实际持续时间由 witherAfterMinutes 决定，不计入总生长时间
+        totalGrowthMinutes: c.growthStageMinutes.slice(0, -1).reduce((sum, m) => sum + m, 0),
+      };
+    });
 
   const hybridRecipes: HybridRecipeConfigDto[] = getAllRecipes()
     .filter((r) => r.enabled)

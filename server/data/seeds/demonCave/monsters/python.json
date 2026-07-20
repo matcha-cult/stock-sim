@@ -1,0 +1,10 @@
+{
+  "id": "demon-python",
+  "name": "蟒蛇精",
+  "description": "东方青木之气所化，鳞甲泛青光，似有龙族血脉",
+  "template_id": "tpl-defense",
+  "element": [
+    "木"
+  ],
+  "bloodline_id": "bloodline-qinglong"
+}

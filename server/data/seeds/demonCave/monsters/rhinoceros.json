@@ -1,0 +1,10 @@
+{
+  "id": "demon-rhinoceros",
+  "name": "犀牛精",
+  "description": "土石结晶为甲，地脉纹理显于身，不动如山",
+  "template_id": "tpl-defense",
+  "element": [
+    "土"
+  ],
+  "bloodline_id": "bloodline-houtu"
+}

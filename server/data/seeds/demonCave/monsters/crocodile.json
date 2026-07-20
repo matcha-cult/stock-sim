@@ -1,0 +1,10 @@
+{
+  "id": "demon-crocodile",
+  "name": "鳄鱼精",
+  "description": "水中蛟龙，无角有鳍，墨绿鳞甲",
+  "template_id": "tpl-attack",
+  "element": [
+    "水"
+  ],
+  "bloodline_id": "bloodline-jiaolong"
+}

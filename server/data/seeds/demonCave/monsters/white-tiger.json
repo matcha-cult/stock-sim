@@ -1,0 +1,10 @@
+{
+  "id": "demon-white-tiger",
+  "name": "白虎精",
+  "description": "雪白黑纹，啸声震山，百兽之王",
+  "template_id": "tpl-attack",
+  "element": [
+    "金"
+  ],
+  "bloodline_id": "bloodline-baihu"
+}

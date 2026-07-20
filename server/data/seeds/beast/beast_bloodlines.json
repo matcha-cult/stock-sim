@@ -1,0 +1,330 @@
+{
+  "version": 7,
+  "description": "灵兽血脉定义（9种SSR无属性 + 27种SR有属性 = 36种），基于山海经异兽名单",
+  "bloodlines": [
+    {
+      "id": "bloodline-zhulong",
+      "name": "烛龙血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "钟山之神，视为昼瞑为夜，吹为冬呼为夏",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-yinglong",
+      "name": "应龙血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "杀蚩尤与夸父，亦能兴云布雨，为龙族巅峰",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-xiangliu",
+      "name": "相柳血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "共工之臣，九首蛇身，所至之处皆为毒沼",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-dijiang",
+      "name": "帝江血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "状如黄囊，六足四翼，浑敦无面目，识歌舞",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-luwu",
+      "name": "陆吾血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "昆仑之丘神，虎身九尾人面，司天之九部及帝之囿时",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-kaimingshou",
+      "name": "开明兽血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "昆仑之丘守门神兽，虎身九首皆人面，东向立昆仑上",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-fenghuang",
+      "name": "凤凰血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "状如鸡，五采而文，首文曰德，翼文曰义，见则天下安宁",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-taotie",
+      "name": "狍鸮血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "羊身人面，目在腋下，虎齿人爪，音如婴儿，食人",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-jiufeng",
+      "name": "九凤血脉",
+      "element": null,
+      "rarity": "SSR",
+      "forced_template": "tpl-balanced",
+      "description": "九首人面鸟身，楚地至高神鸟，司掌大风与兵祸",
+      "weight": 10
+    },
+    {
+      "id": "bloodline-jiuweihu",
+      "name": "九尾狐血脉",
+      "element": "木",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如狐而九尾，音如婴儿，能食人，食者不蛊",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-bifang",
+      "name": "毕方血脉",
+      "element": "火",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如鹤，一足，赤文青质而白喙，见则其邑有讹火",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-luanniao",
+      "name": "鸾鸟血脉",
+      "element": "火",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如翟而五采文，见则天下安宁，为凤凰之属",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-gudiao",
+      "name": "蛊雕血脉",
+      "element": "水",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如雕而有角，其音如婴儿，是食人",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-qiongqi",
+      "name": "穷奇血脉",
+      "element": "金",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如虎，有翼，食人，常食从首始，为四凶之一",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-huashe",
+      "name": "化蛇血脉",
+      "element": "水",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "人面豺身，鸟翼而蛇行，其音如叱呼，见则其邑大水",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-feiyi",
+      "name": "肥遗血脉",
+      "element": "火",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "一首两身，见则其国大旱，为旱灾之兆",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-zhuyan",
+      "name": "朱厌血脉",
+      "element": "木",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如猿，而白首赤足，见则天下大兵",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-qinyuan",
+      "name": "钦原血脉",
+      "element": "火",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如蜂，大如鸳鸯，蠚鸟兽则死，蠚木则枯",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-yonghe",
+      "name": "雍和血脉",
+      "element": "火",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如蝯，赤目赤喙黄身，见则国有大恐",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-yayu",
+      "name": "窫窳血脉",
+      "element": "水",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如牛，赤身人面马足，音如婴儿，是食人",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-zhuhuai",
+      "name": "诸怀血脉",
+      "element": "水",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如牛，四角人目彘耳，音如鸣雁，是食人",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-fuxi",
+      "name": "凫徯血脉",
+      "element": "金",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如雄鸡而人面，其鸣自叫也，见则有兵",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-tiangou",
+      "name": "天狗血脉",
+      "element": "金",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如狸而白首，音如榴榴，可以御凶",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-zheng",
+      "name": "狰血脉",
+      "element": "金",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如赤豹，五尾一角，其音如击石",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-dangkang",
+      "name": "当康血脉",
+      "element": "土",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如豚而有牙，其鸣自詨，见则天下大穰",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-fei",
+      "name": "蜚血脉",
+      "element": "水",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如牛而白首，一目而蛇尾，行水则竭，见则天下大疫",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-manman",
+      "name": "蛮蛮血脉",
+      "element": "水",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如凫，一翼一目，相得乃飞，见则天下大水",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-zhujian",
+      "name": "诸犍血脉",
+      "element": "木",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如豹而长尾，人首牛耳一目，善咤",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-mingshe",
+      "name": "鸣蛇血脉",
+      "element": "火",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如蛇而四翼，其音如磬，见则其邑大旱",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-yingzhao",
+      "name": "英招血脉",
+      "element": "木",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "马身人面，虎文鸟翼，徇于四海，其音如榴",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-shuhu",
+      "name": "孰湖血脉",
+      "element": "木",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "马身而鸟翼，人面蛇尾，是好举人",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-bo",
+      "name": "駮血脉",
+      "element": "金",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如马，白身黑尾，一角虎牙爪，音如鼓音，是食虎豹，可以御兵",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-shanjun",
+      "name": "山犭军血脉",
+      "element": "木",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如犬而人面，善投，见人则笑，其行如风，见则天下大风",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-tulu",
+      "name": "土蝼血脉",
+      "element": "土",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如羊而四角，是食人",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-aoyin",
+      "name": "傲因血脉",
+      "element": "金",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "状如牛，白身四角，其毫如披蓑，是食人",
+      "weight": 30
+    },
+    {
+      "id": "bloodline-ranyiyu",
+      "name": "冉遗鱼血脉",
+      "element": "水",
+      "rarity": "SR",
+      "forced_template": null,
+      "description": "鱼身蛇首六足，其目如马耳，食之使人不眯，可以御凶",
+      "weight": 30
+    }
+  ]
+}

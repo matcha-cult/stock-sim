@@ -40,6 +40,7 @@ import {
 } from './farmTypes.js';
 import { computeSpeedMultiplier, computeWitherMultiplier } from './farmMutationService.js';
 import { checkElementCondition } from './farmElementConditionService.js';
+import { getCropElementAndTraits, getItemByCropId } from '../inventory/itemConfigLoader.js';
 
 // ── 常量 ──
 
@@ -218,7 +219,8 @@ export async function tryHybridOnPlant(
   const cellsToCheck: Array<{ row: number; col: number; cropId: string }> = [];
 
   // 新种作物如果是无属性，需要检查（它刚种下，一定是非成熟的）
-  if (newCropConfig.element.length === 0) {
+  const newCropInfo = getCropElementAndTraits(newCropId);
+  if (newCropInfo && newCropInfo.element.length === 0) {
     cellsToCheck.push({ row: newRow, col: newCol, cropId: newCropId });
   }
 
@@ -227,7 +229,8 @@ export async function tryHybridOnPlant(
     const neighborKey = `${neighbor.row},${neighbor.col}`;
     const neighborData = cellDataMap.get(neighborKey);
     if (!neighborData) continue;
-    if (neighborData.cropConfig.element.length > 0) continue; // 只检查无属性作物
+    const neighborInfo = getCropElementAndTraits(neighborData.cropConfig.cropId);
+    if (!neighborInfo || neighborInfo.element.length > 0) continue; // 只检查无属性作物
     if (neighborData.isHarvestable) continue; // 跳过已成熟的作物
 
     cellsToCheck.push({ row: neighbor.row, col: neighbor.col, cropId: neighborData.cropConfig.cropId });
@@ -271,10 +274,10 @@ export async function tryHybridOnPlant(
 
     // 按稀有度排序，选择最高的
     matchingRecipes.sort((a, b) => {
-      const cropA = getCropConfig(a.resultCropId);
-      const cropB = getCropConfig(b.resultCropId);
-      const rarityA = cropA ? getRarityOrder(cropA.rarity) : 0;
-      const rarityB = cropB ? getRarityOrder(cropB.rarity) : 0;
+      const itemA = getItemByCropId(a.resultCropId);
+      const itemB = getItemByCropId(b.resultCropId);
+      const rarityA = itemA ? getRarityOrder(itemA.rarity ?? 'common') : 0;
+      const rarityB = itemB ? getRarityOrder(itemB.rarity ?? 'common') : 0;
       if (rarityA !== rarityB) return rarityB - rarityA;
       return a.sortOrder - b.sortOrder;
     });
@@ -296,11 +299,11 @@ export async function tryHybridOnPlant(
       const currentSeed = getSeedConfig(currentPending);
       const newSeed = getSeedConfig(bestRecipe.resultSeedItemId);
       if (currentSeed && newSeed) {
-        const currentCrop = getCropConfig(currentSeed.cropId);
-        const newCrop = getCropConfig(newSeed.cropId);
-        if (currentCrop && newCrop) {
-          const currentRarity = getRarityOrder(currentCrop.rarity);
-          const newRarity = getRarityOrder(newCrop.rarity);
+        const currentItem = getItemByCropId(currentSeed.cropId);
+        const newItem = getItemByCropId(newSeed.cropId);
+        if (currentItem && newItem) {
+          const currentRarity = getRarityOrder(currentItem.rarity ?? 'common');
+          const newRarity = getRarityOrder(newItem.rarity ?? 'common');
           if (newRarity <= currentRarity) continue;
         }
       }
@@ -314,8 +317,8 @@ export async function tryHybridOnPlant(
     );
 
     // 记录全局最佳结果（稀有度最高的）
-    const resultCrop = getCropConfig(bestRecipe.resultCropId);
-    const recipeRarity = resultCrop ? getRarityOrder(resultCrop.rarity) : 0;
+    const resultItem = getItemByCropId(bestRecipe.resultCropId);
+    const recipeRarity = resultItem ? getRarityOrder(resultItem.rarity ?? 'common') : 0;
     if (recipeRarity > bestRarity) {
       const seedConfig = getSeedConfig(bestRecipe.resultSeedItemId);
       bestResult = {
@@ -380,7 +383,8 @@ function checkTraitCondition(
 ): boolean {
   let count = 0;
   for (const crop of adjacentCrops) {
-    if (crop.traits.includes(condition.value)) {
+    const info = getCropElementAndTraits(crop.cropId);
+    if (info && info.traits.includes(condition.value)) {
       count++;
     }
   }
@@ -396,7 +400,8 @@ function checkElementConditionDirect(
 ): boolean {
   let count = 0;
   for (const crop of adjacentCrops) {
-    if (crop.element.includes(condition.value)) {
+    const info = getCropElementAndTraits(crop.cropId);
+    if (info && info.element.includes(condition.value)) {
       count++;
     }
   }
@@ -448,10 +453,10 @@ export function checkHybridRevocation(
 
   // 按稀有度排序，选择最高的
   matchingRecipes.sort((a, b) => {
-    const cropA = getCropConfig(a.resultCropId);
-    const cropB = getCropConfig(b.resultCropId);
-    const rarityA = cropA ? getRarityOrder(cropA.rarity) : 0;
-    const rarityB = cropB ? getRarityOrder(cropB.rarity) : 0;
+    const itemA = getItemByCropId(a.resultCropId);
+    const itemB = getItemByCropId(b.resultCropId);
+    const rarityA = itemA ? getRarityOrder(itemA.rarity ?? 'common') : 0;
+    const rarityB = itemB ? getRarityOrder(itemB.rarity ?? 'common') : 0;
     if (rarityA !== rarityB) return rarityB - rarityA;
     return a.sortOrder - b.sortOrder;
   });

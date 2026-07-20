@@ -1,0 +1,10 @@
+{
+  "id": "demon-golden-pheasant",
+  "name": "锦鸡精",
+  "description": "赤羽金冠，五德俱全，鸣声如凤",
+  "template_id": "tpl-balanced",
+  "element": [
+    "火"
+  ],
+  "bloodline_id": "bloodline-zhuque"
+}

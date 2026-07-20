@@ -1,0 +1,10 @@
+{
+  "id": "demon-crow",
+  "name": "乌鸦精",
+  "description": "三足金乌之后裔，周身黑纹隐现日光",
+  "template_id": "tpl-attack",
+  "element": [
+    "火"
+  ],
+  "bloodline_id": "bloodline-sanzuwu"
+}

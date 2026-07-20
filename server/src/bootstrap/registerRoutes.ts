@@ -22,8 +22,11 @@ import monthCardRoutes from '../routes/monthCardRoutes.js';
 import gmMonthCardRoutes from '../routes/gmMonthCardRoutes.js';
 import gmFarmRoutes from '../routes/gmFarmRoutes.js';
 import farmRoutes from '../routes/farmRoutes.js';
+import beastRoutes from '../routes/beastRoutes.js';
+import demonCaveRoutes from '../routes/demonCaveRoutes.js';
 import serverConfigRoutes from '../routes/serverConfigRoutes.js';
 import marketDataRoutes from '../routes/marketDataRoutes.js';
+import inventoryRoutes from '../routes/inventoryRoutes.js';
 
 export function registerRoutes(app: express.Application): void {
   // 认证路由
@@ -62,9 +65,18 @@ export function registerRoutes(app: express.Application): void {
   // 灵田路由
   app.use('/api/farm', farmRoutes);
 
+  // 万兽楼灵兽路由
+  app.use('/api/beast', beastRoutes);
+
+  // 锁妖窟路由
+  app.use('/api/demon-cave', demonCaveRoutes);
+
   // 服务端全局配置（无需鉴权）
   app.use('/api/server-config', serverConfigRoutes);
 
   // 行情数据路由（sk- API key 鉴权）
   app.use('/api/market-data', marketDataRoutes);
+
+  // 统一背包路由
+  app.use('/api/inventory', inventoryRoutes);
 }

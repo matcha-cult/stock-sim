@@ -1,0 +1,10 @@
+{
+  "id": "demon-albatross",
+  "name": "海鸟精",
+  "description": "人面鸟身，耳畔青蛇，北海之神使",
+  "template_id": "tpl-support",
+  "element": [
+    "水"
+  ],
+  "bloodline_id": "bloodline-yuqiang"
+}

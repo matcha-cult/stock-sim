@@ -1,0 +1,7 @@
+{
+  "id": "demon-scorpion",
+  "name": "毒蝎",
+  "description": "剧毒蝎妖，攻击力强",
+  "template_id": "tpl-balanced",
+  "element": ["火"]
+}

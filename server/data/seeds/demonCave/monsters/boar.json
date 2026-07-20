@@ -1,0 +1,7 @@
+{
+  "id": "demon-boar",
+  "name": "野猪精",
+  "description": "皮糙肉厚的野猪妖，防御力强",
+  "template_id": "tpl-defense",
+  "element": ["土"]
+}

@@ -1,0 +1,10 @@
+{
+  "id": "demon-kingfisher",
+  "name": "翠鸟精",
+  "description": "翠羽如春草，鸣声清脆，能催草木生长",
+  "template_id": "tpl-support",
+  "element": [
+    "木"
+  ],
+  "bloodline_id": "bloodline-jumang"
+}

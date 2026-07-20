@@ -45,6 +45,7 @@ const overviewQpsLimit = createGmFarmQpsLimit('overview', 10);
 const logQpsLimit = createGmFarmQpsLimit('log', 10);
 const addSeedQpsLimit = createGmFarmQpsLimit('add-seed', 10);
 const addHarvestQpsLimit = createGmFarmQpsLimit('add-harvest', 10);
+const addAllHarvestQpsLimit = createGmFarmQpsLimit('add-all-harvest', 2);
 
 function parseLookupParams(query: Record<string, unknown>): gmFarmService.GmFarmLookupParams | { error: string } {
   const characterId = parsePositiveInt(query?.characterId);
@@ -185,6 +186,53 @@ router.post(
     const quality = qualityRaw as CropQuality;
 
     const result = await gmFarmService.gmAddHarvest(lookupParams, cropId, quantity, quality);
+    if (!result.success) {
+      const status = result.message === '角色不存在' ? 404 : 400;
+      res.status(status).json({ success: false, message: result.message });
+      return;
+    }
+    sendSuccess(res, result);
+  }),
+);
+
+// ==================== 一键添加所有灵材 ====================
+
+router.post(
+  '/add-all-harvest',
+  requireGm,
+  addAllHarvestQpsLimit,
+  asyncHandler(async (req, res) => {
+    const body = req.body ?? {};
+    const lookupParams = parseLookupParams({
+      characterId: body.characterId,
+      nickname: body.nickname,
+    });
+    if ('error' in lookupParams) {
+      res.status(400).json({ success: false, message: lookupParams.error });
+      return;
+    }
+
+    const quantity = parsePositiveInt(body.quantity);
+    if (quantity == null) {
+      res.status(400).json({ success: false, message: 'quantity 必须为正整数' });
+      return;
+    }
+
+    const qualitiesRaw = body.qualities;
+    if (!Array.isArray(qualitiesRaw) || qualitiesRaw.length === 0) {
+      res.status(400).json({ success: false, message: 'qualities 必须为非空数组' });
+      return;
+    }
+
+    const allowed = new Set(['hq', 'normal', 'lq']);
+    const invalid = qualitiesRaw.find((q) => !allowed.has(q));
+    if (invalid) {
+      res.status(400).json({ success: false, message: `无效品质 ${invalid}，可选：hq / normal / lq` });
+      return;
+    }
+    const qualities = qualitiesRaw as CropQuality[];
+
+    const result = await gmFarmService.gmAddAllHarvest(lookupParams, quantity, qualities);
     if (!result.success) {
       const status = result.message === '角色不存在' ? 404 : 400;
       res.status(status).json({ success: false, message: result.message });

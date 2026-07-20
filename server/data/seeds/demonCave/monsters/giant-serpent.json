@@ -1,0 +1,8 @@
+{
+  "id": "demon-giant-serpent",
+  "name": "巨蟒精",
+  "description": "人面蛇身，赤红纵目，钟山之神后裔",
+  "template_id": "tpl-defense",
+  "element": [],
+  "bloodline_id": "bloodline-zhulong"
+}
