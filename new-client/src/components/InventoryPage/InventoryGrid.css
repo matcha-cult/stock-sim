@@ -1,0 +1,16 @@
+/**
+ * 背包网格容器样式。
+ *
+ * 使用 CSS Grid auto-fill 自适应列数：
+ * - 每个格子最小 80px，根据容器宽度自动填充列数
+ * - 固定行高 80px，gap 7px
+ * - 不使用 antd Row/Col（无法实现 grid-auto-rows 固定行高）
+ */
+
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  grid-auto-rows: 80px;
+  gap: 7px;
+  align-content: start;
+}

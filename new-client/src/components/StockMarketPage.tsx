@@ -54,6 +54,9 @@ import ScratchCardPage from './ScratchCardPage';
 import PuzzleCardPage from './PuzzleCard';
 import { PUZZLE_CARD_TYPES } from '../services/api/puzzleCard';
 import FarmPage from './FarmPage/FarmPage';
+import BeastPage from './BeastPage/BeastPage';
+import DemonCavePage from '../pages/DemonCavePage';
+import InventoryPage from './InventoryPage';
 import {
   buildStockMarketOverviewViewModel,
   buildStockMarketTradePreview,
@@ -74,7 +77,7 @@ const { Content } = Layout;
 
 type RefreshMode = 'initial' | 'background';
 type ActionKey = '' | 'buy' | 'buy-all' | 'sell' | 'clear-stock' | 'clear-all';
-type ActiveTab = 'stock-market' | 'pending-orders' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'puzzle-card' | 'farm' | 'gm-online-ops';
+type ActiveTab = 'stock-market' | 'pending-orders' | 'ranking' | 'shop' | 'ledger' | 'scratch' | 'puzzle-card' | 'farm' | 'beast' | 'demon-cave' | 'inventory' | 'gm-online-ops';
 type StockSubTab = 'market' | 'pending-orders-sub' | 'profit' | 'records';
 type GmTabKey = 'gm-spirit-stones' | 'gm-month-card' | 'gm-news-viewer' | 'gm-ledger' | 'gm-stock-viewer' | 'gm-pending-orders' | 'gm-farm-viewer';
 
@@ -354,7 +357,7 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
   }, [overview, selectedStockDto, tradePreview, stockStore, modal, message, refreshAfterTrade, authStore]);
 
   const handleTabChange = useCallback((key: string) => {
-    if (key === 'stock-market' || key === 'pending-orders' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'puzzle-card' || key === 'farm' || key === 'gm-online-ops') {
+    if (key === 'stock-market' || key === 'pending-orders' || key === 'ranking' || key === 'shop' || key === 'ledger' || key === 'scratch' || key === 'puzzle-card' || key === 'farm' || key === 'beast' || key === 'demon-cave' || key === 'inventory' || key === 'gm-online-ops') {
       setActiveTab(key as ActiveTab);
     }
   }, []);
@@ -547,6 +550,21 @@ const StockMarketPage = observer(function StockMarketPage(): React.ReactNode {
               key: 'farm',
               label: '灵田',
               children: <FarmPage />,
+            },
+            {
+              key: 'beast',
+              label: '万兽楼',
+              children: <BeastPage />,
+            },
+            {
+              key: 'demon-cave',
+              label: '锁妖窟',
+              children: <DemonCavePage />,
+            },
+            {
+              key: 'inventory',
+              label: '背包',
+              children: <InventoryPage />,
             },
             {
               key: 'shop',

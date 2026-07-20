@@ -42,6 +42,7 @@ import {
   gmGetFarmLog,
   gmAddSeed,
   gmAddHarvest,
+  gmAddAllHarvest,
   type GmFarmOverviewResponse,
   type GmFarmLookupParams,
 } from '../../services/api/gmFarm';
@@ -114,6 +115,7 @@ const GmFarmViewer: React.FC = () => {
   const [addSeedLoading, setAddSeedLoading] = useState(false);
   const [addHarvestOpen, setAddHarvestOpen] = useState(false);
   const [addHarvestLoading, setAddHarvestLoading] = useState(false);
+  const [addAllHarvestLoading, setAddAllHarvestLoading] = useState(false);
 
   const [addSeedForm] = Form.useForm<{ itemId: string; quantity: number; mutationType: string; generation: number }>();
   const [addHarvestForm] = Form.useForm<{ cropId: string; quantity: number; quality: string }>();
@@ -296,6 +298,37 @@ const GmFarmViewer: React.FC = () => {
     }
   }, [data, addHarvestForm, message, fetchOverview]);
 
+  // ── 一键添加所有灵材（hq + normal 各 999） ──
+  const handleAddAllHarvest = useCallback(() => {
+    if (data == null) return;
+    Modal.confirm({
+      title: '确认一键添加所有灵材？',
+      content: '将为该角色所有作物分别添加 优质×999 和 普通×999（不含劣质），操作不可撤销。',
+      okText: '确认添加',
+      cancelText: '取消',
+      onOk: async () => {
+        setAddAllHarvestLoading(true);
+        try {
+          const result = await gmAddAllHarvest({
+            characterId: data.characterId,
+            quantity: 999,
+            qualities: ['hq', 'normal'],
+          });
+          if (result.success) {
+            message.success(`一键添加成功：${result.data?.cropCount ?? '-'} 种作物`);
+            void fetchOverview();
+          } else {
+            message.error(result.message ?? '一键添加失败');
+          }
+        } catch {
+          message.error('一键添加失败');
+        } finally {
+          setAddAllHarvestLoading(false);
+        }
+      },
+    });
+  }, [data, message, fetchOverview]);
+
   // 种子袋：合并静态配置与动态库存
   const seedBagRows = useMemo(() => {
     if (!data) return [];
@@ -443,7 +476,15 @@ const GmFarmViewer: React.FC = () => {
                     label: `灵材仓库 (${harvestBagRows.length})`,
                     children: (
                       <Flex vertical gap={8}>
-                        <Flex justify="flex-end">
+                        <Flex justify="flex-end" gap={8}>
+                          <Button
+                            size="small"
+                            icon={<PlusOutlined />}
+                            onClick={handleAddAllHarvest}
+                            loading={addAllHarvestLoading}
+                          >
+                            一键添加所有灵材
+                          </Button>
                           <Button
                             size="small"
                             type="primary"

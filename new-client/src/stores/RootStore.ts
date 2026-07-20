@@ -29,6 +29,7 @@ import { ThemeStore } from './ThemeStore';
 import { ShopStore } from './ShopStore';
 import { MonthCardStore } from './MonthCardStore';
 import { FarmStore } from './FarmStore';
+import { InventoryStore } from './InventoryStore';
 
 export class RootStore {
   authStore: AuthStore;
@@ -37,6 +38,7 @@ export class RootStore {
   shopStore: ShopStore;
   monthCardStore: MonthCardStore;
   farmStore: FarmStore;
+  inventoryStore: InventoryStore;
 
   constructor() {
     this.themeStore = new ThemeStore();
@@ -45,6 +47,7 @@ export class RootStore {
     this.shopStore = new ShopStore(this);
     this.monthCardStore = new MonthCardStore();
     this.farmStore = new FarmStore(this);
+    this.inventoryStore = new InventoryStore(this);
     makeAutoObservable(this);
   }
 }

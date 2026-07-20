@@ -28,12 +28,12 @@ export class RequestDedup {
   private inFlight = new Map<string, Promise<void>>();
 
   /**
-   * 请求入口守卫。
+   * 请求入口守卫（原子操作：检查 + 标记）。
    * @param key 请求唯一标识（如 "trades:1"、"overview"）
    * @param options 去重选项：
    *   - boolean（向后兼容）：等同于 `{ allowConcurrent: value }`
    *   - DedupOptions：完整选项
-   * @returns true 允许执行，false 跳过
+   * @returns true 允许执行（已标记 in-flight），false 跳过
    */
   enter(key: string, options: boolean | DedupOptions = false): boolean {
     const opts: DedupOptions = typeof options === 'boolean'
@@ -43,12 +43,16 @@ export class RequestDedup {
     if (!opts.allowConcurrent && this.inFlight.has(key)) {
       return false;
     }
+    // 立即标记 in-flight（占位），防止 TOCTOU 竞态
+    if (!opts.allowConcurrent) {
+      this.inFlight.set(key, Promise.resolve());
+    }
     return true;
   }
 
   /**
-   * 注册 in-flight 请求。
-   * 在创建 Promise 后、await 之前调用。
+   * 更新 in-flight 的 Promise 引用。
+   * 在创建 Promise 后调用，用于替换 enter() 的占位 Promise。
    */
   start(key: string, promise: Promise<void>): void {
     this.inFlight.set(key, promise);

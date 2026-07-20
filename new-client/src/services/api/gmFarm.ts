@@ -89,3 +89,12 @@ export const gmAddHarvest = (
   },
   config?: AxiosRequestConfig,
 ) => api.post<{ characterId: number }>('/api/gm/farm/add-harvest', params, config);
+
+/** GM 一键为指定角色添加所有作物的灵材（按品质批量写入） */
+export const gmAddAllHarvest = (
+  params: GmFarmLookupParams & {
+    quantity: number;
+    qualities: string[];
+  },
+  config?: AxiosRequestConfig,
+) => api.post<{ characterId: number; cropCount: number }>('/api/gm/farm/add-all-harvest', params, config);

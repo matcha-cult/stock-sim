@@ -895,7 +895,6 @@ const FarmTemplatePanel = observer(function FarmTemplatePanel() {
         onClose={() => setSeedPickerSlot(null)}
         onOk={() => setSeedPickerSlot(null)}
         okText="完成"
-        cancelButtonProps={{ style: { display: 'none' } }}
       >
         {seedPickerSlot !== null && (
           <SeedPickerPanel
