@@ -33,7 +33,7 @@ import { buildLines, type LineDef } from './scratchTicketTypes.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const SEED_PATH = resolve(__dirname, '../../seeds/scratchGameConfig.json');
+const SEED_PATH = resolve(process.cwd(), 'data/seeds/scratchGameConfig.json');
 
 interface ConfigSeed {
   configKey: string;

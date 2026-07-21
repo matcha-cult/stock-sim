@@ -42,7 +42,6 @@ import { initDropPoolConfig } from './services/demonCave/dropPoolLoader.js';
 import { initDemonCaveFloorConfig } from './services/demonCave/floorConfigLoader.js';
 import { initStarLevelConfig } from './services/shared/starLevelLoader.js';
 import { startIdleBattleWorker, stopIdleBattleWorker } from './services/demonCave/idleBattleWorker.js';
-import './types/express.d.ts';
 
 dotenv.config();
 
